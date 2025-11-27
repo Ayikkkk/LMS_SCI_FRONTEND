@@ -12,9 +12,7 @@ class AuthRepository {
 
   static const FlutterSecureStorage storage = FlutterSecureStorage();
 
-  /**
-   * Mengirim kredensial ke API Laravel dan menyimpan token
-   */
+  /// LOGIN
   Future<bool> login(String username, String password) async {
     try {
       final response = await _dio.post('/student/login', data: {
@@ -27,10 +25,11 @@ class AuthRepository {
         final token = response.data['token'];
         final student = jsonEncode(response.data['student']);
 
+        // simpan token
         await storage.write(key: 'auth_token', value: token);
         await storage.write(key: 'student_data', value: student);
 
-        // ✅ Sudah benar: Atur header Dio untuk request berikutnya
+        // set header
         _dio.options.headers['Authorization'] = 'Bearer $token';
 
         return true;
@@ -42,21 +41,22 @@ class AuthRepository {
     }
   }
 
-  /**
-   * Mengambil token dari penyimpanan lokal
-   */
+  /// Ambil token
   Future<String?> getToken() async {
     return await storage.read(key: 'auth_token');
   }
 
-  // 💡 FUNGSI BARU: Menyusun header Dio dari token yang tersimpan
+  /// Set header Authorization
   void setDioAuthorizationHeader(String token) {
-     _dio.options.headers['Authorization'] = 'Bearer $token';
+    _dio.options.headers['Authorization'] = 'Bearer $token';
   }
 
-  /**
-   * Mengambil data siswa yang tersimpan (misalnya untuk ditampilkan di Profile)
-   */
+  /// Hapus header Authorization
+  void clearDioAuthorizationHeader() {
+    _dio.options.headers.remove('Authorization');
+  }
+
+  /// Ambil data student
   Future<Map<String, dynamic>?> getStudentData() async {
     final dataString = await storage.read(key: 'student_data');
     if (dataString != null) {
@@ -65,34 +65,32 @@ class AuthRepository {
     return null;
   }
 
-  /**
-   * Melakukan logout (memanggil API Laravel dan menghapus data lokal)
-   */
+  /// LOGOUT
   Future<void> logout() async {
     try {
-      // Pastikan Dio masih memiliki token saat memanggil /logout
       await _dio.post('/student/logout',
           options: Options(
               headers: {'Authorization': 'Bearer ${await getToken()}'}));
     } catch (e) {
-      print('Logout API failed but proceeding to clear local data: $e');
+      print('Logout API failed but clearing local data...');
     }
 
     await storage.delete(key: 'auth_token');
     await storage.delete(key: 'student_data');
 
-    // ✅ Sudah benar: Hapus header Authorization
-    _dio.options.headers.remove('Authorization');
+    // Hapus header
+    clearDioAuthorizationHeader();
   }
 
+  /// Reset app (digunakan untuk testing/debug)
   Future<void> clearAllData() async {
-    final prefs =
-        await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
 
     await storage.delete(key: 'auth_token');
     await prefs.remove('has_seen_onboarding');
   }
 }
 
-// Provider untuk menyediakan instance AuthRepository (digunakan oleh AuthNotifier)
-final authRepositoryProvider = Provider((ref) => AuthRepository(dio));
+// Provider
+final authRepositoryProvider =
+    Provider((ref) => AuthRepository(dio));

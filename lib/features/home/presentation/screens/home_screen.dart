@@ -5,18 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // Import komponen dari fitur Home
 import '../../data/models/dashboard_model.dart';
-import '../providers/home_provider.dart'; // Pastikan Provider sudah dibuat!
+import '../providers/home_provider.dart';
 
 // Import komponen dari fitur lain
-// 💡 Ganti path ini sesuai lokasi StudentModel Anda
 import '../../../auth/data/models/student_model.dart';
-import '../../../course/presentation/screens/course_screen.dart'; // Akan dibuat di bawah
-import '../../../quiz/presentation/screens/quiz_screen.dart';       // Akan dibuat di bawah
-import '../../../profile/presentation/screens/profile_screen.dart';   // Akan dibuat di bawah
+import '../../../course/presentation/screens/course_screen.dart';
+import '../../../quiz/presentation/screens/quiz_screen.dart';
+import '../../../profile/presentation/screens/profile_screen.dart';
 
-
-// --- WIDGET UTAMA (CONSUMER STATEFUL) ---
-// Diubah dari DashboardScreen menjadi HomeScreen
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -31,15 +27,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
+
+    // INITIFIAL TAB WIDGETS
     _widgetOptions = <Widget>[
-      // Index 0: HOME (Dashboard Content)
       const _DashboardContent(),
-      // Index 1: COURSE
       const CourseScreen(),
-      // Index 2: QUIZ
       const QuizScreen(),
-      // Index 3: PROFIL
-      const ProfileScreen(), 
+      const ProfileScreen(),
     ];
   }
 
@@ -47,6 +41,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     setState(() {
       _selectedIndex = index;
     });
+
+    // ⛔ TAB HOME (index 0) → Re-fetch otomatis setiap dibuka
+    if (index == 0) {
+      ref.invalidate(dashboardDataProvider);
+    }
   }
 
   @override
@@ -62,28 +61,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.menu_book),
-            label: 'Course',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.question_answer),
-            label: 'Quiz',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profil',
-          ),
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+          BottomNavigationBarItem(icon: Icon(Icons.menu_book), label: "Course"),
+          BottomNavigationBarItem(icon: Icon(Icons.question_answer), label: "Quiz"),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profil"),
         ],
         currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
         selectedItemColor: Colors.blueAccent,
         unselectedItemColor: Colors.grey,
-        onTap: _onItemTapped,
       ),
     );
   }
@@ -104,56 +91,59 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-// --- KONTEN DASHBOARD (Halaman Home/Index 0) ---
-// Diubah agar tidak perlu menerima WidgetRef di constructor (bisa diakses di method build)
+// ==========================================================================
+// DASHBOARD CONTENT
+// ==========================================================================
+
 class _DashboardContent extends ConsumerWidget {
   const _DashboardContent();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Memanggil provider
     final dashboardDataAsync = ref.watch(dashboardDataProvider);
 
     return dashboardDataAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(
+      error: (err, _) => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text('Gagal memuat data: $err'),
             ElevatedButton(
-              onPressed: () {
-                // Gunakan ref dari parameter build untuk memuat ulang data
-                ref.invalidate(dashboardDataProvider);
-              },
+              onPressed: () => ref.invalidate(dashboardDataProvider),
               child: const Text('Coba Lagi'),
             ),
           ],
         ),
       ),
       data: (data) {
-        // MENGGANTI StudentInfo dengan StudentModel
         final StudentModel student = data.student;
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildProfileHeader(context, student),
               const Divider(height: 30),
-              Text('Ringkasan Akademik',
-                  style: Theme.of(context).textTheme.titleLarge),
+
+              // RINGKASAN
+              Text('Ringkasan Akademik', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 15),
               _buildStatsGrid(context, data.stats),
+
               const SizedBox(height: 30),
+
+              // MEETING
               Text('Kelas Online Hari Ini (${data.meetingsToday.length})',
                   style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 15),
               _buildMeetingsList(data.meetingsToday),
+
               const SizedBox(height: 30),
-              Text('Akses Cepat Modul',
-                  style: Theme.of(context).textTheme.titleLarge),
+
+              // MODULE
+              Text('Akses Cepat Modul', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 15),
               _buildModuleTiles(context),
             ],
@@ -163,11 +153,13 @@ class _DashboardContent extends ConsumerWidget {
     );
   }
 
-  // --- Helper Methods (Diperbarui menggunakan StudentModel) ---
+  // ========================================================================
+  // WIDGET RENDER
+  // ========================================================================
 
   Widget _buildProfileHeader(BuildContext context, StudentModel student) {
-    // ⚠️ student.classroomName mungkin null/kosong tergantung implementasi StudentModel
-    final className = student.className ?? student.classRoomId?.toString() ?? 'Tidak diketahui';
+    final className =
+        student.className ?? student.classRoomId?.toString() ?? 'Tidak diketahui';
 
     return Row(
       children: [
@@ -180,18 +172,16 @@ class _DashboardContent extends ConsumerWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Halo, ${student.name}!',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold, color: Colors.blueAccent),
-            ),
-            Text(
-              'Kelas: $className',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(color: Colors.grey[700]),
-            ),
+            Text('Halo, ${student.name}!',
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+            Text('Kelas: $className',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(color: Colors.grey[700])),
           ],
         ),
       ],
@@ -206,48 +196,35 @@ class _DashboardContent extends ConsumerWidget {
       crossAxisSpacing: 15,
       mainAxisSpacing: 15,
       children: [
-        _buildStatCard(context, 'Total Tugas', stats.totalTasks,
-            Icons.assignment, Colors.orange),
-        _buildStatCard(context, 'Total Quiz', stats.totalExercises, Icons.quiz,
-            Colors.purple),
-        _buildStatCard(context, 'Rata-rata Tugas', stats.averageTaskScore,
-            Icons.score, Colors.green),
-        _buildStatCard(context, 'Rata-rata Quiz', stats.averageExerciseScore,
-            Icons.star, Colors.blue),
-        _buildStatCard(context, 'Laporan Terkirim', stats.reportCount,
-            Icons.event_note, Colors.redAccent),
+        _statCard(context, 'Total Tugas', stats.totalTasks, Icons.assignment, Colors.orange),
+        _statCard(context, 'Total Quiz', stats.totalExercises, Icons.quiz, Colors.purple),
+        _statCard(context, 'Rata-rata Tugas', stats.averageTaskScore, Icons.score, Colors.green),
+        _statCard(context, 'Rata-rata Quiz', stats.averageExerciseScore, Icons.star, Colors.blue),
+        _statCard(context, 'Laporan Terkirim', stats.reportCount, Icons.event_note, Colors.redAccent),
       ],
     );
   }
 
-  Widget _buildStatCard(BuildContext context, String title, dynamic value,
-      IconData icon, Color color) {
-    String displayValue =
-        (value is double) ? value.toStringAsFixed(2) : value.toString();
+  Widget _statCard(BuildContext context, String title, dynamic value, IconData icon, Color color) {
+    final displayValue = (value is double) ? value.toStringAsFixed(2) : value.toString();
 
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Icon(icon, size: 30, color: color),
             const SizedBox(height: 10),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              displayValue,
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.bold, color: color),
-            ),
+            Text(title, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+            Text(displayValue,
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.bold, color: color)),
           ],
         ),
       ),
@@ -257,8 +234,9 @@ class _DashboardContent extends ConsumerWidget {
   Widget _buildMeetingsList(List<OnlineMeetingModel> meetings) {
     if (meetings.isEmpty) {
       return const Center(
-          child: Text('Tidak ada kelas online hari ini.',
-              style: TextStyle(color: Colors.grey)));
+        child: Text('Tidak ada kelas online hari ini.',
+            style: TextStyle(color: Colors.grey)),
+      );
     }
 
     return Column(
@@ -266,30 +244,12 @@ class _DashboardContent extends ConsumerWidget {
         return Card(
           margin: const EdgeInsets.only(bottom: 10),
           elevation: 2,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          child: Builder(
-            builder: (context) {
-              return ListTile(
-                leading: const Icon(Icons.video_call, color: Colors.red),
-                title: Text(meeting.title,
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text(
-                    'Pukul ${meeting.startTime.substring(11, 16)} - ${meeting.endTime.substring(11, 16)} (${meeting.platform})'),
-                trailing: meeting.meetingLink.isNotEmpty
-                    ? const Icon(Icons.chevron_right, color: Colors.red)
-                    : null,
-                onTap: () {
-                  if (meeting.meetingLink.isNotEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text(
-                              'Membuka link meeting untuk ${meeting.title}')),
-                    );
-                  }
-                },
-              );
-            },
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          child: ListTile(
+            leading: const Icon(Icons.video_call, color: Colors.red),
+            title: Text(meeting.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text(
+                'Pukul ${meeting.startTime.substring(11, 16)} - ${meeting.endTime.substring(11, 16)} (${meeting.platform})'),
           ),
         );
       }).toList(),
@@ -304,42 +264,31 @@ class _DashboardContent extends ConsumerWidget {
       crossAxisSpacing: 10,
       mainAxisSpacing: 10,
       children: [
-        _buildModuleItem(context, 'Materi', Icons.folder_open, Colors.blue,
-            'Materi Pelajaran'),
-        _buildModuleItem(context, 'Tugas', Icons.check_circle_outline,
-            Colors.orange, 'Tugas & Nilai'),
-        _buildModuleItem(
-            context, 'Quiz', Icons.edit_note, Colors.green, 'Latihan & Quiz'),
-        _buildModuleItem(
-            context, 'Laporan', Icons.event_note, Colors.red, 'Laporan Harian'),
-        _buildModuleItem(context, 'Nilai', Icons.bar_chart, Colors.purple,
-            'Rangkuman Nilai'),
-        _buildModuleItem(context, 'Pengaturan', Icons.settings, Colors.grey,
-            'Pengaturan Akun'),
+        _moduleItem(context, 'Materi', Icons.folder_open, Colors.blue),
+        _moduleItem(context, 'Tugas', Icons.check_circle_outline, Colors.orange),
+        _moduleItem(context, 'Quiz', Icons.edit_note, Colors.green),
+        _moduleItem(context, 'Laporan', Icons.event_note, Colors.red),
+        _moduleItem(context, 'Nilai', Icons.bar_chart, Colors.purple),
+        _moduleItem(context, 'Pengaturan', Icons.settings, Colors.grey),
       ],
     );
   }
 
-  Widget _buildModuleItem(BuildContext context, String label, IconData icon,
-      Color color, String fullTitle) {
-    return InkWell(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Navigasi ke $fullTitle belum diimplementasikan.')),
-        );
-      },
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  Widget _moduleItem(BuildContext context, String label, IconData icon, Color color) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: () {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('$label belum diimplementasikan.')));
+        },
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, size: 35, color: color),
             const SizedBox(height: 5),
-            Text(label,
-                style:
-                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+            Text(label, style: const TextStyle(fontSize: 12)),
           ],
         ),
       ),

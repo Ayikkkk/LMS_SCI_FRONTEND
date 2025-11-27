@@ -31,33 +31,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   // Fungsi utama untuk menangani proses login
   Future<void> _submitLogin() async {
-    // 1. Validasi Form
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true); // Mulai loading
+    setState(() => _isLoading = true);
 
-    // 2. Panggil fungsi doLogin dari AuthNotifier
-    // ref.read() digunakan karena kita hanya perlu memanggil method/fungsi
     final success = await ref.read(authNotifierProvider.notifier).doLogin(
           _usernameController.text.trim(),
           _passwordController.text.trim(),
         );
 
-    setState(() => _isLoading = false); // Hentikan loading
+    setState(() => _isLoading = false);
 
-    // 3. Feedback ke Pengguna
-    if (!success && mounted) {
+    if (!success) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Login Gagal. Pastikan Username dan Password benar.'),
           backgroundColor: Colors.red,
         ),
       );
+    } else {
+      ref.invalidate(authNotifierProvider);
+
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/home');
     }
-    // Jika success, status Riverpod (AuthStatus) akan berubah menjadi authenticated,
-    // dan main.dart akan otomatis mengarahkan ke DashboardScreen.
   }
 
   @override
