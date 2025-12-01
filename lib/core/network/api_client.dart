@@ -6,7 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 // ===============================================
 // KONFIGURASI BASE URL API LARAVEL
 // ===============================================
-const String baseUrl = "http://192.168.1.13:8000/api/";
+const String baseUrl = "http://192.168.1.8:8000/api/";
 
 // ===============================================
 // INISIALISASI DIO (HTTP CLIENT)
