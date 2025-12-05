@@ -1,3 +1,5 @@
+// lib/features/auth/data/auth_repository.dart
+
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,11 +27,12 @@ class AuthRepository {
         final token = response.data['token'];
         final student = jsonEncode(response.data['student']);
 
-        // simpan token
+        // SIMPAN TOKEN BARU
         await storage.write(key: 'auth_token', value: token);
         await storage.write(key: 'student_data', value: student);
 
-        // set header
+        // RESET TOKEN LAMA & SET TOKEN BARU
+        _dio.options.headers.remove('Authorization');
         _dio.options.headers['Authorization'] = 'Bearer $token';
 
         return true;
@@ -75,14 +78,15 @@ class AuthRepository {
       print('Logout API failed but clearing local data...');
     }
 
+    // HAPUS TOKEN LOKAL
     await storage.delete(key: 'auth_token');
     await storage.delete(key: 'student_data');
 
-    // Hapus header
+    // RESET HEADER
     clearDioAuthorizationHeader();
   }
 
-  /// Reset app (digunakan untuk testing/debug)
+  /// Reset lokal
   Future<void> clearAllData() async {
     final prefs = await SharedPreferences.getInstance();
 

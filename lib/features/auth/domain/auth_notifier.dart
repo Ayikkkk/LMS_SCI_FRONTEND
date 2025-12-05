@@ -1,5 +1,8 @@
+// lib/features/auth/domain/auth_notifier.dart
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/auth_repository.dart';
+import '../../profile/presentation/providers/profile_provider.dart';
 
 enum AuthStatus {
   unknown,
@@ -9,24 +12,23 @@ enum AuthStatus {
 
 class AuthNotifier extends StateNotifier<AuthStatus> {
   final AuthRepository _repository;
+  final Ref ref;
 
-  AuthNotifier(this._repository) : super(AuthStatus.unknown) {
+  AuthNotifier(this.ref, this._repository) : super(AuthStatus.unknown) {
     checkAuthStatus();
   }
 
-  /// Ambil token (optional untuk kebutuhan lain)
+  /// Ambil token
   Future<String?> getCurrentToken() async {
     return _repository.getToken();
   }
 
-  /// Mengecek status login saat aplikasi dibuka
+  /// Cek status login
   Future<void> checkAuthStatus() async {
     final token = await _repository.getToken();
 
     if (token != null && token.isNotEmpty) {
-      // Set header Authorization supaya request tidak gagal
       _repository.setDioAuthorizationHeader(token);
-
       state = AuthStatus.authenticated;
     } else {
       state = AuthStatus.unauthenticated;
@@ -38,14 +40,14 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
     final success = await _repository.login(username, password);
 
     if (success) {
-      // Ambil token baru
       final newToken = await _repository.getToken();
 
       if (newToken != null && newToken.isNotEmpty) {
-        // SET Authorization header supaya dashboard bisa diakses
         _repository.setDioAuthorizationHeader(newToken);
 
-        // Update state auth
+        // REFRESH DATA PROFIL
+        ref.invalidate(profileDataProvider);
+
         state = AuthStatus.authenticated;
       } else {
         state = AuthStatus.unauthenticated;
@@ -59,16 +61,18 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
   Future<void> doLogout() async {
     await _repository.logout();
 
-    // Bersihkan header Authorization
-    _repository.clearDioAuthorizationHeader();
+    // REFRESH PROFIL
+    ref.invalidate(profileDataProvider);
 
     state = AuthStatus.unauthenticated;
   }
 
-  /// RESET (hapus semua data lokal)
+  /// RESET APP
   Future<void> hardReset() async {
     await _repository.clearAllData();
     _repository.clearDioAuthorizationHeader();
+
+    ref.invalidate(profileDataProvider);
 
     state = AuthStatus.unauthenticated;
   }
@@ -76,5 +80,5 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
 
 final authNotifierProvider =
     StateNotifierProvider<AuthNotifier, AuthStatus>((ref) {
-  return AuthNotifier(ref.watch(authRepositoryProvider));
+  return AuthNotifier(ref, ref.watch(authRepositoryProvider));
 });

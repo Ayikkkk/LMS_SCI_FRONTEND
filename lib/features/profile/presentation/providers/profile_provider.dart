@@ -5,16 +5,15 @@ import '../../../auth/data/models/student_model.dart';
 import '../../../../core/network/api_client.dart';
 
 /// Provider untuk ProfileRepository
-final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
+final profileRepositoryProvider = Provider((ref) {
+  final apiClient = ref.read(apiClientProvider);  
   final authRepo = ref.read(authRepositoryProvider);
-  return ProfileRepository(dio, authRepo);
+  return ProfileRepository(apiClient, authRepo);
 });
 
-/// Provider untuk mengambil data profile (FutureProvider)
+/// Provider Future untuk ambil data profile
 final profileDataProvider = FutureProvider<StudentModel>((ref) async {
-  final repo = ref.read(profileRepositoryProvider);
-
-  final data = await repo.getProfile();
-
+  final profileRepo = ref.read(profileRepositoryProvider);
+  final data = await profileRepo.getProfile();
   return StudentModel.fromJson(data);
 });

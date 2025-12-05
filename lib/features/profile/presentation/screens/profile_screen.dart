@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../presentation/providers/profile_provider.dart';
 import '../../../auth/domain/auth_notifier.dart';
 import '../../../auth/presentation/login_screen.dart';
+import '../../../laporan_harian/presentation/screens/laporan_harian_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -70,7 +71,13 @@ class ProfileScreen extends ConsumerWidget {
               _menuItem(
                 "Laporan Harian",
                 Icons.book_outlined,
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const LaporanHarianScreen()),
+                  );
+                },
               ),
 
               _menuItem(
@@ -130,7 +137,6 @@ class ProfileScreen extends ConsumerWidget {
               child: Icon(Icons.person, size: 35, color: Colors.white),
             ),
             const SizedBox(width: 16),
-
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -141,11 +147,9 @@ class ProfileScreen extends ConsumerWidget {
                           fontWeight: FontWeight.bold,
                           color: Colors.black)),
                   const SizedBox(height: 6),
-
                   Text("NIS: $nis",
                       style: TextStyle(color: Colors.grey[700], fontSize: 14)),
                   const SizedBox(height: 4),
-
                   Text("Kelas • $className",
                       style: TextStyle(color: Colors.grey[600])),
                 ],
@@ -177,7 +181,6 @@ class ProfileScreen extends ConsumerWidget {
                     fontWeight: FontWeight.bold,
                     color: Colors.black)),
             const SizedBox(height: 14),
-
             Row(
               children: [
                 const Icon(Icons.email_outlined, color: Colors.blue),
@@ -186,7 +189,6 @@ class ProfileScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 10),
-
             Row(
               children: [
                 const Icon(Icons.call_outlined, color: Colors.green),
@@ -258,7 +260,7 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   // ================================
-  // LOGOUT BUTTON
+  // LOGOUT BUTTON — FIXED (invalidate profile)
   // ================================
   Widget _logoutButton(BuildContext context, WidgetRef ref) {
     return Card(
@@ -280,13 +282,11 @@ class ProfileScreen extends ConsumerWidget {
               content: const Text("Yakin ingin keluar akun?"),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text("Batal"),
-                ),
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text("Batal")),
                 ElevatedButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text("Keluar"),
-                ),
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text("Keluar")),
               ],
             ),
           );
@@ -294,7 +294,9 @@ class ProfileScreen extends ConsumerWidget {
           if (konfirmasi != true) return;
 
           await ref.read(authNotifierProvider.notifier).doLogout();
+
           ref.invalidate(authNotifierProvider);
+          ref.invalidate(profileDataProvider);
 
           Navigator.pushAndRemoveUntil(
             context,
