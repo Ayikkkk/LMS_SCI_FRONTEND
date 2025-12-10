@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:http_parser/http_parser.dart';
 
 import '../providers/laporan_provider.dart';
 import '../../data/laporan_repository.dart';
@@ -64,17 +65,29 @@ class _LaporanHarianScreenState extends ConsumerState<LaporanHarianScreen> {
 
     MultipartFile? imgFile;
     if (foto != null) {
-      imgFile = await MultipartFile.fromFile(foto!.path);
+      imgFile = await MultipartFile.fromFile(
+        foto!.path,
+        filename: "foto_${DateTime.now().millisecondsSinceEpoch}.jpg",
+        contentType: MediaType("image", "jpeg"),
+      );
     }
 
-    await repo.submitReport(report: listReport, img: imgFile);
-    ref.invalidate(laporanCheckProvider);
+    try {
+      await repo.submitReport(report: listReport, img: imgFile);
 
-    if (mounted) {
+      // refresh check agar besok tidak bisa kirim lagi
+      ref.invalidate(laporanCheckProvider);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Laporan berhasil dikirim")),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Laporan berhasil dikirim")),
+        SnackBar(content: Text("Gagal mengirim laporan: $e")),
       );
-      Navigator.pop(context);
     }
   }
 
@@ -101,15 +114,15 @@ class _LaporanHarianScreenState extends ConsumerState<LaporanHarianScreen> {
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              _radio("Tetap Belajar Mandiri?", (v) => setState(() => q1 = v), q1),
+              _radio(
+                  "Tetap Belajar Mandiri?", (v) => setState(() => q1 = v), q1),
               _radio("Mengerjakan Tugas Pembelajaran?",
                   (v) => setState(() => q2 = v), q2),
               _radio("Membantu Orang Tua?", (v) => setState(() => q3 = v), q3),
-              _radio("Tetap Berada Dirumah?", (v) => setState(() => q4 = v), q4),
+              _radio(
+                  "Tetap Berada Dirumah?", (v) => setState(() => q4 = v), q4),
               _radio("Melaksanakan Ibadah?", (v) => setState(() => q5 = v), q5),
-
               const SizedBox(height: 15),
-
               DropdownButtonFormField(
                 value: kondisi,
                 items: const [
@@ -124,9 +137,7 @@ class _LaporanHarianScreenState extends ConsumerState<LaporanHarianScreen> {
                   border: OutlineInputBorder(),
                 ),
               ),
-
               const SizedBox(height: 15),
-
               TextField(
                 controller: kegiatanController,
                 decoration: const InputDecoration(
@@ -135,23 +146,18 @@ class _LaporanHarianScreenState extends ConsumerState<LaporanHarianScreen> {
                 ),
                 maxLines: 3,
               ),
-
               const SizedBox(height: 20),
-
               ElevatedButton.icon(
                 onPressed: pickFoto,
                 icon: const Icon(Icons.image),
                 label: const Text("Tambah Dokumentasi"),
               ),
-
               if (foto != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 10),
                   child: Image.file(foto!, height: 120),
                 ),
-
               const SizedBox(height: 30),
-
               ElevatedButton(
                 onPressed: submit,
                 child: const Text("Kirim Laporan"),

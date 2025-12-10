@@ -3,32 +3,25 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/auth_repository.dart';
 import '../../profile/presentation/providers/profile_provider.dart';
+import '../../laporan_harian/presentation/providers/laporan_provider.dart';
+import '../../../../core/network/api_client.dart';
 
-enum AuthStatus {
-  unknown,
-  authenticated,
-  unauthenticated,
-}
+enum AuthStatus { unknown, authenticated, unauthenticated }
 
 class AuthNotifier extends StateNotifier<AuthStatus> {
-  final AuthRepository _repository;
+  final AuthRepository _repo;
   final Ref ref;
 
-  AuthNotifier(this.ref, this._repository) : super(AuthStatus.unknown) {
+  AuthNotifier(this.ref, this._repo) : super(AuthStatus.unknown) {
     checkAuthStatus();
   }
 
-  /// Ambil token
-  Future<String?> getCurrentToken() async {
-    return _repository.getToken();
-  }
-
-  /// Cek status login
+  /// CEK STATUS LOGIN SAAT APLIKASI DIBUKA
   Future<void> checkAuthStatus() async {
-    final token = await _repository.getToken();
+    final token = await _repo.getToken();
 
     if (token != null && token.isNotEmpty) {
-      _repository.setDioAuthorizationHeader(token);
+      dio.options.headers['Authorization'] = "Bearer $token";
       state = AuthStatus.authenticated;
     } else {
       state = AuthStatus.unauthenticated;
@@ -37,21 +30,20 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
 
   /// LOGIN
   Future<bool> doLogin(String username, String password) async {
-    final success = await _repository.login(username, password);
+    final success = await _repo.login(username, password);
 
     if (success) {
-      final newToken = await _repository.getToken();
-
-      if (newToken != null && newToken.isNotEmpty) {
-        _repository.setDioAuthorizationHeader(newToken);
-
-        // REFRESH DATA PROFIL
-        ref.invalidate(profileDataProvider);
-
-        state = AuthStatus.authenticated;
-      } else {
-        state = AuthStatus.unauthenticated;
+      // SET HEADER TOKEN BARU
+      final token = await _repo.getToken();
+      if (token != null) {
+        dio.options.headers['Authorization'] = "Bearer $token";
       }
+
+      // INVALIDATE SEMUA PROVIDER YANG BERGANTUNG PADA USER
+      ref.invalidate(profileDataProvider);
+      ref.invalidate(laporanCheckProvider);
+
+      state = AuthStatus.authenticated;
     }
 
     return success;
@@ -59,20 +51,11 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
 
   /// LOGOUT
   Future<void> doLogout() async {
-    await _repository.logout();
+    await _repo.logout();
 
-    // REFRESH PROFIL
+    // RESET PROVIDER YANG BERISI DATA USER
     ref.invalidate(profileDataProvider);
-
-    state = AuthStatus.unauthenticated;
-  }
-
-  /// RESET APP
-  Future<void> hardReset() async {
-    await _repository.clearAllData();
-    _repository.clearDioAuthorizationHeader();
-
-    ref.invalidate(profileDataProvider);
+    ref.invalidate(laporanCheckProvider);
 
     state = AuthStatus.unauthenticated;
   }
@@ -80,5 +63,5 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
 
 final authNotifierProvider =
     StateNotifierProvider<AuthNotifier, AuthStatus>((ref) {
-  return AuthNotifier(ref, ref.watch(authRepositoryProvider));
+  return AuthNotifier(ref, ref.read(authRepositoryProvider));
 });

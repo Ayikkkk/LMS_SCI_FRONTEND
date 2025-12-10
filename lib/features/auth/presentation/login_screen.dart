@@ -1,5 +1,3 @@
-// lib/features/auth/presentation/login_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/auth_notifier.dart';
@@ -12,140 +10,167 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  // Controller untuk mengambil input dari TextFormField
-  final _usernameController = TextEditingController();
-  final _passwordController = TextEditingController();
-
-  // GlobalKey untuk validasi form
+  final _username = TextEditingController();
+  final _password = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
-  // State lokal untuk mengontrol loading indicator
-  bool _isLoading = false;
+  bool loading = false;
 
   @override
   void dispose() {
-    _usernameController.dispose();
-    _passwordController.dispose();
+    _username.dispose();
+    _password.dispose();
     super.dispose();
   }
 
-  // Fungsi utama untuk menangani proses login
-  Future<void> _submitLogin() async {
+  Future<void> submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    setState(() => loading = true);
 
-    final success = await ref.read(authNotifierProvider.notifier).doLogin(
-          _usernameController.text.trim(),
-          _passwordController.text.trim(),
-        );
+    final ok = await ref
+        .read(authNotifierProvider.notifier)
+        .doLogin(_username.text.trim(), _password.text.trim());
 
-    setState(() => _isLoading = false);
+    setState(() => loading = false);
 
-    if (!success) {
-      if (!mounted) return;
+    if (!ok && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Login Gagal. Pastikan Username dan Password benar.'),
           backgroundColor: Colors.red,
+          content: Text("Login gagal, periksa username & password."),
         ),
       );
-    } else {
-      ref.invalidate(authNotifierProvider);
-
-      if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/home');
+      return;
     }
+
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(context, '/home');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Login Siswa'),
-        backgroundColor: Theme.of(context).primaryColor,
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              const SizedBox(height: 50),
-              //
-
-              // 🖼️ Placeholder untuk Logo Aplikasi
-              const Center(
-                child: Icon(Icons.school, size: 80, color: Colors.blue),
-              ),
-              const SizedBox(height: 40),
-
-              // --- Input Username ---
-              TextFormField(
-                controller: _usernameController,
-                keyboardType: TextInputType.text,
-                decoration: const InputDecoration(
-                  labelText: 'Username',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person),
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // App Logo / Icon
+                const Icon(
+                  Icons.school,
+                  color: Colors.white,
+                  size: 90,
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Username tidak boleh kosong';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-
-              // --- Input Password ---
-              TextFormField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.lock),
+                const SizedBox(height: 20),
+                const Text(
+                  "Login Siswa",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Password tidak boleh kosong';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 40),
+                const SizedBox(height: 30),
 
-              // --- Tombol Login ---
-              _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : ElevatedButton(
-                      onPressed: _submitLogin,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        backgroundColor: Theme.of(context).primaryColor,
-                      ),
-                      child: const Text(
-                        'LOGIN',
-                        style: TextStyle(fontSize: 18, color: Colors.white),
+                // Card Login
+                Card(
+                  elevation: 10,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          // Username
+                          TextFormField(
+                            controller: _username,
+                            validator: (v) =>
+                                v!.isEmpty ? "Tidak boleh kosong" : null,
+                            decoration: InputDecoration(
+                              prefixIcon: const Icon(Icons.person),
+                              labelText: "Username",
+                              filled: true,
+                              fillColor: Colors.grey.shade100,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Password
+                          TextFormField(
+                            controller: _password,
+                            obscureText: true,
+                            validator: (v) =>
+                                v!.isEmpty ? "Tidak boleh kosong" : null,
+                            decoration: InputDecoration(
+                              prefixIcon: const Icon(Icons.lock),
+                              labelText: "Password",
+                              filled: true,
+                              fillColor: Colors.grey.shade100,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 28),
+
+                          // Tombol Login
+                          SizedBox(
+                            width: double.infinity,
+                            height: 50,
+                            child: ElevatedButton(
+                              onPressed: loading ? null : submit,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF2575FC),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: loading
+                                  ? const SizedBox(
+                                      height: 22,
+                                      width: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 3,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Text(
+                                      "LOGIN",
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-              const SizedBox(height: 20),
+                  ),
+                ),
 
-              // Opsi lupa password (jika ada)
-              TextButton(
-                onPressed: () {
-                  // Arahkan ke halaman Lupa Password
-                },
-                child: const Text('Lupa Password?'),
-              ),
-            ],
+                const SizedBox(height: 30),
+              ],
+            ),
           ),
         ),
       ),

@@ -3,11 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../data/task_repository.dart';
 import 'package:lms_frontend/features/auth/domain/auth_notifier.dart';
+import 'package:lms_frontend/features/auth/data/auth_repository.dart';
 
 class SubmitTaskScreen extends ConsumerStatefulWidget {
-  final int assignmentId;      // post_id dari tugas
+  final int assignmentId; // post_id dari tugas
   final String assignmentTitle;
-  final bool isSubmitted;      
+  final bool isSubmitted;
 
   const SubmitTaskScreen({
     super.key,
@@ -75,8 +76,9 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
     setState(() => _isLoading = true);
 
     final repo = ref.read(taskRepositoryProvider);
-    final authToken =
-        await ref.read(authNotifierProvider.notifier).getCurrentToken();
+
+// ambil token dari AuthRepository (cara baru)
+    final authToken = await ref.read(authRepositoryProvider).getToken();
 
     if (authToken == null) {
       _showSnackbar('Autentikasi gagal. Silakan login ulang.', Colors.red);
@@ -104,8 +106,7 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
     }
 
     // Jika backend kirim pesan “sudah mengirim”
-    if (result.toLowerCase().contains('sudah') ||
-        result.contains('409')) {
+    if (result.toLowerCase().contains('sudah') || result.contains('409')) {
       setState(() => _alreadySubmitted = true);
       _showSnackbar('Kamu sudah mengirim tugas ini sebelumnya.', Colors.orange);
       return;
@@ -154,7 +155,8 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
               controller: _descriptionController,
               decoration: InputDecoration(
                 labelText: 'Deskripsi / Catatan Tambahan',
-                hintText: 'Misalnya: Tugas sudah saya kerjakan dengan metode A.',
+                hintText:
+                    'Misalnya: Tugas sudah saya kerjakan dengan metode A.',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -222,8 +224,7 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
 
             // Tombol Submit
             ElevatedButton(
-              onPressed:
-                  (_isLoading || _alreadySubmitted) ? null : _submitTask,
+              onPressed: (_isLoading || _alreadySubmitted) ? null : _submitTask,
               style: ElevatedButton.styleFrom(
                 backgroundColor: _alreadySubmitted
                     ? Colors.grey

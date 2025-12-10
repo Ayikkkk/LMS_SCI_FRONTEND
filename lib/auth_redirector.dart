@@ -1,5 +1,7 @@
-import 'package:flutter/material.dart';
+// lib/auth_redirector.dart
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'navigation_service.dart';
 import 'features/auth/domain/auth_notifier.dart';
 
 class AuthRedirector extends ConsumerWidget {
@@ -8,15 +10,24 @@ class AuthRedirector extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Flush pending navigation attempts whenever this widget is built
+    // (ensures navigation will run once MaterialApp+navigatorKey siap).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NavigationService.instance.flushPending();
+    });
+
     ref.listen<AuthStatus>(authNotifierProvider, (prev, next) {
-      // Redirect setelah frame selesai dirender
+      if (prev == next) return;
+
+      // Queue or run navigation after current frame to keep it safe.
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (next == AuthStatus.authenticated) {
-          Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
-        }
-        else if (next == AuthStatus.unauthenticated) {
-          Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
-        }
+        NavigationService.instance.runOrQueue((nav) {
+          if (next == AuthStatus.authenticated) {
+            nav.pushNamedAndRemoveUntil('/home', (route) => false);
+          } else if (next == AuthStatus.unauthenticated) {
+            nav.pushNamedAndRemoveUntil('/login', (route) => false);
+          }
+        });
       });
     });
 

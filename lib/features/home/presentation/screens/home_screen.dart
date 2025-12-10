@@ -10,7 +10,7 @@ import '../providers/home_provider.dart';
 // Import komponen dari fitur lain
 import '../../../auth/data/models/student_model.dart';
 import '../../../course/presentation/screens/course_screen.dart';
-import '../../../quiz/presentation/screens/quiz_screen.dart';
+import '../../../quiz/presentation/lessons_quiz_screen.dart';
 import '../../../profile/presentation/screens/profile_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -28,11 +28,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
 
-    // INITIFIAL TAB WIDGETS
+    // INIT TAB WIDGETS
     _widgetOptions = <Widget>[
       const _DashboardContent(),
       const CourseScreen(),
-      const QuizScreen(),
+      const LessonsQuizScreen(),
       const ProfileScreen(),
     ];
   }
@@ -42,7 +42,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _selectedIndex = index;
     });
 
-    // ⛔ TAB HOME (index 0) → Re-fetch otomatis setiap dibuka
+    // Re-fetch otomatis saat tab Home dibuka
     if (index == 0) {
       ref.invalidate(dashboardDataProvider);
     }
@@ -153,13 +153,9 @@ class _DashboardContent extends ConsumerWidget {
     );
   }
 
-  // ========================================================================
-  // WIDGET RENDER
-  // ========================================================================
-
   Widget _buildProfileHeader(BuildContext context, StudentModel student) {
-    final className =
-        student.className ?? student.classRoomId?.toString() ?? 'Tidak diketahui';
+    // gunakan nama field yang benar: classroomId
+    final className = student.className ?? (student.classroomId?.toString()) ?? 'Tidak diketahui';
 
     return Row(
       children: [
@@ -266,7 +262,11 @@ class _DashboardContent extends ConsumerWidget {
       children: [
         _moduleItem(context, 'Materi', Icons.folder_open, Colors.blue),
         _moduleItem(context, 'Tugas', Icons.check_circle_outline, Colors.orange),
-        _moduleItem(context, 'Quiz', Icons.edit_note, Colors.green),
+        _moduleItem(context, 'Quiz', Icons.edit_note, Colors.green, onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const LessonsQuizScreen()),
+          );
+        }),
         _moduleItem(context, 'Laporan', Icons.event_note, Colors.red),
         _moduleItem(context, 'Nilai', Icons.bar_chart, Colors.purple),
         _moduleItem(context, 'Pengaturan', Icons.settings, Colors.grey),
@@ -274,15 +274,16 @@ class _DashboardContent extends ConsumerWidget {
     );
   }
 
-  Widget _moduleItem(BuildContext context, String label, IconData icon, Color color) {
+  Widget _moduleItem(BuildContext context, String label, IconData icon, Color color, {VoidCallback? onTap}) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
-        onTap: () {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text('$label belum diimplementasikan.')));
-        },
+        onTap: onTap ??
+            () {
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(SnackBar(content: Text('$label belum diimplementasikan.')));
+            },
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

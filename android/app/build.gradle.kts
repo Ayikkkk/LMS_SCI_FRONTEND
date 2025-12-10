@@ -7,8 +7,8 @@ plugins {
 
 android {
     namespace = "com.example.lms_frontend"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    compileSdk = 35
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -31,12 +31,16 @@ android {
     }
 
     buildTypes {
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+    getByName("debug") {
+        isDebuggable = true
+    }
+    release {
+        // supaya flutter run --release tetap jalan
+        signingConfig = signingConfigs.getByName("debug")
+        isDebuggable = false
         }
     }
+
 }
 
 flutter {

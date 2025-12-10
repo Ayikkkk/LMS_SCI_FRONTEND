@@ -10,7 +10,9 @@ class LaporanRepository {
 
   LaporanRepository(this._dio, this._auth);
 
-  /// Ambil semua laporan user
+  // ======================================================
+  // Ambil semua laporan user
+  // ======================================================
   Future<List<dynamic>> getReports() async {
     try {
       final token = await _auth.getToken();
@@ -22,30 +24,34 @@ class LaporanRepository {
 
       return res.data["data"] ?? [];
     } catch (e) {
-      rethrow; // biar provider menangkap error
+      rethrow;
     }
   }
 
-  /// Cek apakah user sudah mengisi laporan hari ini
-  Future<bool> isFilledToday() async {
-    final list = await getReports();
+  // ======================================================
+  // Cek laporan harian dengan endpoint check/today
+  // ======================================================
+  Future<bool> checkToday() async {
+    try {
+      final token = await _auth.getToken();
 
-    final today = DateTime.now();
+      final res = await _dio.get(
+        "/student/reports/check/today",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
 
-    for (var r in list) {
-      final t = DateTime.parse(r["created_at"]);
-
-      if (t.year == today.year &&
-          t.month == today.month &&
-          t.day == today.day) {
-        return true;
-      }
+      return res.data["filled"] ?? false;
+    } catch (e) {
+      return false;
     }
-
-    return false;
   }
 
-  /// Kirim laporan harian
+  // Alias agar tetap kompatibel
+  Future<bool> isFilledToday() async => checkToday();
+
+  // ======================================================
+  // Perbaikan submit laporan harian (FIX UPLOAD GAMBAR)
+  // ======================================================
   Future<void> submitReport({
     required List<String> report,
     required MultipartFile? img,
@@ -53,23 +59,37 @@ class LaporanRepository {
     try {
       final token = await _auth.getToken();
 
-      final form = FormData.fromMap({
-        "report": jsonEncode(report), // backend kamu pakai string JSON
-        if (img != null) "img": img,
-      });
+      // FORMAT Multipart sesuai Laravel
+      final form = FormData();
+
+      // JSON laporan
+      form.fields.add(MapEntry("report", jsonEncode(report)));
+
+      // File gambar (FIX MIME TYPE)
+      if (img != null) {
+        form.files.add(
+          MapEntry("img", img),
+        );
+      }
 
       await _dio.post(
         "/student/reports",
         data: form,
-        options: Options(headers: {"Authorization": "Bearer $token"}),
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+          contentType: "multipart/form-data",
+        ),
       );
     } catch (e) {
+      print("❌ ERROR SUBMIT: $e");
       rethrow;
     }
   }
 }
 
-/// Provider repository
+// Provider repository
 final laporanRepositoryProvider = Provider((ref) {
   final auth = ref.read(authRepositoryProvider);
   return LaporanRepository(dio, auth);

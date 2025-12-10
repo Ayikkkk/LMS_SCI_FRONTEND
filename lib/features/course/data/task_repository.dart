@@ -5,7 +5,7 @@ import 'package:http_parser/http_parser.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
-const String _baseUrl = 'http://192.168.1.9:8000/api/';
+const String _baseUrl = 'http://192.168.1.8:8000/api/';
 
 final taskRepositoryProvider = Provider((ref) => TaskRepository());
 

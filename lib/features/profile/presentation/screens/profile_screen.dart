@@ -7,6 +7,7 @@ import '../../presentation/providers/profile_provider.dart';
 import '../../../auth/domain/auth_notifier.dart';
 import '../../../auth/presentation/login_screen.dart';
 import '../../../laporan_harian/presentation/screens/laporan_harian_screen.dart';
+import '../screens/profile_detail_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -32,11 +33,7 @@ class ProfileScreen extends ConsumerWidget {
               // AKUN SISWA
               // ============================
               _sectionTitle("AKUN"),
-              _profileCard(
-                student.name,
-                student.nis ?? student.username,
-                student.className ?? "-",
-              ),
+              _profileCard(context, ref, student),
 
               const SizedBox(height: 20),
 
@@ -119,43 +116,92 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   // ================================
-  // PROFILE CARD
+  // PROFILE CARD (clickable)
   // ================================
-  Widget _profileCard(String name, String nis, String className) {
+  Widget _profileCard(BuildContext context, WidgetRef ref, dynamic student) {
+    final name = (student?.name ?? "").toString();
+    final nis = (student?.nis ?? student?.username ?? "-").toString();
+    final className = (student?.className ?? student?.class_name ?? "-").toString();
+
+    // Ambil foto: coba beberapa properti yang mungkin ada (photo / photoUrl)
+    String? photoUrl;
+    try {
+      photoUrl = student?.photo ?? student?.photoUrl;
+    } catch (_) {
+      photoUrl = null;
+    }
+
+    Widget avatar;
+    if (photoUrl != null && photoUrl.toString().isNotEmpty) {
+      avatar = CircleAvatar(
+        radius: 32,
+        backgroundColor: Colors.transparent,
+        backgroundImage: NetworkImage(photoUrl.toString()),
+      );
+    } else {
+      // fallback: inisial dari nama
+      String initials = "";
+      if (name.isNotEmpty) {
+        final parts = name.split(' ');
+        if (parts.isNotEmpty) initials = parts.first.substring(0, 1).toUpperCase();
+        if (parts.length > 1) initials += parts[1].substring(0, 1).toUpperCase();
+      }
+      avatar = CircleAvatar(
+        radius: 32,
+        backgroundColor: Colors.blue,
+        child: Text(initials.isEmpty ? "?" : initials,
+            style: const TextStyle(color: Colors.white, fontSize: 20)),
+      );
+    }
+
     return Card(
       color: Colors.white,
       elevation: 2,
       shadowColor: Colors.black12,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Row(
-          children: [
-            const CircleAvatar(
-              radius: 32,
-              backgroundColor: Colors.blue,
-              child: Icon(Icons.person, size: 35, color: Colors.white),
+      child: InkWell(
+        onTap: () async {
+          // tunggu sampai user kembali dari detail, lalu invalidate provider agar data reload
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ProfileDetailScreen(student: student),
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name,
-                      style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black)),
-                  const SizedBox(height: 6),
-                  Text("NIS: $nis",
-                      style: TextStyle(color: Colors.grey[700], fontSize: 14)),
-                  const SizedBox(height: 4),
-                  Text("Kelas • $className",
-                      style: TextStyle(color: Colors.grey[600])),
-                ],
+          );
+
+          // reload profile data setelah kembali (otomatis refresh foto/nama jika berubah)
+          try {
+            ref.invalidate(profileDataProvider);
+          } catch (_) {}
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              avatar,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name,
+                        style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black)),
+                    const SizedBox(height: 6),
+                    Text("NIS: $nis",
+                        style:
+                            TextStyle(color: Colors.grey[700], fontSize: 14)),
+                    const SizedBox(height: 4),
+                    Text("Kelas • $className",
+                        style: TextStyle(color: Colors.grey[600])),
+                  ],
+                ),
               ),
-            ),
-          ],
+              const Icon(Icons.chevron_right, color: Colors.black26),
+            ],
+          ),
         ),
       ),
     );

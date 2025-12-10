@@ -1,45 +1,113 @@
-# Miscellaneous
+# ---------------------------------------------------------
+# GENERAL / MISC
+# ---------------------------------------------------------
 *.class
 *.log
 *.pyc
 *.swp
 .DS_Store
-.atom/
-.build/
-.buildlog/
 .history
-.svn/
-.swiftpm/
 migrate_working_dir/
 
-# IntelliJ related
+# OS-specific
+Thumbs.db
+
+# ---------------------------------------------------------
+# IDE / EDITOR
+# ---------------------------------------------------------
+.idea/
 *.iml
 *.ipr
 *.iws
-.idea/
+.vscode/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# ---------------------------------------------------------
+# FLUTTER / DART
+# ---------------------------------------------------------
 .dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.pub-cache/
+.packages
 .pub/
+.pub-cache/
+.metadata
+
+# Flutter generated docs
+**/doc/api/
+
+# Build outputs
 /build/
+/**/build/
 
-# Symbolication related
+# Flutter plugin registrants and generated files
+**/generated_plugin_registrant.*
+
+# Symbolication & obfuscation
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# ---------------------------------------------------------
+# ANDROID
+# ---------------------------------------------------------
+**/local.properties
+**/.gradle/
+android/.gradle/
+android/*/build/
+android/app/debug
+android/app/profile
+android/app/release
+
+# ---------------------------------------------------------
+# iOS
+# ---------------------------------------------------------
+ios/Pods/
+ios/Flutter/.last_build_id
+ios/Flutter/Flutter.podspec
+**/Runner.xcworkspace
+**/DerivedData/
+ios/Flutter/ephemeral/
+
+# ---------------------------------------------------------
+# MACOS / WINDOWS / LINUX DESKTOP
+# ---------------------------------------------------------
+**/ephemeral/
+**/.plugin_symlinks/
+**/flutter/ephemeral/
+
+# ---------------------------------------------------------
+# WEB
+# ---------------------------------------------------------
+web/.dart_tool/
+web/.flutter-plugins
+web/.flutter-plugins-dependencies
+web/.pub-cache
+web/.pub
+
+# ---------------------------------------------------------
+# LOGS / TEMP / SENSITIVE FILES
+# ---------------------------------------------------------
+*.log
+*.trace
+app_pid_log.txt
+full_logcat.txt
+
+# Keys / credentials
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+*.env
+.env.*
+
+# ---------------------------------------------------------
+# TEST / COVERAGE
+# ---------------------------------------------------------
+.coverage
+coverage/
+lcov.info
+
+# ---------------------------------------------------------
+# PACKAGES / EXAMPLES (auto-generated or unnecessary)
+# ---------------------------------------------------------
+**/example/
+**/example/**/build/
+

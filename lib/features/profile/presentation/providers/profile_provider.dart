@@ -1,19 +1,21 @@
+// lib/features/profile/presentation/providers/profile_provider.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/profile_repository.dart';
 import '../../../auth/data/auth_repository.dart';
-import '../../../auth/data/models/student_model.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../auth/data/models/student_model.dart';
 
-/// Provider untuk ProfileRepository
+/// Provider Repository
 final profileRepositoryProvider = Provider((ref) {
-  final apiClient = ref.read(apiClientProvider);  
+  final apiClient = ref.read(apiClientProvider);
   final authRepo = ref.read(authRepositoryProvider);
   return ProfileRepository(apiClient, authRepo);
 });
 
-/// Provider Future untuk ambil data profile
+/// FutureProvider GET profile
 final profileDataProvider = FutureProvider<StudentModel>((ref) async {
-  final profileRepo = ref.read(profileRepositoryProvider);
-  final data = await profileRepo.getProfile();
-  return StudentModel.fromJson(data);
+  final repo = ref.read(profileRepositoryProvider);
+  final raw = await repo.getProfile();
+
+  return StudentModel.fromJson(raw);
 });
