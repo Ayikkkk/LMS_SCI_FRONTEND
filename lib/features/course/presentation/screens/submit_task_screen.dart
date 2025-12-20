@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
+
 import '../../data/task_repository.dart';
-import 'package:lms_frontend/features/auth/domain/auth_notifier.dart';
-import 'package:lms_frontend/features/auth/data/auth_repository.dart';
 
 class SubmitTaskScreen extends ConsumerStatefulWidget {
-  final int assignmentId; // post_id dari tugas
+  final int assignmentId;
   final String assignmentTitle;
   final bool isSubmitted;
 
@@ -31,11 +30,13 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
   @override
   void initState() {
     super.initState();
-    // Set dari backend
     _alreadySubmitted = widget.isSubmitted;
   }
 
-  /// Pilih file
+  // =============================================================
+  // PICK FILE
+  // =============================================================
+
   Future<void> _pickFile() async {
     if (_alreadySubmitted) {
       _showSnackbar('Kamu sudah mengirim tugas ini.', Colors.orange);
@@ -57,7 +58,10 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
     }
   }
 
-  /// Submit tugas
+  // =============================================================
+  // SUBMIT TASK
+  // =============================================================
+
   Future<void> _submitTask() async {
     if (_alreadySubmitted) {
       _showSnackbar('Kamu sudah mengirim tugas ini sebelumnya.', Colors.orange);
@@ -68,6 +72,7 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
       _showSnackbar('Mohon pilih file tugas terlebih dahulu.', Colors.orange);
       return;
     }
+
     if (_descriptionController.text.trim().isEmpty) {
       _showSnackbar('Deskripsi tidak boleh kosong.', Colors.orange);
       return;
@@ -77,44 +82,35 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
 
     final repo = ref.read(taskRepositoryProvider);
 
-// ambil token dari AuthRepository (cara baru)
-    final authToken = await ref.read(authRepositoryProvider).getToken();
-
-    if (authToken == null) {
-      _showSnackbar('Autentikasi gagal. Silakan login ulang.', Colors.red);
-      setState(() => _isLoading = false);
-      return;
-    }
-
     final result = await repo.submitTask(
       assignmentId: widget.assignmentId,
       description: _descriptionController.text.trim(),
       file: _pickedFile!,
-      authToken: authToken,
     );
 
     setState(() => _isLoading = false);
 
     if (result == null) {
-      // sukses submit
       _showSnackbar('✅ Tugas berhasil dikirim!', Colors.green);
-
       setState(() => _alreadySubmitted = true);
 
       if (mounted) Navigator.of(context).pop(true);
       return;
     }
 
-    // Jika backend kirim pesan “sudah mengirim”
-    if (result.toLowerCase().contains('sudah') || result.contains('409')) {
+    if (result.toLowerCase().contains('sudah') ||
+        result.contains('409')) {
       setState(() => _alreadySubmitted = true);
       _showSnackbar('Kamu sudah mengirim tugas ini sebelumnya.', Colors.orange);
       return;
     }
 
-    // Error lain
     _showSnackbar(result, Colors.red);
   }
+
+  // =============================================================
+  // UI HELPERS
+  // =============================================================
 
   void _showSnackbar(String message, Color color) {
     if (!mounted) return;
@@ -134,6 +130,10 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
     super.dispose();
   }
 
+  // =============================================================
+  // UI
+  // =============================================================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -146,13 +146,15 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            // Input Deskripsi
+          children: [
+            // Deskripsi
             TextFormField(
               controller: _descriptionController,
+              enabled: !_alreadySubmitted,
+              maxLines: 4,
               decoration: InputDecoration(
                 labelText: 'Deskripsi / Catatan Tambahan',
                 hintText:
@@ -160,14 +162,11 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
-                alignLabelWithHint: true,
               ),
-              maxLines: 4,
-              enabled: !_alreadySubmitted, // otomatis disable
             ),
             const SizedBox(height: 25),
 
-            // Pilih File
+            // File Picker
             Card(
               elevation: 2,
               shape: RoundedRectangleBorder(
@@ -177,7 +176,7 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
                 onTap: (_isLoading || _alreadySubmitted) ? null : _pickFile,
                 borderRadius: BorderRadius.circular(10),
                 child: Padding(
-                  padding: const EdgeInsets.all(15.0),
+                  padding: const EdgeInsets.all(15),
                   child: Row(
                     children: [
                       const Icon(Icons.attach_file,
@@ -187,21 +186,16 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
                         child: _pickedFile == null
                             ? const Text(
                                 'Pilih File Tugas (.pdf, .doc, .jpg, dll.)',
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 16,
-                                ),
+                                style: TextStyle(color: Colors.grey),
                               )
                             : Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     _pickedFile!.name,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                    ),
                                     overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold),
                                   ),
                                   Text(
                                     'Ukuran: ${(_pickedFile!.size / 1024 / 1024).toStringAsFixed(2)} MB',
@@ -222,9 +216,11 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
             ),
             const SizedBox(height: 30),
 
-            // Tombol Submit
+            // Submit Button
             ElevatedButton(
-              onPressed: (_isLoading || _alreadySubmitted) ? null : _submitTask,
+              onPressed: (_isLoading || _alreadySubmitted)
+                  ? null
+                  : _submitTask,
               style: ElevatedButton.styleFrom(
                 backgroundColor: _alreadySubmitted
                     ? Colors.grey
@@ -234,7 +230,6 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
-                elevation: 5,
               ),
               child: _isLoading
                   ? const SizedBox(
@@ -246,7 +241,9 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
                       ),
                     )
                   : Text(
-                      _alreadySubmitted ? 'Tugas Sudah Dikirim' : 'Kirim Tugas',
+                      _alreadySubmitted
+                          ? 'Tugas Sudah Dikirim'
+                          : 'Kirim Tugas',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,

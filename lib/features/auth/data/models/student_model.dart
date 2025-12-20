@@ -36,7 +36,7 @@ class StudentModel {
         ? Map<String, dynamic>.from(json['data'])
         : Map<String, dynamic>.from(json);
 
-    // class name sources: className (camelCase), classroom.name (relation), class_name (snake)
+// class name sources (FIXED)
     String? parsedClassName;
     if (data['className'] != null) {
       parsedClassName = data['className']?.toString();
@@ -44,6 +44,8 @@ class StudentModel {
       parsedClassName = data['classroom']['name']?.toString();
     } else if (data['class_name'] != null) {
       parsedClassName = data['class_name']?.toString();
+    } else if (data['classroom_name'] != null) {
+      parsedClassName = data['classroom_name']?.toString();
     }
 
     // classroom id sources: classroom_id, classroomId
@@ -59,7 +61,9 @@ class StudentModel {
     }
 
     return StudentModel(
-      id: (data['id'] is int) ? data['id'] as int : int.tryParse('${data['id'] ?? 0}') ?? 0,
+      id: (data['id'] is int)
+          ? data['id'] as int
+          : int.tryParse('${data['id'] ?? 0}') ?? 0,
       name: data['name']?.toString() ?? '-',
       username: data['username']?.toString() ?? '-',
       email: data['email']?.toString(),
@@ -68,9 +72,19 @@ class StudentModel {
       nis: data['nis']?.toString(),
       classroomId: parsedClassroomId,
       className: parsedClassName,
-      userId: data['user_id'] is int ? data['user_id'] as int : (data['user_id'] != null ? int.tryParse('${data['user_id']}') : null),
-      serialId: data['serial_id'] is int ? data['serial_id'] as int : (data['serial_id'] != null ? int.tryParse('${data['serial_id']}') : null),
-      guru: data['guru'] is Map ? Guru.fromJson(Map<String, dynamic>.from(data['guru'])) : null,
+      userId: data['user_id'] is int
+          ? data['user_id'] as int
+          : (data['user_id'] != null
+              ? int.tryParse('${data['user_id']}')
+              : null),
+      serialId: data['serial_id'] is int
+          ? data['serial_id'] as int
+          : (data['serial_id'] != null
+              ? int.tryParse('${data['serial_id']}')
+              : null),
+      guru: data['guru'] is Map
+          ? Guru.fromJson(Map<String, dynamic>.from(data['guru']))
+          : null,
     );
   }
 

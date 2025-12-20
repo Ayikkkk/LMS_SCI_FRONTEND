@@ -19,6 +19,7 @@ class AssignmentModel {
   final String? link;
   final String? attachment;
   final String? embed;
+  final String point;
 
   AssignmentModel({
     required this.id,
@@ -31,6 +32,7 @@ class AssignmentModel {
     required this.status,
     required this.statusColor,
     this.studentAttachment,
+    required this.point,
     this.link,
     this.attachment,
     this.embed,
@@ -51,6 +53,13 @@ class AssignmentModel {
     final bool isSubmitted =
         json['is_submitted'] == 1 || json['is_submitted'] == true;
 
+    /// Logika Nilai (Point)
+    // Jika null, 0, atau string kosong, tampilkan "-"
+    String pointDisplay = "-";
+    if (json['point'] != null && json['point'] != 0 && json['point'] != "0") {
+      pointDisplay = json['point'].toString();
+    }
+
     /// File tugas siswa
     String? studentAttachment;
     if (json['student_attachment'] != null &&
@@ -70,7 +79,7 @@ class AssignmentModel {
     Color color;
 
     if (isSubmitted) {
-      status = 'Sudah Mengumpulkan';
+      status = pointDisplay != "-" ? 'Sudah Dinilai' : 'Sudah Mengumpulkan';
       color = Colors.green.shade600;
     } else if (isLate) {
       status = 'Terlambat';
@@ -90,6 +99,7 @@ class AssignmentModel {
       isSubmitted: isSubmitted,
       status: status,
       statusColor: color,
+      point: pointDisplay,
       studentAttachment: studentAttachment,
       link: link,
       attachment: attachment,

@@ -5,48 +5,42 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // ===============================================
-// KONFIGURASI BASE URL API LARAVEL
+// BASE URL API
 // ===============================================
-const String baseUrl = "http://192.168.1.8:8000/api/";
+const String apiHost = "http://192.168.1.8:8000";
+const String apiBaseUrl = "$apiHost/api/";
 
 // ===============================================
-// INISIALISASI DIO (HTTP CLIENT)
+// DIO GLOBAL (API ONLY)
 // ===============================================
-
-final dio = Dio(
+final Dio dio = Dio(
   BaseOptions(
-    baseUrl: baseUrl,
+    baseUrl: apiBaseUrl,
     connectTimeout: const Duration(seconds: 30),
     receiveTimeout: const Duration(seconds: 30),
     headers: {
-      'Content-Type': 'application/json',
       'Accept': 'application/json',
+      'Content-Type': 'application/json',
     },
   ),
 );
 
 // ===============================================
-// INISIALISASI SECURE STORAGE
+// STORAGE TOKEN
 // ===============================================
-
 const FlutterSecureStorage storage = FlutterSecureStorage();
 
-// Memasukkan token ke header Authorization
+// ===============================================
+// LOAD TOKEN KE HEADER
+// ===============================================
 Future<void> initializeDioToken() async {
   final token = await storage.read(key: 'auth_token');
-  if (token != null) {
+  if (token != null && token.isNotEmpty) {
     dio.options.headers['Authorization'] = 'Bearer $token';
-    print("Token loaded into Dio: $token");
-  } else {
-    print("No token found in secure storage.");
   }
 }
 
 // ===============================================
-// PROVIDER API CLIENT (WAJIB!)
+// PROVIDER
 // ===============================================
-
-// Gunakan ini di seluruh aplikasi
-final apiClientProvider = Provider<Dio>((ref) {
-  return dio;
-});
+final apiClientProvider = Provider<Dio>((ref) => dio);

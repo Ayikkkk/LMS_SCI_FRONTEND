@@ -10,7 +10,7 @@ import '../providers/home_provider.dart';
 // Import komponen dari fitur lain
 import '../../../auth/data/models/student_model.dart';
 import '../../../course/presentation/screens/course_screen.dart';
-import '../../../quiz/presentation/lessons_quiz_screen.dart';
+import '../../../quiz/presentation/screens/lessons_quiz_screen.dart';
 import '../../../profile/presentation/screens/profile_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -173,7 +173,7 @@ class _DashboardContent extends ConsumerWidget {
                     .textTheme
                     .headlineSmall
                     ?.copyWith(fontWeight: FontWeight.bold, color: Colors.blueAccent)),
-            Text('Kelas: $className',
+            Text('Kelas: ${student.className ?? 'Tidak diketahui'}',
                 style: Theme.of(context)
                     .textTheme
                     .titleMedium

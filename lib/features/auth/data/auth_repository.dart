@@ -37,7 +37,9 @@ class AuthRepository {
 
       return false;
     } on DioException catch (e) {
-      print("Login Error: ${e.response?.data ?? e.message}");
+      print("LOGIN ERROR STATUS: ${e.response?.statusCode}");
+      print("LOGIN ERROR DATA: ${e.response?.data}");
+      print("LOGIN ERROR MESSAGE: ${e.message}");
       return false;
     }
   }

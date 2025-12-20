@@ -14,8 +14,6 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
-
-
 ```
 lms_frontend
 ├─ .flutter-plugins-dependencies
@@ -28,7 +26,6 @@ lms_frontend
 │  │  ├─ build.gradle.kts
 │  │  └─ src
 │  │     ├─ debug
-│  │     │  └─ AndroidManifest.xml
 │  │     ├─ main
 │  │     │  ├─ AndroidManifest.xml
 │  │     │  ├─ java
@@ -210,6 +207,7 @@ lms_frontend
 │  │  │     ├─ providers
 │  │  │     │  └─ profile_provider.dart
 │  │  │     └─ screens
+│  │  │        ├─ profile_detail_screen.dart
 │  │  │        └─ profile_screen.dart
 │  │  └─ quiz
 │  │     ├─ data
@@ -220,13 +218,14 @@ lms_frontend
 │  │     │  │  └─ question_model.dart
 │  │     │  └─ quiz_notifier.dart
 │  │     └─ presentation
-│  │        ├─ exercise_list_screen.dart
-│  │        ├─ lessons_quiz_screen.dart
 │  │        ├─ providers
 │  │        │  └─ quiz_provider.dart
-│  │        ├─ quiz_remote_screen.dart
-│  │        ├─ quiz_screen.dart
-│  │        └─ quiz_view.dart
+│  │        └─ screens
+│  │           ├─ exercise_list_screen.dart
+│  │           ├─ lessons_quiz_screen.dart
+│  │           ├─ quiz_remote_screen.dart
+│  │           ├─ quiz_screen.dart
+│  │           └─ quiz_view.dart
 │  ├─ main.dart
 │  └─ navigation_service.dart
 ├─ linux

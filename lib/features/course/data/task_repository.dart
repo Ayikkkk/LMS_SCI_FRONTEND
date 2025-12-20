@@ -1,18 +1,34 @@
 import 'dart:io';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
+import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http_parser/http_parser.dart';
 
-const String _baseUrl = 'http://192.168.1.8:8000/api/';
+import '../../../core/network/api_client.dart';
 
-final taskRepositoryProvider = Provider((ref) => TaskRepository());
+// ===============================================
+// PROVIDER
+// ===============================================
+
+final taskRepositoryProvider = Provider<TaskRepository>((ref) {
+  final dio = ref.read(apiClientProvider);
+  return TaskRepository(dio);
+});
+
+// ===============================================
+// REPOSITORY
+// ===============================================
 
 class TaskRepository {
+  final Dio _dio;
+
+  TaskRepository(this._dio);
+
   // =============================================================
   // Helper MIME Type
   // =============================================================
+
   String _guessMimeTypeFromExtension(String fileName) {
     final ext = fileName.split('.').last.toLowerCase();
     switch (ext) {
@@ -44,46 +60,29 @@ class TaskRepository {
     }
   }
 
-  MediaType _safeParseMimeType(String? mimeType,
-      [String defaultType = 'application/octet-stream']) {
-    if (mimeType == null || mimeType.isEmpty) {
-      return MediaType.parse(defaultType);
+  MediaType _safeParseMimeType(String? mimeType) {
+    if (mimeType == null || !mimeType.contains('/')) {
+      return MediaType('application', 'octet-stream');
     }
-
-    final p = mimeType.split('/');
-    if (p.length != 2 || p[0].isEmpty || p[1].isEmpty) {
-      return MediaType.parse(defaultType);
-    }
-
-    return MediaType(p[0], p[1]);
+    final parts = mimeType.split('/');
+    return MediaType(parts[0], parts[1]);
   }
 
   // =============================================================
-  //  CHECK SUBMISSION STATUS
+  // CHECK SUBMISSION STATUS
   // =============================================================
-  Future<bool> checkSubmission(int assignmentId, String authToken) async {
-    final url = Uri.parse('${_baseUrl}student/assignment/$assignmentId/status');
 
+  Future<bool> checkSubmission(int assignmentId) async {
     try {
-      final res = await http.get(
-        url,
-        headers: {
-          'Authorization': 'Bearer $authToken',
-        },
+      final response = await _dio.get(
+        'student/assignment/$assignmentId/status',
       );
 
-      if (res.statusCode == 200) {
-        final body = res.body;
-
-        // Contoh response backend:
-        // { "is_submitted": true }
-
-        return body.contains('true');
-      }
-
-      return false; // default: dianggap belum mengumpulkan
-    } catch (e) {
-      print("⚠️ Error checkSubmission: $e");
+      // Contoh response:
+      // { "is_submitted": true }
+      return response.data['is_submitted'] == true;
+    } on DioException catch (e) {
+      debugPrint('❌ checkSubmission error: ${e.response?.data}');
       return false;
     }
   }
@@ -91,62 +90,61 @@ class TaskRepository {
   // =============================================================
   // SUBMIT TASK
   // =============================================================
+
   Future<String?> submitTask({
     required int assignmentId,
     required String description,
     required PlatformFile file,
-    required String authToken,
   }) async {
-    final url = Uri.parse('${_baseUrl}student/submit-task');
-    final request = http.MultipartRequest('POST', url);
-
-    request.headers['Authorization'] = 'Bearer $authToken';
-
-    request.fields['post_id'] = assignmentId.toString();
-    request.fields['description'] = description;
-
     try {
       final mime = _guessMimeTypeFromExtension(file.name);
-      final safeMime = _safeParseMimeType(mime);
+      final mediaType = _safeParseMimeType(mime);
 
-      http.MultipartFile attachment;
+      MultipartFile attachment;
 
-      if (kIsWeb || file.path == null) {
+      if (kIsWeb) {
         if (file.bytes == null) {
           return 'File tidak memiliki bytes.';
         }
 
-        attachment = http.MultipartFile.fromBytes(
-          'attachment',
+        attachment = MultipartFile.fromBytes(
           file.bytes!,
           filename: file.name,
-          contentType: safeMime,
+          contentType: mediaType,
         );
       } else {
-        attachment = await http.MultipartFile.fromPath(
-          'attachment',
+        if (file.path == null) {
+          return 'Path file tidak ditemukan.';
+        }
+
+        attachment = await MultipartFile.fromFile(
           file.path!,
           filename: file.name,
-          contentType: safeMime,
+          contentType: mediaType,
         );
       }
 
-      request.files.add(attachment);
-    } catch (e) {
-      return 'Gagal menyiapkan file: $e';
-    }
+      final formData = FormData.fromMap({
+        'post_id': assignmentId,
+        'description': description,
+        'attachment': attachment,
+      });
 
-    try {
-      final streamed = await request.send();
-      final response = await http.Response.fromStream(streamed);
+      final response = await _dio.post(
+        'student/submit-task',
+        data: formData,
+      );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return null; // sukses
-      } else {
-        return 'Server Error (${response.statusCode}): ${response.body}';
       }
+
+      return 'Server error (${response.statusCode})';
+    } on DioException catch (e) {
+      final msg = e.response?.data.toString() ?? e.message;
+      return 'Gagal submit: $msg';
     } catch (e) {
-      return 'Koneksi gagal: $e';
+      return 'Error tidak diketahui: $e';
     }
   }
 }

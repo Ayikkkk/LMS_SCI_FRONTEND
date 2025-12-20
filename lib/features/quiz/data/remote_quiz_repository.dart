@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
 import '../domain/models/question_model.dart';
-import '../data/quiz_repository.dart'; // IQuizRepository
+import 'quiz_repository.dart';
 
 final remoteQuizRepositoryProvider =
     Provider.autoDispose<RemoteQuizRepository>((ref) {
@@ -20,109 +20,118 @@ class RemoteQuizRepository implements IQuizRepository {
   RemoteQuizRepository({required this.dio});
 
   String _stripHtmlTags(String input) {
-    // Sederhana: hapus tag HTML seperti <p>, <strong>, dsb.
     return input.replaceAll(RegExp(r'<[^>]*>'), '').trim();
   }
 
+  // ================= FETCH QUIZ =================
   @override
-  Future<List<QuestionModel>> fetchQuiz({required String exerciseId}) async {
-    final response = await dio.get("student/exercises/$exerciseId");
+  Future<List<QuestionModel>> fetchQuiz({
+    required String exerciseId,
+  }) async {
+    final response = await dio.get(
+      'student/exercises/$exerciseId',
+    );
 
-    // Pastikan struktur yang diterima:
-    // response.data['data'] memiliki field 'items' -> list soal
     final data = response.data['data'];
     final items = data['items'] ?? [];
 
-    List<QuestionModel> questions = [];
+    final List<QuestionModel> questions = [];
 
-    for (var it in items) {
-      // Ambil teks soal (hilangkan tag HTML sederhana jika ada)
-      final rawQuestion = it['question']?.toString() ?? '';
-      final questionText = _stripHtmlTags(rawQuestion);
+    for (final it in items) {
+      final questionText = _stripHtmlTags(it['question']?.toString() ?? '');
 
       List<OptionModel> options = [];
 
-      // 1) Jika ada kolom 'selection' yang berisi JSON array => parse itu
+      // selection JSON
       if (it['selection'] != null) {
         try {
-          final selRaw = it['selection'];
-          final parsedSelections = (selRaw is String) ? jsonDecode(selRaw) : selRaw;
+          final raw = it['selection'];
+          final parsed = raw is String ? jsonDecode(raw) : raw;
 
-          if (parsedSelections is List) {
-            for (int i = 0; i < parsedSelections.length; i++) {
-              final rawOpt = parsedSelections[i]?.toString() ?? '';
-              final optText = _stripHtmlTags(rawOpt);
-
-              // id option -> a, b, c, d ...
-              final id = String.fromCharCode(97 + i); // 0->a, 1->b, ...
-              options.add(OptionModel(id: id, text: optText));
+          if (parsed is List) {
+            for (int i = 0; i < parsed.length; i++) {
+              options.add(
+                OptionModel(
+                  id: String.fromCharCode(97 + i), // a,b,c,d
+                  text: _stripHtmlTags(parsed[i].toString()),
+                ),
+              );
             }
           }
-        } catch (e) {
-          // jika parse gagal, ignore dan coba fallback ke option_a...
-          // debug print optional
-        }
+        } catch (_) {}
       }
 
-      // 2) Fallback: jika tidak ada selection, coba ambil option_a..option_d
+      // fallback option_a..d
       if (options.isEmpty) {
         final rawOptions = [
           it['option_a'],
           it['option_b'],
           it['option_c'],
-          it['option_d']
+          it['option_d'],
         ];
 
-        for (var i = 0; i < rawOptions.length; i++) {
-          final r = rawOptions[i];
-          if (r != null) {
-            final text = _stripHtmlTags(r.toString());
-            final id = String.fromCharCode(97 + i);
-            options.add(OptionModel(id: id, text: text));
+        for (int i = 0; i < rawOptions.length; i++) {
+          if (rawOptions[i] != null) {
+            options.add(
+              OptionModel(
+                id: String.fromCharCode(97 + i),
+                text: _stripHtmlTags(rawOptions[i].toString()),
+              ),
+            );
           }
         }
       }
 
-      // 3) Ambil kunci jawaban dari kolom 'answer'
-      String? correctId;
-      if (it['answer'] != null) {
-        try {
-          final ansRaw = it['answer'];
-          final parsedAnswer = (ansRaw is String) ? jsonDecode(ansRaw) : ansRaw;
-
-          if (parsedAnswer is List && parsedAnswer.isNotEmpty) {
-            // sering disimpan seperti ["a"]
-            correctId = parsedAnswer[0]?.toString();
-          } else if (parsedAnswer is String) {
-            correctId = parsedAnswer;
-          } else if (parsedAnswer != null) {
-            correctId = parsedAnswer.toString();
-          }
-        } catch (e) {
-          // fallback: jika answer simple string seperti "a"
-          correctId = it['answer']?.toString();
-        }
-      } else {
-        // juga coba field 'answer' plain
-        correctId = it['answer']?.toString();
-      }
-
-      // 4) time limit (jika ada)
-      int? timeLimit;
-      if (it['time_limit'] != null) {
-        timeLimit = int.tryParse(it['time_limit'].toString());
-      }
-
-      // Tambah question model
-      questions.add(QuestionModel(
-        id: it['id'].toString(),
-        question: questionText,
-        options: options,
-        correctOptionId: correctId,
-        timeLimitSeconds: timeLimit,
-      ));
+      questions.add(
+        QuestionModel(
+          id: it['id'].toString(),
+          question: questionText,
+          options: options,
+          correctOptionId: null, // backend yang menilai
+        ),
+      );
     }
 
     return questions;
+  }
+
+  // ================= SUBMIT QUIZ =================
+  @override
+  Future<void> submitQuiz({
+    required String exerciseId,
+    required Map<String, String> answers,
+  }) async {
+    await dio.post(
+      'student/exercises/$exerciseId/submit',
+      data: {
+        'answers': answers,
+      },
+    );
+  }
+
+  // ================= GET RESULT =================
+  @override
+  Future<int?> getResultScore({
+    required String exerciseId,
+  }) async {
+    try {
+      final res = await dio.get(
+        'student/exercises/$exerciseId/result',
+      );
+
+      final data = res.data['data'];
+      if (data == null) return null;
+
+      final rawScore = data['exercise_point'];
+
+      // 🔑 HANDLE SEMUA KEMUNGKINAN TIPE
+      if (rawScore is int) return rawScore;
+      if (rawScore is double) return rawScore.toInt();
+      if (rawScore is String) return int.tryParse(rawScore);
+
+      return null;
+    } catch (e) {
+      return null;
+    }
   }
 }
