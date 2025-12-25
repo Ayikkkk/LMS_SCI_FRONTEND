@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ===============================================
 // BASE URL API
 // ===============================================
-const String apiHost = "http://192.168.1.8:8000";
+const String apiHost = "http://192.168.110.45:8000";
 const String apiBaseUrl = "$apiHost/api/";
 
 // ===============================================

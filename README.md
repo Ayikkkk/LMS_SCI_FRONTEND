@@ -14,6 +14,8 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+
 ```
 lms_frontend
 ├─ .flutter-plugins-dependencies
@@ -200,6 +202,10 @@ lms_frontend
 │  │  │     │  └─ laporan_provider.dart
 │  │  │     └─ screens
 │  │  │        └─ laporan_harian_screen.dart
+│  │  ├─ online_class
+│  │  │  └─ presentation
+│  │  │     └─ screens
+│  │  │        └─ online_class_screen.dart
 │  │  ├─ profile
 │  │  │  ├─ data
 │  │  │  │  └─ profile_repository.dart

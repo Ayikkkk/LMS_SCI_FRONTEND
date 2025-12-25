@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_client.dart';
 import '../models/dashboard_model.dart';
-import '../../../auth/data/models/student_model.dart';
 
 // ===============================================
 // PROVIDER
@@ -29,37 +28,16 @@ class HomeRepository {
     try {
       final response = await _dio.get('student/dashboard');
 
-      final Map<String, dynamic> body =
-          Map<String, dynamic>.from(response.data);
-
+      // Ambil langsung bagian "data" dari API
       final Map<String, dynamic> data =
-          Map<String, dynamic>.from(body['data'] ?? {});
+          Map<String, dynamic>.from(response.data['data'] ?? {});
 
-      // ================= STUDENT =================
-      final Map<String, dynamic> studentJson =
-          Map<String, dynamic>.from(data['student'] ?? {});
-
-      final student = StudentModel.fromJson(studentJson);
-
-      // ================= STATS =================
-      final stats =
-          Stats.fromJson(Map<String, dynamic>.from(data['stats'] ?? {}));
-
-      // ================= MEETINGS =================
-      final List<OnlineMeetingModel> meetings =
-          (data['meetings_today'] as List? ?? [])
-              .map((e) =>
-                  OnlineMeetingModel.fromJson(Map<String, dynamic>.from(e)))
-              .toList();
-
-      return DashboardModel(
-        student: student,
-        stats: stats,
-        meetingsToday: meetings,
-      );
+      // Delegasikan parsing ke DashboardModel
+      return DashboardModel.fromJson(data);
     } on DioException catch (e) {
-      final msg = e.response?.data.toString() ?? e.message;
-      throw Exception('Dashboard API Error: $msg');
+      final message =
+          e.response?.data['message'] ?? e.message ?? 'Unknown error';
+      throw Exception('Dashboard API Error: $message');
     } catch (e) {
       throw Exception('Dashboard Parsing Error: $e');
     }
