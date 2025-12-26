@@ -4,15 +4,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// ===============================================
-// BASE URL API
-// ===============================================
-const String apiHost = "http://192.168.110.45:8000";
+const String apiHost = "http://192.168.43.182:8000";
 const String apiBaseUrl = "$apiHost/api/";
 
-// ===============================================
-// DIO GLOBAL (API ONLY)
-// ===============================================
 final Dio dio = Dio(
   BaseOptions(
     baseUrl: apiBaseUrl,
@@ -20,27 +14,30 @@ final Dio dio = Dio(
     receiveTimeout: const Duration(seconds: 30),
     headers: {
       'Accept': 'application/json',
-      'Content-Type': 'application/json',
     },
   ),
 );
 
-// ===============================================
-// STORAGE TOKEN
-// ===============================================
 const FlutterSecureStorage storage = FlutterSecureStorage();
 
-// ===============================================
-// LOAD TOKEN KE HEADER
-// ===============================================
-Future<void> initializeDioToken() async {
-  final token = await storage.read(key: 'auth_token');
-  if (token != null && token.isNotEmpty) {
-    dio.options.headers['Authorization'] = 'Bearer $token';
+// 🚀 TOKEN INTERCEPTOR
+class TokenInterceptor extends Interceptor {
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+    final token = await storage.read(key: 'auth_token');
+    if (token != null && token.isNotEmpty) {
+      options.headers['Authorization'] = 'Bearer $token';
+    }
+    return handler.next(options);
   }
 }
 
-// ===============================================
-// PROVIDER
-// ===============================================
-final apiClientProvider = Provider<Dio>((ref) => dio);
+// 🔥 Pasang interceptor saat init
+Future<void> configureDio() async {
+  dio.interceptors.clear();
+  dio.interceptors.add(TokenInterceptor());
+}
+
+final apiClientProvider = Provider<Dio>((ref) {
+  return dio;
+});

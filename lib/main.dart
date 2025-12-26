@@ -1,9 +1,12 @@
 // lib/main.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// PROVIDERS
+// INIT
 import 'core/init/app_initializer.dart';
+
+// PROVIDERS
 import 'features/auth/data/repository/onboarding_repository.dart';
 import 'features/auth/domain/auth_notifier.dart';
 
@@ -12,7 +15,7 @@ import 'features/auth/presentation/onboarding_screen.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/home/presentation/screens/home_screen.dart';
 
-// Redirector
+// Redirect Middleware
 import 'auth_redirector.dart';
 
 // Navigation service (navigatorKey)
@@ -28,45 +31,29 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Tunggu semua inisialisasi sebelum app benar-benar jalan
     final init = ref.watch(appInitializerProvider);
 
     return init.when(
-      loading: () => const MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(
-          body: Center(child: CircularProgressIndicator()),
-        ),
-      ),
-      error: (err, _) => MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(
-          body: Center(child: Text("Init Error: $err")),
-        ),
-      ),
-      data: (_) {
-        return AuthRedirector(
-          child: MaterialApp(
-            debugShowCheckedModeBanner: false,
-            title: 'LMS Student',
-            theme: ThemeData(
-              colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-              useMaterial3: true,
-            ),
+      loading: () => const _AppLoadingView(),
+      error: (err, _) => _InitErrorView(error: err.toString()),
 
-            // PENTING: pasang navigatorKey di sini
-            navigatorKey: NavigationService.instance.navigatorKey,
-
-            routes: {
-              '/login': (_) => const LoginScreen(),
-              '/home': (_) => const HomeScreen(),
-              '/onboarding': (_) => const OnboardingScreen(),
-            },
-
-            home: _buildHomeByState(ref),
+      data: (_) => AuthRedirector(
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'LMS Student',
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
+            useMaterial3: true,
           ),
-        );
-      },
+          navigatorKey: NavigationService.instance.navigatorKey,
+          home: _buildHomeByState(ref),
+          routes: {
+            '/login': (_) => const LoginScreen(),
+            '/home': (_) => const HomeScreen(),
+            '/onboarding': (_) => const OnboardingScreen(),
+          },
+        ),
+      ),
     );
   }
 
@@ -75,27 +62,57 @@ class MyApp extends ConsumerWidget {
     final authStatus = ref.watch(authNotifierProvider);
 
     return onboardingStatus.when(
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
-      error: (err, _) => Scaffold(
-        body: Center(child: Text("Error: $err")),
-      ),
+      loading: () => const _AppLoadingView(),
+      error: (err, _) => _InitErrorView(error: err.toString()),
+
       data: (hasSeen) {
         if (!hasSeen) return const OnboardingScreen();
 
-        if (authStatus == AuthStatus.unknown) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+        switch (authStatus) {
+          case AuthStatus.authenticated:
+            return const HomeScreen();
+          case AuthStatus.unauthenticated:
+            return const LoginScreen();
+          default:
+            return const _AppLoadingView();
         }
-
-        if (authStatus == AuthStatus.authenticated) {
-          return const HomeScreen();
-        }
-
-        return const LoginScreen();
       },
+    );
+  }
+}
+
+// ======================
+// UI KOMPONEN LOADING & ERROR
+// ======================
+
+class _AppLoadingView extends StatelessWidget {
+  const _AppLoadingView();
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+    );
+  }
+}
+
+class _InitErrorView extends StatelessWidget {
+  final String error;
+  const _InitErrorView({required this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        body: Center(
+          child: Text('Init Error: $error',
+              style: const TextStyle(color: Colors.red)),
+        ),
+      ),
     );
   }
 }

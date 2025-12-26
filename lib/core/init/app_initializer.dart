@@ -3,14 +3,16 @@ import 'package:intl/date_symbol_data_local.dart';
 import '../network/api_client.dart';
 
 final appInitializerProvider = FutureProvider<void>((ref) async {
-  // Inisialisasi token dio
-  await initializeDioToken();
-
-  // Inisialisasi locale
   try {
+    // 🚀 Inisialisasi interceptor token DIO
+    await configureDio();
+
+    // 🌍 Inisialisasi format tanggal lokal Indonesia
     await initializeDateFormatting('id_ID', null);
-  } catch (e) {
-    print("Locale init gagal: $e");
+
+    print("🔥 App initialization completed");
+  } catch (e, s) {
+    print("❌ Error during app initialization: $e");
+    print(s);
   }
 });
- 
