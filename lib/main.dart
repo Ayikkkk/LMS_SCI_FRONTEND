@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'scaffold_messenger_key.dart';
 
 // INIT
 import 'core/init/app_initializer.dart';
@@ -45,6 +46,7 @@ class MyApp extends ConsumerWidget {
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
             useMaterial3: true,
           ),
+          scaffoldMessengerKey: scaffoldMessengerKey,
           navigatorKey: NavigationService.instance.navigatorKey,
           home: _buildHomeByState(ref),
           routes: {

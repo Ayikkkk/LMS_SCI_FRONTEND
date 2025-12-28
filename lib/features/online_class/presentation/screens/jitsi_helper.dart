@@ -1,37 +1,53 @@
 import 'package:jitsi_meet_flutter_sdk/jitsi_meet_flutter_sdk.dart';
 
+typedef OnMeetingLeft = Future<void> Function();
+
 class JitsiHelper {
-  static final _jitsiMeet = JitsiMeet();
+  static final JitsiMeet _jitsiMeet = JitsiMeet();
 
   static Future<void> joinMeeting({
     required String room,
     required String displayName,
-    Function()? onLeft,
+    OnMeetingLeft? onMeetingLeft,
   }) async {
-
     final options = JitsiMeetConferenceOptions(
       room: room,
-      userInfo: JitsiMeetUserInfo(displayName: displayName),
-
+      userInfo: JitsiMeetUserInfo(
+        displayName: displayName,
+      ),
       configOverrides: {
-        "disableModeratorIndicator": true,
         "startWithAudioMuted": true,
         "startWithVideoMuted": true,
-        "disableModerator": true,
         "prejoinPageEnabled": false,
       },
       featureFlags: {
-        "kick-out.enabled": false,
-        "mute-everyone.enabled": false,
         "invite.enabled": false,
+        "kick-out.enabled": false,
         "recording.enabled": false,
         "live-streaming.enabled": false,
       },
     );
 
-    // ⬇️ ketika meeting UI ditutup → dianggap keluar meeting
-    await _jitsiMeet.join(options);
+    final listener = JitsiMeetEventListener(
+      conferenceJoined: (url) {
+        print("Jitsi conference joined: $url");
+      },
+      conferenceTerminated: (url, error) async {
+        print("Jitsi conference terminated");
+        if (onMeetingLeft != null) {
+          await onMeetingLeft();
+        }
+      },
+    );
 
-    if (onLeft != null) onLeft();
+    // ✅ INI YANG BENAR DI SDK 10.3.0
+    await _jitsiMeet.join(
+      options,
+      listener,
+    );
+  }
+
+  static Future<void> leaveMeeting() async {
+    await _jitsiMeet.hangUp();
   }
 }
