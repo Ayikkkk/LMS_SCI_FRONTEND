@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../domain/providers/course_providers.dart';
-import '../../domain/models/assignment_model.dart';
-import '../../domain/models/course_material_model.dart';
+import '../../data/models/assignment_model.dart';
+import '../../data/models/course_material_model.dart';
 import 'material_detail_screen.dart';
 import 'assignment_detail_screen.dart';
 

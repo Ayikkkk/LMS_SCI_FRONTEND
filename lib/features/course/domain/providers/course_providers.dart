@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/course_repository.dart';
+import '../../data/repository/course_repository.dart';
 
-import '../models/assignment_model.dart';
-import '../models/course_material_model.dart';
+import '../../data/models/assignment_model.dart';
+import '../../data/models/course_material_model.dart';
 
 
 // Provider untuk data daftar materi

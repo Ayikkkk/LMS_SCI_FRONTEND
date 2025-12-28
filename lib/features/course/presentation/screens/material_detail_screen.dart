@@ -1,62 +1,44 @@
+// lib/features/course/presentation/screens/material_detail_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../../core/network/api_client.dart';
-import '../../domain/models/course_material_model.dart';
+import '../../data/models/course_material_model.dart';
 import '../../domain/providers/course_providers.dart';
 
-/// =================================================
-/// BACKEND CONFIG (REAL SETUP)
-/// =================================================
-/// API   : http://192.168.1.10:8000/api/
-/// FILE  : http://192.168.1.10:8000/storage/
-/// =================================================
+// KOMENTAR
+import '../../domain/providers/comment_provider.dart';
+import '../../presentation/widgets/comment_list_widget.dart';
+import '../../presentation/widgets/add_comment_field.dart';
+
+// DATA SISWA LOGIN
+import '../../../profile/presentation/providers/profile_provider.dart';
 
 String resolveFileUrl(String path) {
   if (path.startsWith('http')) return path;
   return '$apiHost/storage/${path.replaceAll(RegExp(r'^/+'), '')}';
 }
 
-/// ===============================================
-/// UTIL: OPEN URL VIA SYSTEM (ANDROID STABLE)
-/// NOTE:
-/// - TANPA canLaunchUrl (BUGGY DI MIUI)
-/// - LANGSUNG launchUrl + try-catch
-/// ===============================================
 Future<void> _launchExternalUrl(String url, BuildContext context) async {
   try {
-    final uri = Uri.parse(url.trim());
-
-    await launchUrl(
-      uri,
-      mode: LaunchMode.externalApplication,
-    );
-  } catch (e) {
+    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  } catch (_) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Tidak dapat membuka file'),
-          backgroundColor: Colors.red,
-        ),
+        const SnackBar(content: Text('Tidak dapat membuka file')),
       );
     }
   }
 }
 
-/// ===============================================
-/// WIDGET: EXTERNAL LINK
-/// ===============================================
 class ExternalLinkWidget extends StatelessWidget {
   final String url;
   final String label;
 
-  const ExternalLinkWidget({
-    super.key,
-    required this.url,
-    required this.label,
-  });
+  const ExternalLinkWidget({super.key, required this.url, required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -64,17 +46,11 @@ class ExternalLinkWidget extends StatelessWidget {
       icon: const Icon(Icons.link),
       label: Text(label),
       onPressed: () => _launchExternalUrl(url, context),
-      style: ElevatedButton.styleFrom(
-        minimumSize: const Size(double.infinity, 50),
-      ),
+      style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
     );
   }
 }
 
-/// ===============================================
-/// WIDGET: FILE ATTACHMENT
-/// Download via Chrome / Download Manager
-/// ===============================================
 class AttachmentFileWidget extends StatelessWidget {
   final String path;
   final String fileType;
@@ -87,46 +63,18 @@ class AttachmentFileWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final icon = fileType == 'pdf' ? Icons.picture_as_pdf : Icons.attach_file;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'File Lampiran:',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        ElevatedButton.icon(
-          icon: Icon(icon),
-          label: Text('Unduh File (${fileType.toUpperCase()})'),
-          style: ElevatedButton.styleFrom(
-            minimumSize: const Size(double.infinity, 50),
-          ),
-          onPressed: () async {
-            final url = resolveFileUrl(path);
-            await _launchExternalUrl(url, context);
-
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'File sedang diunduh. Cek folder Download.',
-                  ),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            }
-          },
-        ),
-      ],
-    );
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text("Lampiran:", style: TextStyle(fontWeight: FontWeight.bold)),
+      const SizedBox(height: 8),
+      ElevatedButton.icon(
+        icon: const Icon(Icons.attach_file),
+        label: Text("Unduh File (${fileType.toUpperCase()})"),
+        onPressed: () => _launchExternalUrl(resolveFileUrl(path), context),
+      ),
+    ]);
   }
 }
 
-/// ===============================================
-/// WIDGET: VIDEO EMBED
-/// ===============================================
 class VideoEmbedWidget extends StatefulWidget {
   final String embedCode;
 
@@ -143,14 +91,8 @@ class _VideoEmbedWidgetState extends State<VideoEmbedWidget> {
   @override
   void initState() {
     super.initState();
-
     final regex = RegExp('src=["\']([^"\']+)["\']');
-    final match = regex.firstMatch(widget.embedCode);
-
-    _url = match?.group(1) ??
-        (Uri.tryParse(widget.embedCode)?.hasAbsolutePath == true
-            ? widget.embedCode
-            : null);
+    _url = regex.firstMatch(widget.embedCode)?.group(1);
 
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted);
@@ -163,10 +105,7 @@ class _VideoEmbedWidgetState extends State<VideoEmbedWidget> {
   @override
   Widget build(BuildContext context) {
     if (_url == null) {
-      return const Text(
-        'Embed video tidak valid',
-        style: TextStyle(color: Colors.red),
-      );
+      return const Text('Embed tidak valid', style: TextStyle(color: Colors.red));
     }
 
     return AspectRatio(
@@ -176,17 +115,48 @@ class _VideoEmbedWidgetState extends State<VideoEmbedWidget> {
   }
 }
 
-/// ===============================================
-/// SCREEN: MATERIAL DETAIL
-/// ===============================================
-class MaterialDetailScreen extends ConsumerWidget {
+// ====================================
+// 🔥 MAIN SCREEN MATERIAL DETAIL
+// ====================================
+class MaterialDetailScreen extends ConsumerStatefulWidget {
   final int materialId;
-
   const MaterialDetailScreen({super.key, required this.materialId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final asyncMaterial = ref.watch(materialDetailProvider(materialId));
+  ConsumerState<MaterialDetailScreen> createState() =>
+      _MaterialDetailScreenState();
+}
+
+class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen> {
+  int? replyToCommentId; // Track mode reply
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(commentProvider.notifier).loadComments(widget.materialId);
+    });
+  }
+
+  // ⬇️ saat klik tombol "Balas"
+  void startReply(int commentId) {
+    setState(() {
+      replyToCommentId = commentId;
+    });
+  }
+
+  // ⬇️ saat klik tombol batal reply
+  void cancelReply() {
+    setState(() {
+      replyToCommentId = null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final asyncMaterial =
+        ref.watch(materialDetailProvider(widget.materialId));
+    final student = ref.watch(studentProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Detail Materi')),
@@ -194,77 +164,74 @@ class MaterialDetailScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (CourseMaterialModel item) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.title,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+          return Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(item.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                    Text(item.subjectName, style: TextStyle(color: Colors.grey.shade600)),
+                    const Divider(),
+
+                    if (item.link?.isNotEmpty == true)
+                      ExternalLinkWidget(url: item.link!, label: "Buka Tautan"),
+
+                    if (item.attachment?.isNotEmpty == true)
+                      AttachmentFileWidget(
+                          path: item.attachment!,
+                          fileType: item.attachment!.split('.').last),
+
+                    if (item.embed?.isNotEmpty == true) ...[
+                      const SizedBox(height: 24),
+                      VideoEmbedWidget(embedCode: item.embed!),
+                    ],
+
+                    const SizedBox(height: 20),
+                    const Text("Deskripsi", style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(item.description ?? "-"),
+
+                    const SizedBox(height: 30),
+                    const Text("Komentar", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 6),
+
+                    if (student == null)
+                      const Center(child: CircularProgressIndicator())
+                    else
+                      CommentListWidget(
+                        postId: item.id,
+                        currentUser: student,
+                        onReplySelected: startReply, // ⬅️ penting!
+                      ),
+                  ]),
+                ),
+              ),
+
+              // ============================
+              // INPUT KOMENTAR / BALAS
+              // ============================
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 6,
+                      offset: Offset(0, -3),
+                    )
+                  ],
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: AddCommentField(
+                    postId: item.id,
+                    commentId: replyToCommentId,
+                    onCancelReply: cancelReply,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  item.subjectName,
-                  style: TextStyle(color: Colors.grey.shade600),
-                ),
-                const Divider(height: 32),
-                if (item.link?.isNotEmpty == true) ...[
-                  const SizedBox(height: 20),
-
-                  // ====== JUDUL LINK ======
-                  const Text(
-                    'Link Materi',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  ExternalLinkWidget(
-                    url: item.link!,
-                    label: 'Buka Tautan',
-                  ),
-                ],
-                if (item.attachment?.isNotEmpty == true) ...[
-                  const SizedBox(height: 16),
-                  AttachmentFileWidget(
-                    path: item.attachment!,
-                    fileType: item.attachment!.split('.').last.toLowerCase(),
-                  ),
-                ],
-                if (item.embed?.isNotEmpty == true) ...[
-                  const SizedBox(height: 24),
-                  // ====== JUDUL KONTEN VIDEO ======
-                  const Text(
-                    'Konten Materi',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  VideoEmbedWidget(embedCode: item.embed!),
-                ],
-                const SizedBox(height: 24),
-                const Text(
-                  'Deskripsi',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(item.description ?? '-'),
-              ],
-            ),
+              )
+            ],
           );
         },
       ),

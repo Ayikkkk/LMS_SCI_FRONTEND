@@ -6,6 +6,7 @@ import 'scaffold_messenger_key.dart';
 
 // INIT
 import 'core/init/app_initializer.dart';
+import 'package:timeago/timeago.dart' as timeago;
 
 // PROVIDERS
 import 'features/auth/data/repository/onboarding_repository.dart';
@@ -19,11 +20,15 @@ import 'features/home/presentation/screens/home_screen.dart';
 // Redirect Middleware
 import 'auth_redirector.dart';
 
-// Navigation service (navigatorKey)
+// Navigation service
 import 'navigation_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 🔥 Set bahasa Indonesia untuk timeago
+  timeago.setLocaleMessages('id', timeago.IdMessages());
+
   runApp(const ProviderScope(child: MyApp()));
 }
 
@@ -84,7 +89,7 @@ class MyApp extends ConsumerWidget {
 }
 
 // ======================
-// UI KOMPONEN LOADING & ERROR
+// UI LOADING & ERROR
 // ======================
 
 class _AppLoadingView extends StatelessWidget {
@@ -111,8 +116,10 @@ class _InitErrorView extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       home: Scaffold(
         body: Center(
-          child: Text('Init Error: $error',
-              style: const TextStyle(color: Colors.red)),
+          child: Text(
+            'Init Error: $error',
+            style: const TextStyle(color: Colors.red),
+          ),
         ),
       ),
     );

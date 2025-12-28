@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 
-import '../../data/task_repository.dart';
+import '../../data/repository/task_repository.dart';
 
 class SubmitTaskScreen extends ConsumerStatefulWidget {
   final int assignmentId;

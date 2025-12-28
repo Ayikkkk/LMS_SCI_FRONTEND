@@ -5,6 +5,7 @@ import '../data/auth_repository.dart';
 import '../../profile/presentation/providers/profile_provider.dart';
 import '../../laporan_harian/presentation/providers/laporan_provider.dart';
 import '../../../../core/network/api_client.dart';
+import '../data/models/student_model.dart';
 
 enum AuthStatus { unknown, authenticated, unauthenticated }
 
@@ -64,4 +65,14 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
 final authNotifierProvider =
     StateNotifierProvider<AuthNotifier, AuthStatus>((ref) {
   return AuthNotifier(ref, ref.read(authRepositoryProvider));
+});
+
+/// Ambil data Student yang sedang login
+final studentProvider = Provider<StudentModel?>((ref) {
+  final profileAsync = ref.watch(profileDataProvider);
+
+  return profileAsync.maybeWhen(
+    data: (profile) => profile,
+    orElse: () => null,
+  );
 });

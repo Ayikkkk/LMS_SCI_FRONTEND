@@ -2,9 +2,9 @@
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lms_frontend/core/network/api_client.dart'; 
-import '../domain/models/assignment_model.dart';
-import '../domain/models/course_material_model.dart';
+import 'package:lms_frontend/core/network/api_client.dart';
+import '../models/assignment_model.dart';
+import '../models/course_material_model.dart';
 
 class CourseRepository {
   final Dio _dio;
