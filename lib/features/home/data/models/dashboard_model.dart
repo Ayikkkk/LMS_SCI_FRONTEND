@@ -1,19 +1,18 @@
 import 'package:lms_frontend/features/auth/data/models/student_model.dart';
 import 'dashboard_meeting_model.dart';
-
-// ==========================================================
-// DASHBOARD MODEL
-// ==========================================================
+import 'dashboard_pending_task_model.dart';
 
 class DashboardModel {
   final StudentModel student;
   final Stats stats;
   final List<DashboardMeetingModel> meetingsToday;
+  final List<PendingTaskModel> pendingTasks; // 🔥 baru
 
   DashboardModel({
     required this.student,
     required this.stats,
     required this.meetingsToday,
+    required this.pendingTasks, // 🔥
   });
 
   factory DashboardModel.fromJson(Map<String, dynamic> json) {
@@ -23,10 +22,12 @@ class DashboardModel {
       meetingsToday: (json['meetings_today'] as List? ?? [])
           .map((e) => DashboardMeetingModel.fromJson(e))
           .toList(),
+      pendingTasks: (json['pending_tasks'] as List? ?? [])
+          .map((e) => PendingTaskModel.fromJson(e))
+          .toList(), // 🔥
     );
   }
 }
-
 
 // ==========================================================
 // STATS

@@ -1,3 +1,4 @@
+// lib/features/course/domain/providers/course_providers.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/repository/course_repository.dart';

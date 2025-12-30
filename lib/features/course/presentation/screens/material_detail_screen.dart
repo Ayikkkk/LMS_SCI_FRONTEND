@@ -46,7 +46,8 @@ class ExternalLinkWidget extends StatelessWidget {
       icon: const Icon(Icons.link),
       label: Text(label),
       onPressed: () => _launchExternalUrl(url, context),
-      style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
+      style: ElevatedButton.styleFrom(
+          minimumSize: const Size(double.infinity, 50)),
     );
   }
 }
@@ -105,7 +106,8 @@ class _VideoEmbedWidgetState extends State<VideoEmbedWidget> {
   @override
   Widget build(BuildContext context) {
     if (_url == null) {
-      return const Text('Embed tidak valid', style: TextStyle(color: Colors.red));
+      return const Text('Embed tidak valid',
+          style: TextStyle(color: Colors.red));
     }
 
     return AspectRatio(
@@ -129,6 +131,9 @@ class MaterialDetailScreen extends ConsumerStatefulWidget {
 
 class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen> {
   int? replyToCommentId; // Track mode reply
+  int? editingCommentId;
+  int? editingReplyId;
+  String? editingInitialText;
 
   @override
   void didChangeDependencies() {
@@ -145,17 +150,36 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen> {
     });
   }
 
+  void startEditReply(int replyId, String text, int parentId) {
+    setState(() {
+      editingReplyId = replyId;
+      editingInitialText = text;
+      editingCommentId = null;
+      replyToCommentId = parentId;
+    });
+  }
+
   // ⬇️ saat klik tombol batal reply
-  void cancelReply() {
+  void cancelAction() {
     setState(() {
       replyToCommentId = null;
+      editingCommentId = null;
+      editingReplyId = null;
+      editingInitialText = null;
+    });
+  }
+
+  void startEdit(int commentId, String currentText) {
+    setState(() {
+      editingCommentId = commentId;
+      editingInitialText = currentText;
+      replyToCommentId = null; // ❌ pastikan bukan mode balas
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final asyncMaterial =
-        ref.watch(materialDetailProvider(widget.materialId));
+    final asyncMaterial = ref.watch(materialDetailProvider(widget.materialId));
     final student = ref.watch(studentProvider);
 
     return Scaffold(
@@ -169,41 +193,46 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen> {
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(item.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                    Text(item.subjectName, style: TextStyle(color: Colors.grey.shade600)),
-                    const Divider(),
-
-                    if (item.link?.isNotEmpty == true)
-                      ExternalLinkWidget(url: item.link!, label: "Buka Tautan"),
-
-                    if (item.attachment?.isNotEmpty == true)
-                      AttachmentFileWidget(
-                          path: item.attachment!,
-                          fileType: item.attachment!.split('.').last),
-
-                    if (item.embed?.isNotEmpty == true) ...[
-                      const SizedBox(height: 24),
-                      VideoEmbedWidget(embedCode: item.embed!),
-                    ],
-
-                    const SizedBox(height: 20),
-                    const Text("Deskripsi", style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text(item.description ?? "-"),
-
-                    const SizedBox(height: 30),
-                    const Text("Komentar", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 6),
-
-                    if (student == null)
-                      const Center(child: CircularProgressIndicator())
-                    else
-                      CommentListWidget(
-                        postId: item.id,
-                        currentUser: student,
-                        onReplySelected: startReply, // ⬅️ penting!
-                      ),
-                  ]),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(item.title,
+                            style: const TextStyle(
+                                fontSize: 22, fontWeight: FontWeight.bold)),
+                        Text(item.subjectName,
+                            style: TextStyle(color: Colors.grey.shade600)),
+                        const Divider(),
+                        if (item.link?.isNotEmpty == true)
+                          ExternalLinkWidget(
+                              url: item.link!, label: "Buka Tautan"),
+                        if (item.attachment?.isNotEmpty == true)
+                          AttachmentFileWidget(
+                              path: item.attachment!,
+                              fileType: item.attachment!.split('.').last),
+                        if (item.embed?.isNotEmpty == true) ...[
+                          const SizedBox(height: 24),
+                          VideoEmbedWidget(embedCode: item.embed!),
+                        ],
+                        const SizedBox(height: 20),
+                        const Text("Deskripsi",
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text(item.description ?? "-"),
+                        const SizedBox(height: 30),
+                        const Text("Komentar",
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 6),
+                        if (student == null)
+                          const Center(child: CircularProgressIndicator())
+                        else
+                          CommentListWidget(
+                            postId: item.id,
+                            currentUser: student,
+                            onReplySelected: startReply,
+                            onEditSelected: startEdit,
+                            onEditReplySelected: startEditReply,
+                          ),
+                      ]),
                 ),
               ),
 
@@ -226,8 +255,12 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen> {
                   top: false,
                   child: AddCommentField(
                     postId: item.id,
-                    commentId: replyToCommentId,
-                    onCancelReply: cancelReply,
+                    commentId: editingReplyId ?? editingCommentId ?? replyToCommentId,
+                    parentCommentId: editingReplyId != null ? replyToCommentId : null,
+                    isEditing: editingCommentId != null ||  editingReplyId != null,
+                    isReply: editingReplyId != null,
+                    onCancelAction: cancelAction,
+                    initialText: editingInitialText,
                   ),
                 ),
               )

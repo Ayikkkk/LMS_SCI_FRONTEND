@@ -87,6 +87,8 @@ class PostComment {
   }
 
   PostComment copyWith({
+    String? message,
+    DateTime? updatedAt,
     List<PostChildComment>? replies,
   }) {
     return PostComment(
@@ -94,12 +96,12 @@ class PostComment {
       postId: postId,
       userId: userId,
       studentId: studentId,
-      message: message,
+      message: message?? this.message,
       authorName: authorName,
       authorPhoto: authorPhoto,
       isUser: isUser,
       createdAt: createdAt,
-      updatedAt: updatedAt,
+      updatedAt: updatedAt?? this.updatedAt,
       replies: replies ?? this.replies,
     );
   }

@@ -7,54 +7,88 @@ import '../../data/models/assignment_model.dart';
 import '../../data/models/course_material_model.dart';
 import 'material_detail_screen.dart';
 import 'assignment_detail_screen.dart';
+import '../../domain/providers/course_tab_provider.dart';
 
 // ==========================================================
 // COURSE SCREEN (MATERI & TUGAS) - FIXED & STABLE
 // ==========================================================
-class CourseScreen extends StatelessWidget {
+
+class CourseScreen extends ConsumerStatefulWidget {
   const CourseScreen({super.key});
 
   @override
+  ConsumerState<CourseScreen> createState() => _CourseScreenState();
+}
+
+class _CourseScreenState extends ConsumerState<CourseScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  bool _didListen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: ref.read(courseTabProvider),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    /// 💡 Setup listener here — SAFE & recommended by Riverpod Team
+    if (!_didListen) {
+      _didListen = true;
+      ref.listen<int>(courseTabProvider, (prev, next) {
+        if (!mounted) return;
+        if (_tabController.index != next) {
+          _tabController.animateTo(next);
+        }
+      });
+    }
+
     return Scaffold(
-      body: DefaultTabController(
-        length: 2,
-        child: Column(
-          children: const [
-            // 🔥 WAJIB Material untuk TabBar
-            Material(
-              color: Colors.white,
-              elevation: 1,
-              child: TabBar(
-                labelColor: Colors.blueAccent,
-                unselectedLabelColor: Colors.grey,
-                indicatorColor: Colors.blueAccent,
-                tabs: [
-                  Tab(
-                    text: 'Materi',
-                    icon: Icon(Icons.folder_open),
-                  ),
-                  Tab(
-                    text: 'Tugas',
-                    icon: Icon(Icons.assignment),
-                  ),
-                ],
-              ),
+      body: Column(
+        children: [
+          Material(
+            color: Colors.white,
+            elevation: 1,
+            child: TabBar(
+              controller: _tabController,
+              labelColor: Colors.blueAccent,
+              unselectedLabelColor: Colors.grey,
+              indicatorColor: Colors.blueAccent,
+              onTap: (i) {
+                ref.read(courseTabProvider.notifier).state = i;
+              },
+              tabs: const [
+                Tab(text: 'Materi', icon: Icon(Icons.folder_open)),
+                Tab(text: 'Tugas', icon: Icon(Icons.assignment)),
+              ],
             ),
-            Expanded(
-              child: TabBarView(
-                children: [
-                  _MateriListView(),
-                  _TugasListView(),
-                ],
-              ),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: const [
+                _MateriListView(),
+                _TugasListView(),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 }
+
 
 // ==========================================================
 // MATERI LIST
@@ -126,6 +160,9 @@ class _MateriListView extends ConsumerWidget {
 // ==========================================================
 // TUGAS LIST
 // ==========================================================
+// ==========================================================
+// TUGAS LIST (AUTO REFRESH ACTIVE)
+// ==========================================================
 class _TugasListView extends ConsumerWidget {
   const _TugasListView();
 
@@ -160,8 +197,7 @@ class _TugasListView extends ConsumerWidget {
                 child: ListTile(
                   leading: CircleAvatar(
                     backgroundColor: item.statusColor,
-                    child:
-                        const Icon(Icons.assignment, color: Colors.white),
+                    child: const Icon(Icons.assignment, color: Colors.white),
                   ),
                   title: Text(
                     item.title,
@@ -186,7 +222,10 @@ class _TugasListView extends ConsumerWidget {
                           assignmentId: item.id,
                         ),
                       ),
-                    );
+                    ).then((_) {
+                      // 🔄 Auto refresh after returning from detail screen
+                      ref.invalidate(courseAssignmentsProvider);
+                    });
                   },
                 ),
               );

@@ -11,12 +11,18 @@ class CommentListWidget extends ConsumerWidget {
   final int postId;
   final StudentModel currentUser;
   final void Function(int commentId) onReplySelected;
+  final void Function(int replyId, String message, int parentId)? onEditReplySelected;
+
+  /// 🔥 PARAMETER BARU UNTUK EDIT KOMENTAR
+  final void Function(int commentId, String message)? onEditSelected;
 
   const CommentListWidget({
     super.key,
     required this.postId,
     required this.currentUser,
     required this.onReplySelected,
+    this.onEditSelected,
+    this.onEditReplySelected,
   });
 
   @override
@@ -53,7 +59,6 @@ class CommentListWidget extends ConsumerWidget {
                       : null,
                 ),
                 const SizedBox(width: 10),
-
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -64,22 +69,25 @@ class CommentListWidget extends ConsumerWidget {
                             child: Text(
                               comment.authorName ?? "Tidak diketahui",
                               style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 13),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           const SizedBox(width: 6),
                           Text(
                             "• $timestamp",
-                            style: const TextStyle(fontSize: 11, color: Colors.grey),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey,
+                            ),
                             overflow: TextOverflow.fade,
                             softWrap: false,
                           )
                         ],
                       ),
-
                       const SizedBox(height: 6),
-
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
@@ -88,9 +96,7 @@ class CommentListWidget extends ConsumerWidget {
                         ),
                         child: Text(comment.message),
                       ),
-
                       const SizedBox(height: 6),
-
                       Row(
                         children: [
                           InkWell(
@@ -106,6 +112,20 @@ class CommentListWidget extends ConsumerWidget {
                           ),
                           if (isOwner) ...[
                             const SizedBox(width: 10),
+
+                            /// ✍ EDIT TOMBOL UNTUK KOMENTAR MILIK SENDIRI
+                            InkWell(
+                              onTap: () => onEditSelected?.call(
+                                comment.id,
+                                comment.message,
+                              ),
+                              child: const Icon(Icons.edit,
+                                  size: 16, color: Colors.orange),
+                            ),
+
+                            const SizedBox(width: 10),
+
+                            /// 🗑 DELETE TOMBOL KOMENTAR UTAMA
                             InkWell(
                               onTap: () async {
                                 final confirm = await showDialog<bool>(
@@ -116,10 +136,12 @@ class CommentListWidget extends ConsumerWidget {
                                         "Apakah kamu yakin ingin menghapus komentar ini?"),
                                     actions: [
                                       TextButton(
-                                          onPressed: () => Navigator.pop(context, false),
+                                          onPressed: () =>
+                                              Navigator.pop(context, false),
                                           child: const Text("Batal")),
                                       ElevatedButton(
-                                        onPressed: () => Navigator.pop(context, true),
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
                                         style: ElevatedButton.styleFrom(
                                             backgroundColor: Colors.red),
                                         child: const Text("Hapus"),
@@ -138,9 +160,7 @@ class CommentListWidget extends ConsumerWidget {
                           ]
                         ],
                       ),
-
                       const SizedBox(height: 6),
-
                       if (replyCount > 0)
                         InkWell(
                           onTap: () => notifier.toggleReplies(comment.id),
@@ -158,19 +178,18 @@ class CommentListWidget extends ConsumerWidget {
                             ),
                           ),
                         ),
-
                       if (isExpanded)
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: replies.map((reply) {
-                            final replyOwner = reply.studentId == currentUser.id;
+                            final replyOwner =
+                                reply.studentId == currentUser.id;
                             final replyTime = reply.createdAt != null
                                 ? timeago.format(reply.createdAt!, locale: "id")
                                 : "";
 
                             return Padding(
-                              padding:
-                                  const EdgeInsets.only(left: 30, top: 10),
+                              padding: const EdgeInsets.only(left: 30, top: 10),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -184,10 +203,10 @@ class CommentListWidget extends ConsumerWidget {
                                         : null,
                                   ),
                                   const SizedBox(width: 8),
-
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Row(
                                           children: [
@@ -195,9 +214,8 @@ class CommentListWidget extends ConsumerWidget {
                                               child: Text(
                                                 reply.authorName,
                                                 style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 12,
-                                                ),
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 12),
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
@@ -205,8 +223,9 @@ class CommentListWidget extends ConsumerWidget {
                                             Text(
                                               "• $replyTime",
                                               style: const TextStyle(
-                                                  fontSize: 11,
-                                                  color: Colors.grey),
+                                                fontSize: 11,
+                                                color: Colors.grey,
+                                              ),
                                               overflow: TextOverflow.fade,
                                               softWrap: false,
                                             ),
@@ -217,21 +236,66 @@ class CommentListWidget extends ConsumerWidget {
                                           padding: const EdgeInsets.all(10),
                                           decoration: BoxDecoration(
                                             color: Colors.white,
-                                            borderRadius: BorderRadius.circular(10),
+                                            borderRadius:
+                                                BorderRadius.circular(10),
                                           ),
                                           child: Text(reply.message),
                                         ),
                                       ],
                                     ),
                                   ),
+                                  if (replyOwner) ...[
+                                    const SizedBox(width: 8),
 
-                                  if (replyOwner)
+                                    //  Edit Reply Button
                                     InkWell(
-                                      onTap: () =>
-                                          notifier.deleteReply(reply.id, comment.id),
+                                      onTap: () => onEditReplySelected?.call(
+                                        reply.id,
+                                        reply.message,
+                                        comment.id,
+                                      ),
+                                      child: const Icon(Icons.edit,
+                                          size: 14, color: Colors.orange),
+                                    ),
+
+                                    const SizedBox(width: 10),
+
+                                    // 🗑 Delete Reply Button
+                                    InkWell(
+                                      onTap: () async {
+                                        final confirm = await showDialog<bool>(
+                                          context: context,
+                                          builder: (_) => AlertDialog(
+                                            title: const Text("Hapus Balasan"),
+                                            content: const Text(
+                                                "Apakah kamu yakin ingin menghapus balasan ini?"),
+                                            actions: [
+                                              TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.pop(
+                                                          context, false),
+                                                  child: const Text("Batal")),
+                                              ElevatedButton(
+                                                onPressed: () => Navigator.pop(
+                                                    context, true),
+                                                style: ElevatedButton.styleFrom(
+                                                    backgroundColor:
+                                                        Colors.red),
+                                                child: const Text("Hapus"),
+                                              )
+                                            ],
+                                          ),
+                                        );
+
+                                        if (confirm == true) {
+                                          await notifier.deleteReply(
+                                              reply.id, comment.id);
+                                        }
+                                      },
                                       child: const Icon(Icons.delete,
                                           size: 14, color: Colors.red),
                                     ),
+                                  ],
                                 ],
                               ),
                             );

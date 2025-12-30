@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Dashboard
 import '../../data/models/dashboard_model.dart';
 import '../../data/models/dashboard_meeting_model.dart';
+import '../../data/models/dashboard_pending_task_model.dart';
 import '../providers/home_provider.dart';
 
 // Other features
@@ -16,6 +17,8 @@ import '../../../online_class/presentation/screens/online_class_screen.dart';
 import '../../../online_class/presentation/screens/jitsi_helper.dart';
 import '../../../laporan_harian/presentation/screens/laporan_harian_screen.dart';
 import '../../../../core/widgets/section_title.dart';
+import '../../../course/domain/providers/course_tab_provider.dart';
+
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -39,8 +42,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-
-    /// 🔁 Auto refresh dashboard tiap 30 detik
     _dashboardTimer = Timer.periodic(
       const Duration(seconds: 30),
       (_) {
@@ -59,16 +60,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _goToTab(int index) {
     if (_selectedIndex == index) return;
-
     setState(() => _selectedIndex = index);
-
-    if (index == 0) {
-      ref.invalidate(dashboardDataProvider);
-    }
+    if (index == 0) ref.invalidate(dashboardDataProvider);
   }
 
   @override
   Widget build(BuildContext context) {
+    // 🔥 LISTEN: Jika Dashboard menyuruh pindah ke Tab "Tugas"
+    ref.listen<int>(courseTabProvider, (prev, next) {
+      setState(() {
+        _selectedIndex = 1; // otomatis ke Tab Materi/Tugas
+      });
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_getTitle(_selectedIndex)),
@@ -96,21 +100,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   String _getTitle(int index) {
     return const [
       'Dashboard',
-      'Materi',
+      'Materi & Tugas',
       'Online Class',
       'Quiz',
-      'Profil',
+      'Profil'
     ][index];
   }
 }
 
-// ======================================================================
+// ==============================================================
 // DASHBOARD CONTENT
-// ======================================================================
+// ==============================================================
 
 class _DashboardContent extends ConsumerWidget {
   final void Function(int index) onNavigate;
-
   const _DashboardContent({required this.onNavigate});
 
   @override
@@ -124,28 +127,33 @@ class _DashboardContent extends ConsumerWidget {
         onRetry: () => ref.invalidate(dashboardDataProvider),
       ),
       data: (data) {
-        final todayMeetings = data.meetingsToday
-            .where((m) => m.isUpcoming || m.isLive)
-            .toList();
+        final todayMeetings =
+            data.meetingsToday.where((m) => m.isUpcoming || m.isLive).toList();
+        final pending = data.pendingTasks;
+        final now = DateTime.now();
+
+        final urgentTasks = pending.where((task) {
+          final diff = task.dueDate.difference(now);
+          return !diff.isNegative && diff.inHours < 24;
+        }).toList();
 
         return RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(dashboardDataProvider);
-          },
+          onRefresh: () async => ref.invalidate(dashboardDataProvider),
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
               _ProfileHeader(student: data.student),
               const SizedBox(height: 24),
-
               const SectionTitle('Ringkasan Akademik'),
               _StatsGrid(stats: data.stats),
-
               const SizedBox(height: 28),
-              SectionTitle(
-                  'Kelas Online Hari Ini (${todayMeetings.length})'),
+              if (urgentTasks.isNotEmpty)
+                _UrgentBanner(urgentTasks: urgentTasks),
+              if (urgentTasks.isNotEmpty) const SizedBox(height: 20),
+              _AssignmentsPreview(tasks: pending, onNavigate: onNavigate),
+              const SizedBox(height: 28),
+              SectionTitle('Kelas Online Hari Ini (${todayMeetings.length})'),
               _MeetingsList(todayMeetings),
-
               const SizedBox(height: 28),
               const SectionTitle('Akses Cepat'),
               _QuickMenu(onNavigate: onNavigate),
@@ -157,9 +165,9 @@ class _DashboardContent extends ConsumerWidget {
   }
 }
 
-// ======================================================================
-// HEADER
-// ======================================================================
+// ==============================================================
+// PROFILE HEADER
+// ==============================================================
 
 class _ProfileHeader extends StatelessWidget {
   final StudentModel student;
@@ -177,9 +185,9 @@ class _ProfileHeader extends StatelessWidget {
   }
 }
 
-// ======================================================================
-// STATS GRID
-// ======================================================================
+// ==============================================================
+// STATS
+// ==============================================================
 
 class _StatsGrid extends StatelessWidget {
   final Stats stats;
@@ -204,8 +212,7 @@ class _StatsGrid extends StatelessWidget {
     );
   }
 
-  Widget _stat(
-      String title, dynamic value, IconData icon, Color color) {
+  Widget _stat(String title, dynamic value, IconData icon, Color color) {
     final display =
         value is double ? value.toStringAsFixed(2) : value.toString();
 
@@ -219,17 +226,12 @@ class _StatsGrid extends StatelessWidget {
           children: [
             Icon(icon, color: color),
             const Spacer(),
-            Text(title,
-                style:
-                    const TextStyle(color: Colors.grey, fontSize: 12)),
+            Text(title, style: const TextStyle(color: Colors.grey)),
             const SizedBox(height: 4),
             Text(
               display,
               style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
+                  fontSize: 22, fontWeight: FontWeight.bold, color: color),
             ),
           ],
         ),
@@ -238,9 +240,103 @@ class _StatsGrid extends StatelessWidget {
   }
 }
 
-// ======================================================================
-// MEETINGS LIST (LIVE + COUNTDOWN + JOIN)
-// ======================================================================
+// ==============================================================
+// WARNING BANNER (Urgent Tasks)
+// ==============================================================
+
+class _UrgentBanner extends StatelessWidget {
+  final List<PendingTaskModel> urgentTasks;
+  const _UrgentBanner({required this.urgentTasks});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning, color: Colors.red, size: 28),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              "Ada ${urgentTasks.length} tugas akan segera jatuh tempo!",
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.red,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ==============================================================
+// ASSIGNMENTS PREVIEW
+// ==============================================================
+
+class _AssignmentsPreview extends ConsumerWidget {
+  final List<PendingTaskModel> tasks;
+  final void Function(int index) onNavigate;
+
+  const _AssignmentsPreview({
+    required this.tasks,
+    required this.onNavigate,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (tasks.isEmpty) return const SizedBox.shrink();
+    final preview = tasks.take(3).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionTitle("Tugas Belum Dikerjakan (${tasks.length})"),
+        const SizedBox(height: 8),
+        ...preview.map((task) {
+          return Card(
+            color: Colors.orange.shade50,
+            child: ListTile(
+              leading:
+                  const Icon(Icons.assignment_outlined, color: Colors.orange),
+              title: Text(task.title,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text(
+                  "Deadline: ${task.dueDate.day}/${task.dueDate.month}/${task.dueDate.year}"),
+              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+              onTap: () {
+                Navigator.pushNamed(
+                  context,
+                  '/assignment/detail',
+                  arguments: task.id,
+                );
+              },
+            ),
+          );
+        }),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: () {
+              ref.read(courseTabProvider.notifier).state = 1;
+              onNavigate(1); // pindah ke screen Materi/Tugas
+            },
+            child: const Text("Lihat Semua"),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ==============================================================
+// MEETINGS
+// ==============================================================
 
 class _MeetingsList extends StatelessWidget {
   final List<DashboardMeetingModel> meetings;
@@ -249,20 +345,16 @@ class _MeetingsList extends StatelessWidget {
   String _countdown(DateTime startTime) {
     final diff = startTime.difference(DateTime.now());
     if (diff.isNegative) return 'Mulai';
-
     final h = diff.inHours;
     final m = diff.inMinutes % 60;
-
     return h > 0 ? '$h jam $m mnt' : '$m mnt lagi';
   }
 
   @override
   Widget build(BuildContext context) {
     if (meetings.isEmpty) {
-      return const Text(
-        'Tidak ada kelas online hari ini',
-        style: TextStyle(color: Colors.grey),
-      );
+      return const Text('Tidak ada kelas online hari ini',
+          style: TextStyle(color: Colors.grey));
     }
 
     return Column(
@@ -276,8 +368,7 @@ class _MeetingsList extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(m.title,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold)),
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
                 m.isLive
                     ? InkWell(
@@ -289,14 +380,16 @@ class _MeetingsList extends StatelessWidget {
                         },
                         child: const Chip(
                           label: Text('LIVE',
-                              style: TextStyle(
-                                  color: Colors.white, fontSize: 11)),
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 11)),
                           backgroundColor: Colors.red,
                         ),
                       )
                     : Chip(
-                        label: Text(_countdown(m.startTime),
-                            style: const TextStyle(fontSize: 11)),
+                        label: Text(
+                          _countdown(m.startTime),
+                          style: const TextStyle(fontSize: 11),
+                        ),
                       ),
               ],
             ),
@@ -310,13 +403,12 @@ class _MeetingsList extends StatelessWidget {
   }
 }
 
-// ======================================================================
+// ==============================================================
 // QUICK MENU
-// ======================================================================
+// ==============================================================
 
 class _QuickMenu extends StatelessWidget {
   final void Function(int index) onNavigate;
-
   const _QuickMenu({required this.onNavigate});
 
   @override
@@ -337,8 +429,7 @@ class _QuickMenu extends StatelessWidget {
         _item('Laporan', Icons.event_note, Colors.purple, () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (_) => const LaporanHarianScreen()),
+            MaterialPageRoute(builder: (_) => const LaporanHarianScreen()),
           );
         }),
         _item('Profil', Icons.person, Colors.grey, () => onNavigate(4)),
@@ -346,8 +437,7 @@ class _QuickMenu extends StatelessWidget {
     );
   }
 
-  Widget _item(
-      String label, IconData icon, Color color, VoidCallback onTap) {
+  Widget _item(String label, IconData icon, Color color, VoidCallback onTap) {
     return Card(
       elevation: 2,
       child: InkWell(
@@ -366,9 +456,9 @@ class _QuickMenu extends StatelessWidget {
   }
 }
 
-// ======================================================================
+// ==============================================================
 // ERROR VIEW
-// ======================================================================
+// ==============================================================
 
 class _ErrorView extends StatelessWidget {
   final String message;

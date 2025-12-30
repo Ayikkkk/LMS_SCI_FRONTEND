@@ -1,3 +1,4 @@
+// lib/features/course/data/repository/post_comment_repository.dart
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -60,8 +61,8 @@ class PostCommentRepository {
       final response = await dio.delete("student/comments/$commentId");
 
       return response.statusCode == 200 ||
-             response.statusCode == 201 ||
-             response.data['success'] == true;
+          response.statusCode == 201 ||
+          response.data['success'] == true;
     } catch (_) {
       return false;
     }
@@ -73,10 +74,44 @@ class PostCommentRepository {
       final response = await dio.delete("student/replies/$replyId");
 
       return response.statusCode == 200 ||
-             response.statusCode == 201 ||
-             response.data['success'] == true;
+          response.statusCode == 201 ||
+          response.data['success'] == true;
     } catch (_) {
       return false;
+    }
+  }
+
+  /// 🔹 Edit komentar utama
+  Future<PostComment?> updateComment(int commentId, String message) async {
+    try {
+      final response = await dio.put(
+        "student/comments/$commentId",
+        data: {'message': message},
+      );
+
+      if (response.data['success'] == true) {
+        return PostComment.fromJson(response.data['data']);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 🔹 Edit balasan komentar
+  Future<PostChildComment?> updateReply(int replyId, String message) async {
+    try {
+      final response = await dio.put(
+        "student/replies/$replyId",
+        data: {'message': message},
+      );
+
+      if (response.data['success'] == true) {
+        return PostChildComment.fromJson(response.data['data']);
+      }
+      return null;
+    } catch (_) {
+      return null;
     }
   }
 }

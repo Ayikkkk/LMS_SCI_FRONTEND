@@ -29,14 +29,12 @@ class PostChildComment {
     final student = json['student'];
     final user = json['user'];
 
-    /// Ambil raw photo dari semua kemungkinan field
     final rawPhoto = student?['photo'] ??
         student?['photo_url'] ??
         user?['photo'] ??
         user?['img'] ??
         json['author_photo'];
 
-    /// Format URL foto lokal → jadi URL lengkap
     String resolvedPhoto;
     if (rawPhoto != null) {
       if (rawPhoto.startsWith('http')) {
@@ -70,7 +68,7 @@ class PostChildComment {
     );
   }
 
-  /// Timestamp UI ala chat (opsional)
+  /// Format timestamp UI
   String timeAgo() {
     if (createdAt == null) return "";
     final diff = DateTime.now().difference(createdAt!);
@@ -81,5 +79,24 @@ class PostChildComment {
     if (diff.inDays == 1) return "Kemarin";
     if (diff.inDays < 7) return "${diff.inDays} hari lalu";
     return "${createdAt!.day}-${createdAt!.month}-${createdAt!.year}";
+  }
+
+  /// ✨ copyWith: penting untuk update UI tanpa reload
+  PostChildComment copyWith({
+    String? message,
+    DateTime? updatedAt,
+  }) {
+    return PostChildComment(
+      id: id,
+      postCommentId: postCommentId,
+      userId: userId,
+      studentId: studentId,
+      message: message ?? this.message,
+      authorName: authorName,
+      authorPhoto: authorPhoto,
+      isUser: isUser,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
   }
 }

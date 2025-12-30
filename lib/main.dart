@@ -22,6 +22,7 @@ import 'auth_redirector.dart';
 
 // Navigation service
 import 'navigation_service.dart';
+import 'features/course/presentation/screens/assignment_detail_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,7 +43,6 @@ class MyApp extends ConsumerWidget {
     return init.when(
       loading: () => const _AppLoadingView(),
       error: (err, _) => _InitErrorView(error: err.toString()),
-
       data: (_) => AuthRedirector(
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
@@ -58,6 +58,13 @@ class MyApp extends ConsumerWidget {
             '/login': (_) => const LoginScreen(),
             '/home': (_) => const HomeScreen(),
             '/onboarding': (_) => const OnboardingScreen(),
+
+            // 🔥 Route untuk halaman detail tugas
+            '/assignment/detail': (context) {
+              final assignmentId =
+                  ModalRoute.of(context)!.settings.arguments as int;
+              return AssignmentDetailScreen(assignmentId: assignmentId);
+            },
           },
         ),
       ),
@@ -71,7 +78,6 @@ class MyApp extends ConsumerWidget {
     return onboardingStatus.when(
       loading: () => const _AppLoadingView(),
       error: (err, _) => _InitErrorView(error: err.toString()),
-
       data: (hasSeen) {
         if (!hasSeen) return const OnboardingScreen();
 

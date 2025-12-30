@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/post_comment_model.dart';
+import '../../data/models/post_child_comment_model.dart';
 import '../../data/repository/post_comment_repository.dart';
 
 class CommentNotifier extends StateNotifier<AsyncValue<List<PostComment>>> {
@@ -7,27 +8,19 @@ class CommentNotifier extends StateNotifier<AsyncValue<List<PostComment>>> {
 
   final PostCommentRepository _repository;
 
-  /// Simpan state expand/collapse per komentar
   final Map<int, bool> _expandedReplies = {};
   Map<int, bool> get expandedReplies => _expandedReplies;
 
-  /// Check expanded state
-  bool isExpanded(int commentId) => _expandedReplies[commentId] ?? false;
+  bool isExpanded(int id) => _expandedReplies[id] ?? false;
 
-  /// Toggle replies (alias)
-  void toggleReplyVisibility(int commentId) => toggleReplies(commentId);
-
-  /// Show / Hide replies
-  void toggleReplies(int commentId) {
-    _expandedReplies[commentId] = !(_expandedReplies[commentId] ?? false);
-    state = state.whenData((comments) => [...comments]); // refresh UI
+  void toggleReplies(int id) {
+    _expandedReplies[id] = !(_expandedReplies[id] ?? false);
+    state = state.whenData((comments) => [...comments]);
   }
 
-  /// Load all comments
   Future<void> loadComments(int postId) async {
     try {
       state = const AsyncValue.loading();
-
       final comments = await _repository.getComments(postId);
       state = AsyncValue.data(comments);
 
@@ -40,76 +33,101 @@ class CommentNotifier extends StateNotifier<AsyncValue<List<PostComment>>> {
     }
   }
 
-  /// Add new comment
   Future<void> addComment(int postId, String message) async {
     try {
       final newComment = await _repository.addComment(postId, message);
-
       state = state.whenData((comments) => [...comments, newComment]);
       _expandedReplies[newComment.id] = false;
     } catch (_) {}
   }
 
-  /// Add reply
-  Future<void> addReply(int commentId, String message) async {
+  Future<void> addReply(int parentId, String message) async {
     try {
-      final reply = await _repository.addReply(commentId, message);
+      final reply = await _repository.addReply(parentId, message);
 
       state = state.whenData((comments) {
-        return comments.map((comment) {
-          if (comment.id == commentId) {
-            return comment.copyWith(replies: [...comment.replies, reply]);
+        return comments.map((c) {
+          if (c.id == parentId) {
+            return c.copyWith(replies: [...c.replies, reply]);
           }
-          return comment;
+          return c;
         }).toList();
       });
 
-      /// Tetap collapsed setelah membalas
-      _expandedReplies[commentId] = false;
-
+      _expandedReplies[parentId] = true;
     } catch (_) {}
   }
 
-  /// Delete comment (only if own)
-  Future<void> deleteComment(int commentId) async {
-    try {
-      final success = await _repository.deleteComment(commentId);
-      if (!success) return;
+  Future<void> deleteComment(int id) async {
+    final success = await _repository.deleteComment(id);
+    if (!success) return;
 
-      state = state.whenData(
-        (comments) => comments.where((c) => c.id != commentId).toList(),
-      );
-
-      _expandedReplies.remove(commentId);
-
-    } catch (_) {}
+    state = state.whenData(
+      (comments) => comments.where((c) => c.id != id).toList(),
+    );
+    _expandedReplies.remove(id);
   }
 
-  /// Delete reply
-  Future<void> deleteReply(int replyId, int commentId) async {
-    try {
-      final success = await _repository.deleteReply(replyId);
-      if (!success) return;
+  Future<void> deleteReply(int replyId, int parentId) async {
+    final success = await _repository.deleteReply(replyId);
+    if (!success) return;
 
-      state = state.whenData((comments) {
-        return comments.map((comment) {
-          if (comment.id == commentId) {
-            final updatedReplies =
-                comment.replies.where((r) => r.id != replyId).toList();
-            return comment.copyWith(replies: updatedReplies);
-          }
-          return comment;
-        }).toList();
-      });
+    state = state.whenData((comments) {
+      return comments.map((c) {
+        if (c.id == parentId) {
+          final updatedReplies =
+              c.replies.where((r) => r.id != replyId).toList();
+          return c.copyWith(replies: updatedReplies);
+        }
+        return c;
+      }).toList();
+    });
 
-      /// Tetap collapsed setelah delete
-      _expandedReplies[commentId] = false;
+    _expandedReplies[parentId] = false;
+  }
 
-    } catch (_) {}
+  // =====================================
+  // ✨ Update Comment + Reply
+  // =====================================
+
+  // 🔹 Update komentar utama
+  Future<void> updateComment(int id, String message) async {
+    final updated = await _repository.updateComment(id, message);
+
+    if (updated == null) return;
+
+    state = state.whenData((comments) {
+      return comments.map((c) {
+        return c.id == id
+            ? c.copyWith(
+                message: updated.message,
+                updatedAt: DateTime.now(),
+              )
+            : c;
+      }).toList();
+    });
+  }
+
+// 🔹 Update balasan komentar
+  Future<void> updateReply(int replyId, int parentId, String message) async {
+
+    final updatedReply = await _repository.updateReply(replyId, message);
+    if (updatedReply == null) return;
+    state = state.whenData((comments) {
+      return comments.map((c) {
+        if (c.id == parentId) {
+          return c.copyWith(
+            replies: c.replies.map((r) {
+              return r.id == replyId ? updatedReply : r;
+            }).toList(),
+          );
+        }
+        return c;
+      }).toList();
+    });
   }
 }
 
 final commentProvider =
     StateNotifierProvider<CommentNotifier, AsyncValue<List<PostComment>>>(
-  (ref) => CommentNotifier(ref.watch(postCommentRepositoryProvider)),
-);
+        (ref) => CommentNotifier(ref.watch(postCommentRepositoryProvider)));

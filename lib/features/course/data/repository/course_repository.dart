@@ -1,4 +1,4 @@
-// course_repository.dart
+// lib/features/course/data/repository/course_repository.dart
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
