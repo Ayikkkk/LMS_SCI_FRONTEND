@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-import '../../../../core/network/api_client.dart';
 import '../../data/models/course_material_model.dart';
 import '../../domain/providers/course_providers.dart';
 import '../../../../core/widgets/attachment_file_widget.dart';

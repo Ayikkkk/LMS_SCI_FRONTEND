@@ -5,8 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
 
-import '../../../../core/network/api_client.dart';
-import '../../data/profile_repository.dart';
 import '../providers/profile_provider.dart';
 import '../../../auth/data/models/student_model.dart';
 

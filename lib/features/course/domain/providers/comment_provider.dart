@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/post_comment_model.dart';
-import '../../data/models/post_child_comment_model.dart';
 import '../../data/repository/post_comment_repository.dart';
 
 class CommentNotifier extends StateNotifier<AsyncValue<List<PostComment>>> {
