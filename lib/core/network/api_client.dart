@@ -4,7 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-const String apiHost = "http://192.168.43.182:8000";
+const String apiHost = "http://192.168.110.47:8000";
 const String apiBaseUrl = "$apiHost/api/";
 
 final Dio dio = Dio(

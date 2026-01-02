@@ -18,7 +18,7 @@ import '../../../online_class/presentation/screens/jitsi_helper.dart';
 import '../../../laporan_harian/presentation/screens/laporan_harian_screen.dart';
 import '../../../../core/widgets/section_title.dart';
 import '../../../course/domain/providers/course_tab_provider.dart';
-
+import '../../../grades/presentation/screens/recap_grade_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -426,13 +426,20 @@ class _QuickMenu extends StatelessWidget {
         _item('Online', Icons.video_camera_front, Colors.red,
             () => onNavigate(2)),
         _item('Quiz', Icons.quiz, Colors.green, () => onNavigate(3)),
+        _item('Rekap Nilai', Icons.assessment, Colors.teal, () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const RecapGradeScreen(),
+            ),
+          );
+        }),
         _item('Laporan', Icons.event_note, Colors.purple, () {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const LaporanHarianScreen()),
           );
         }),
-        _item('Profil', Icons.person, Colors.grey, () => onNavigate(4)),
       ],
     );
   }

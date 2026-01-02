@@ -7,6 +7,7 @@ import 'dart:async';
 import '../screens/submit_task_screen.dart';
 import '../../domain/providers/course_providers.dart';
 import '../../data/models/assignment_model.dart';
+import '../../../../core/widgets/attachment_file_widget.dart';
 
 import '../../domain/providers/comment_provider.dart';
 import '../../presentation/widgets/comment_list_widget.dart';
@@ -123,6 +124,12 @@ class _AssignmentDetailScreenState
                 Text(assignment.subjectName,
                     style: TextStyle(color: Colors.grey.shade600)),
                 const Divider(height: 32),
+                if (assignment.attachment?.isNotEmpty == true)
+                  AttachmentFileWidget(
+                    postId: assignment.id,
+                    fileName: assignment.attachment!.split('/').last,
+                    fileType: assignment.attachment!.split('.').last,
+                  ),
                 _infoSection(context, assignment, score),
                 const SizedBox(height: 12),
                 if (!assignment.isSubmitted && !assignment.isLate)

@@ -8,6 +8,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../../../../core/network/api_client.dart';
 import '../../data/models/course_material_model.dart';
 import '../../domain/providers/course_providers.dart';
+import '../../../../core/widgets/attachment_file_widget.dart';
 
 // KOMENTAR
 import '../../domain/providers/comment_provider.dart';
@@ -17,18 +18,13 @@ import '../../presentation/widgets/add_comment_field.dart';
 // DATA SISWA LOGIN
 import '../../../profile/presentation/providers/profile_provider.dart';
 
-String resolveFileUrl(String path) {
-  if (path.startsWith('http')) return path;
-  return '$apiHost/storage/${path.replaceAll(RegExp(r'^/+'), '')}';
-}
-
 Future<void> _launchExternalUrl(String url, BuildContext context) async {
   try {
     await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
   } catch (_) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tidak dapat membuka file')),
+        const SnackBar(content: Text('Tidak dapat membuka tautan')),
       );
     }
   }
@@ -49,30 +45,6 @@ class ExternalLinkWidget extends StatelessWidget {
       style: ElevatedButton.styleFrom(
           minimumSize: const Size(double.infinity, 50)),
     );
-  }
-}
-
-class AttachmentFileWidget extends StatelessWidget {
-  final String path;
-  final String fileType;
-
-  const AttachmentFileWidget({
-    super.key,
-    required this.path,
-    required this.fileType,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text("Lampiran:", style: TextStyle(fontWeight: FontWeight.bold)),
-      const SizedBox(height: 8),
-      ElevatedButton.icon(
-        icon: const Icon(Icons.attach_file),
-        label: Text("Unduh File (${fileType.toUpperCase()})"),
-        onPressed: () => _launchExternalUrl(resolveFileUrl(path), context),
-      ),
-    ]);
   }
 }
 
@@ -118,7 +90,7 @@ class _VideoEmbedWidgetState extends State<VideoEmbedWidget> {
 }
 
 // ====================================
-// 🔥 MAIN SCREEN MATERIAL DETAIL
+//  MAIN SCREEN MATERIAL DETAIL
 // ====================================
 class MaterialDetailScreen extends ConsumerStatefulWidget {
   final int materialId;
@@ -207,7 +179,8 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen> {
                               url: item.link!, label: "Buka Tautan"),
                         if (item.attachment?.isNotEmpty == true)
                           AttachmentFileWidget(
-                              path: item.attachment!,
+                              postId: item.id,
+                              fileName: item.attachment!.split('/').last,
                               fileType: item.attachment!.split('.').last),
                         if (item.embed?.isNotEmpty == true) ...[
                           const SizedBox(height: 24),
@@ -255,9 +228,12 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen> {
                   top: false,
                   child: AddCommentField(
                     postId: item.id,
-                    commentId: editingReplyId ?? editingCommentId ?? replyToCommentId,
-                    parentCommentId: editingReplyId != null ? replyToCommentId : null,
-                    isEditing: editingCommentId != null ||  editingReplyId != null,
+                    commentId:
+                        editingReplyId ?? editingCommentId ?? replyToCommentId,
+                    parentCommentId:
+                        editingReplyId != null ? replyToCommentId : null,
+                    isEditing:
+                        editingCommentId != null || editingReplyId != null,
                     isReply: editingReplyId != null,
                     onCancelAction: cancelAction,
                     initialText: editingInitialText,

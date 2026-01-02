@@ -7,6 +7,7 @@ import 'scaffold_messenger_key.dart';
 // INIT
 import 'core/init/app_initializer.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:media_store_plus/media_store_plus.dart';
 
 // PROVIDERS
 import 'features/auth/data/repository/onboarding_repository.dart';
@@ -29,6 +30,8 @@ import 'features/course/presentation/screens/assignment_detail_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await MediaStore.ensureInitialized();
 
   // Set bahasa Indonesia untuk timeago
   timeago.setLocaleMessages('id', timeago.IdMessages());

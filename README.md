@@ -1,20 +1,3 @@
-# lms_frontend
-
-A new Flutter project.
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-
 
 ```
 lms_frontend
@@ -290,7 +273,11 @@ lms_frontend
 │  │  │  └─ app_initializer.dart
 │  │  ├─ network
 │  │  │  └─ api_client.dart
-│  │  └─ routes
+│  │  ├─ routes
+│  │  ├─ theme
+│  │  │  └─ theme_notifier.dart
+│  │  └─ widgets
+│  │     └─ section_title.dart
 │  ├─ features
 │  │  ├─ auth
 │  │  │  ├─ data
@@ -303,32 +290,43 @@ lms_frontend
 │  │  │  ├─ domain
 │  │  │  │  └─ auth_notifier.dart
 │  │  │  └─ presentation
+│  │  │     ├─ change_password_screen.dart
 │  │  │     ├─ login_screen.dart
 │  │  │     └─ onboarding_screen.dart
 │  │  ├─ course
 │  │  │  ├─ data
-│  │  │  │  ├─ course_repository.dart
-│  │  │  │  └─ task_repository.dart
-│  │  │  ├─ domain
 │  │  │  │  ├─ models
 │  │  │  │  │  ├─ assignment_model.dart
-│  │  │  │  │  └─ course_material_model.dart
+│  │  │  │  │  ├─ course_material_model.dart
+│  │  │  │  │  ├─ post_child_comment_model.dart
+│  │  │  │  │  └─ post_comment_model.dart
+│  │  │  │  └─ repository
+│  │  │  │     ├─ course_repository.dart
+│  │  │  │     ├─ post_comment_repository.dart
+│  │  │  │     └─ task_repository.dart
+│  │  │  ├─ domain
 │  │  │  │  └─ providers
-│  │  │  │     └─ course_providers.dart
+│  │  │  │     ├─ comment_provider.dart
+│  │  │  │     ├─ course_providers.dart
+│  │  │  │     └─ course_tab_provider.dart
 │  │  │  └─ presentation
-│  │  │     └─ screens
-│  │  │        ├─ assignment_detail_screen.dart
-│  │  │        ├─ course_screen.dart
-│  │  │        ├─ material_detail_screen.dart
-│  │  │        └─ submit_task_screen.dart
+│  │  │     ├─ screens
+│  │  │     │  ├─ assignment_detail_screen.dart
+│  │  │     │  ├─ course_screen.dart
+│  │  │     │  ├─ material_detail_screen.dart
+│  │  │     │  └─ submit_task_screen.dart
+│  │  │     └─ widgets
+│  │  │        ├─ add_comment_field.dart
+│  │  │        ├─ add_reply_field.dart
+│  │  │        ├─ comment_list_widget.dart
+│  │  │        └─ reply_list_widget.dart
 │  │  ├─ dashboard
-│  │  │  └─ data
-│  │  │     └─ dashboard_model.dart
 │  │  ├─ home
 │  │  │  ├─ data
 │  │  │  │  ├─ models
 │  │  │  │  │  ├─ dashboard_meeting_model.dart
-│  │  │  │  │  └─ dashboard_model.dart
+│  │  │  │  │  ├─ dashboard_model.dart
+│  │  │  │  │  └─ dashboard_pending_task_model.dart
 │  │  │  │  └─ repository
 │  │  │  │     └─ home_repository.dart
 │  │  │  └─ presentation
