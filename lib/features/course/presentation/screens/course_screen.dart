@@ -9,10 +9,9 @@ import 'material_detail_screen.dart';
 import 'assignment_detail_screen.dart';
 import '../../domain/providers/course_tab_provider.dart';
 
-// ==========================================================
-// COURSE SCREEN (MATERI & TUGAS) - FIXED & STABLE
-// ==========================================================
-
+// ==================================
+// COURSE SCREEN (MATERI & TUGAS)
+// ==================================
 class CourseScreen extends ConsumerStatefulWidget {
   const CourseScreen({super.key});
 

@@ -94,6 +94,7 @@ class _LessonsQuizScreenState extends ConsumerState<LessonsQuizScreen> {
 
     showModalBottomSheet(
       context: context,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       builder: (sheetContext) {
         return SafeArea(
           child: Padding(
@@ -104,14 +105,15 @@ class _LessonsQuizScreenState extends ConsumerState<LessonsQuizScreen> {
               children: [
                 Text(
                   lesson["name"],
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 10),
-
                 ...types.map((t) {
                   return ListTile(
-                    leading: const Icon(Icons.quiz),
+                    leading: Icon(
+                      Icons.quiz,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                     title: Text(t["name"]),
                     subtitle: Text("${t["count"]} latihan tersedia"),
                     onTap: () {
@@ -131,7 +133,6 @@ class _LessonsQuizScreenState extends ConsumerState<LessonsQuizScreen> {
                     },
                   );
                 }).toList(),
-
                 if (types.isEmpty)
                   const Padding(
                     padding: EdgeInsets.all(8.0),
@@ -147,6 +148,7 @@ class _LessonsQuizScreenState extends ConsumerState<LessonsQuizScreen> {
 
   Widget _buildLessonCard(Map<String, dynamic> lesson) {
     return Card(
+      color: Theme.of(context).cardColor,
       elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: InkWell(
@@ -159,31 +161,28 @@ class _LessonsQuizScreenState extends ConsumerState<LessonsQuizScreen> {
                 width: 6,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: Colors.blueAccent,
+                  color: Theme.of(context).colorScheme.primary,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
               const SizedBox(width: 12),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       lesson["name"] ?? "",
-                      style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.blueAccent),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
                     const SizedBox(height: 6),
-
                     Row(
                       children: [
                         Text(
                           "Kelas ${lesson["grade"]} • Sem ${lesson["semester"]}",
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.black54),
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
                     )
@@ -200,9 +199,6 @@ class _LessonsQuizScreenState extends ConsumerState<LessonsQuizScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Pilih Mapel & Tipe Ujian"),
-      ),
       body: RefreshIndicator(
         onRefresh: _fetchLessons,
         child: _loading

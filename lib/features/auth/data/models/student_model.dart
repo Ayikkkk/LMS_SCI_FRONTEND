@@ -1,4 +1,3 @@
-// lib/features/auth/data/models/student_model.dart
 import 'guru_model.dart';
 
 class StudentModel {
@@ -9,6 +8,7 @@ class StudentModel {
   final String? photo;
   final String? phone;
   final String? nis;
+  final int? absenNumber; // ⬅️ TAMBAHAN
   final int? classroomId;
   final String? className;
   final int? userId;
@@ -23,6 +23,7 @@ class StudentModel {
     this.photo,
     this.phone,
     this.nis,
+    this.absenNumber,
     this.classroomId,
     this.className,
     this.userId,
@@ -36,11 +37,14 @@ class StudentModel {
         ? Map<String, dynamic>.from(json['data'])
         : Map<String, dynamic>.from(json);
 
-// class name sources (FIXED)
+    // ==========================
+    // CLASS NAME (multi source)
+    // ==========================
     String? parsedClassName;
     if (data['className'] != null) {
       parsedClassName = data['className']?.toString();
-    } else if (data['classroom'] is Map && data['classroom']['name'] != null) {
+    } else if (data['classroom'] is Map &&
+        data['classroom']['name'] != null) {
       parsedClassName = data['classroom']['name']?.toString();
     } else if (data['class_name'] != null) {
       parsedClassName = data['class_name']?.toString();
@@ -48,20 +52,36 @@ class StudentModel {
       parsedClassName = data['classroom_name']?.toString();
     }
 
-    // classroom id sources: classroom_id, classroomId
+    // ==========================
+    // CLASSROOM ID (multi source)
+    // ==========================
     int? parsedClassroomId;
     if (data['classroom_id'] != null) {
-      parsedClassroomId = (data['classroom_id'] is int)
+      parsedClassroomId = data['classroom_id'] is int
           ? data['classroom_id'] as int
           : int.tryParse(data['classroom_id'].toString());
     } else if (data['classroomId'] != null) {
-      parsedClassroomId = (data['classroomId'] is int)
+      parsedClassroomId = data['classroomId'] is int
           ? data['classroomId'] as int
           : int.tryParse(data['classroomId'].toString());
     }
 
+    // ==========================
+    // ABSEN NUMBER (SAFE PARSE)
+    // ==========================
+    int? parsedAbsen;
+    if (data['absen_number'] != null) {
+      parsedAbsen = data['absen_number'] is int
+          ? data['absen_number'] as int
+          : int.tryParse(data['absen_number'].toString());
+    } else if (data['absenNumber'] != null) {
+      parsedAbsen = data['absenNumber'] is int
+          ? data['absenNumber'] as int
+          : int.tryParse(data['absenNumber'].toString());
+    }
+
     return StudentModel(
-      id: (data['id'] is int)
+      id: data['id'] is int
           ? data['id'] as int
           : int.tryParse('${data['id'] ?? 0}') ?? 0,
       name: data['name']?.toString() ?? '-',
@@ -70,6 +90,7 @@ class StudentModel {
       photo: data['photo']?.toString() ?? data['photoUrl']?.toString(),
       phone: data['phone']?.toString() ?? data['telephone']?.toString(),
       nis: data['nis']?.toString(),
+      absenNumber: parsedAbsen,
       classroomId: parsedClassroomId,
       className: parsedClassName,
       userId: data['user_id'] is int
@@ -88,7 +109,9 @@ class StudentModel {
     );
   }
 
-  /// Only used for updating profile
+  /// ==========================
+  /// ONLY FOR PROFILE UPDATE
+  /// ==========================
   Map<String, dynamic> toJsonForUpdate() {
     return {
       "name": name,
@@ -97,6 +120,9 @@ class StudentModel {
     };
   }
 
+  /// ==========================
+  /// FULL JSON (READ ONLY USE)
+  /// ==========================
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -106,11 +132,12 @@ class StudentModel {
       'photo': photo,
       'phone': phone,
       'nis': nis,
+      'absen_number': absenNumber,
       'classroom_id': classroomId,
       'class_name': className,
       'user_id': userId,
       'serial_id': serialId,
-      // guru intentionally omitted (read-only)
+      // guru intentionally omitted
     };
   }
 
@@ -122,6 +149,7 @@ class StudentModel {
     String? photo,
     String? phone,
     String? nis,
+    int? absenNumber,
     int? classroomId,
     String? className,
     int? userId,
@@ -136,6 +164,7 @@ class StudentModel {
       photo: photo ?? this.photo,
       phone: phone ?? this.phone,
       nis: nis ?? this.nis,
+      absenNumber: absenNumber ?? this.absenNumber,
       classroomId: classroomId ?? this.classroomId,
       className: className ?? this.className,
       userId: userId ?? this.userId,

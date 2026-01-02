@@ -1,5 +1,3 @@
-// lib/features/auth/domain/auth_notifier.dart
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/auth_repository.dart';
 import '../../profile/presentation/providers/profile_provider.dart';
@@ -17,7 +15,9 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
     checkAuthStatus();
   }
 
-  /// CEK STATUS LOGIN SAAT APLIKASI DIBUKA
+  /// ==========================
+  /// CEK STATUS LOGIN
+  /// ==========================
   Future<void> checkAuthStatus() async {
     final token = await _repo.getToken();
 
@@ -29,32 +29,57 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
     }
   }
 
+  /// ==========================
   /// LOGIN
+  /// ==========================
   Future<bool> doLogin(String username, String password) async {
-    final success = await _repo.login(username, password);
+    try {
+      final success = await _repo.login(username, password);
 
-    if (success) {
-      // SET HEADER TOKEN BARU
-      final token = await _repo.getToken();
-      if (token != null) {
-        dio.options.headers['Authorization'] = "Bearer $token";
+      if (success) {
+        final token = await _repo.getToken();
+        if (token != null) {
+          dio.options.headers['Authorization'] = "Bearer $token";
+        }
+
+        // refresh provider terkait user
+        ref.invalidate(profileDataProvider);
+        ref.invalidate(laporanCheckProvider);
+
+        state = AuthStatus.authenticated;
       }
 
-      // INVALIDATE SEMUA PROVIDER YANG BERGANTUNG PADA USER
-      ref.invalidate(profileDataProvider);
-      ref.invalidate(laporanCheckProvider);
-
-      state = AuthStatus.authenticated;
+      return success;
+    } catch (e) {
+      rethrow; // ⬅️ biar UI bisa tampilkan pesan error
     }
-
-    return success;
   }
 
+  /// ==========================
+  /// CHANGE PASSWORD
+  /// ==========================
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    await _repo.changePassword(
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+      confirmPassword: confirmPassword,
+    );
+
+    // 🔐 OPSIONAL (AKTIFKAN JIKA MAU AUTO LOGOUT)
+    // await doLogout();
+  }
+
+  /// ==========================
   /// LOGOUT
+  /// ==========================
   Future<void> doLogout() async {
     await _repo.logout();
 
-    // RESET PROVIDER YANG BERISI DATA USER
+    // reset semua provider terkait user
     ref.invalidate(profileDataProvider);
     ref.invalidate(laporanCheckProvider);
 
@@ -62,12 +87,13 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
   }
 }
 
+/// PROVIDER UTAMA AUTH
 final authNotifierProvider =
     StateNotifierProvider<AuthNotifier, AuthStatus>((ref) {
   return AuthNotifier(ref, ref.read(authRepositoryProvider));
 });
 
-/// Ambil data Student yang sedang login
+/// PROVIDER STUDENT LOGIN
 final studentProvider = Provider<StudentModel?>((ref) {
   final profileAsync = ref.watch(profileDataProvider);
 

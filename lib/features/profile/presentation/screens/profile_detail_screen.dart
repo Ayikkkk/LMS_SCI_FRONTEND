@@ -1,4 +1,3 @@
-// lib/features/profile/presentation/screens/profile_detail_screen.dart
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -26,12 +25,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
   late final TextEditingController _emailCtrl;
   late final TextEditingController _phoneCtrl;
 
-  final _oldPasswordCtrl = TextEditingController();
-  final _newPasswordCtrl = TextEditingController();
-  final _confirmPasswordCtrl = TextEditingController();
-
   bool _saving = false;
-  bool _changingPassword = false;
   String? _error;
 
   File? _pickedImage;
@@ -41,8 +35,6 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
 
   final ImagePicker _picker = ImagePicker();
 
-  /// Local remote photo URL (from server). We initialize from widget.student.photo,
-  /// and update this when server returns new photo URL so avatar refreshes immediately.
   String? _remotePhotoUrl;
 
   @override
@@ -52,8 +44,6 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     _nameCtrl = TextEditingController(text: widget.student.name);
     _emailCtrl = TextEditingController(text: widget.student.email ?? '');
     _phoneCtrl = TextEditingController(text: widget.student.phone ?? '');
-
-    // initialize remote photo url from model (may be null)
     _remotePhotoUrl = widget.student.photo;
   }
 
@@ -62,46 +52,76 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     _nameCtrl.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
-    _oldPasswordCtrl.dispose();
-    _newPasswordCtrl.dispose();
-    _confirmPasswordCtrl.dispose();
     if (_cancelToken != null && !_cancelToken!.isCancelled) {
       _cancelToken!.cancel("disposed");
     }
     super.dispose();
   }
 
+  void _showPhotoOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text("Pilih dari Galeri"),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text("Ambil dari Kamera"),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            if (_remotePhotoUrl != null || _pickedImage != null)
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: const Text(
+                  "Hapus Foto",
+                  style: TextStyle(color: Colors.red),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _deletePhoto();
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ==========================
+  // IMAGE PICKER
+  // ==========================
   Future<void> _pickImage(ImageSource source) async {
     try {
       final xfile = await _picker.pickImage(source: source, imageQuality: 80);
-      if (xfile == null) return;
-      if (!mounted) return;
+      if (xfile == null || !mounted) return;
       setState(() => _pickedImage = File(xfile.path));
-    } catch (e) {
-      debugPrint("Image pick error: $e");
+    } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text("Gagal memilih gambar")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Gagal memilih gambar")),
+        );
       }
     }
   }
 
-  String _extractDioMessage(DioError dioErr) {
-    try {
-      final data = dioErr.response?.data;
-      if (data is Map) {
-        if (data['message'] != null) return data['message'].toString();
-        if (data['errors'] != null) return data['errors'].toString();
-        return data.toString();
-      }
-      if (data is String && data.isNotEmpty) return data;
-      if (dioErr.error != null) return dioErr.error.toString();
-    } catch (_) {}
-    return dioErr.toString();
-  }
-
-  /// Build FormData only with changed (or non-empty) fields.
-  /// Async because we use MultipartFile.fromFile
+  // ==========================
+  // BUILD FORM DATA (ONLY CHANGED)
+  // ==========================
   Future<FormData> _buildFormDataOnlyChanged() async {
     final original = widget.student;
     final Map<String, dynamic> map = {};
@@ -110,7 +130,6 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     final emailVal = _emailCtrl.text.trim();
     final phoneVal = _phoneCtrl.text.trim();
 
-    // Tambahkan hanya jika berbeda dari original DAN tidak kosong
     if (nameVal.isNotEmpty && nameVal != original.name) map['name'] = nameVal;
     if (emailVal.isNotEmpty && emailVal != (original.email ?? ''))
       map['email'] = emailVal;
@@ -119,7 +138,6 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
 
     final form = FormData.fromMap(map);
 
-    // tambahkan file jika dipilih (async)
     if (_pickedImage != null) {
       final fileName = _pickedImage!.path.split('/').last;
       final mp =
@@ -130,8 +148,10 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     return form;
   }
 
+  // ==========================
+  // SAVE PROFILE
+  // ==========================
   Future<void> _saveProfile() async {
-    // Validate form (name is required in this UI). If you want name optional, adapt validator.
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -144,13 +164,13 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
 
     try {
       final formData = await _buildFormDataOnlyChanged();
-
-      // Kalau tidak ada perubahan sama sekali, beri tahu user dan return
       final hasChanges = (_pickedImage != null) || formData.fields.isNotEmpty;
+
       if (!hasChanges) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text("Tidak ada perubahan untuk disimpan")));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Tidak ada perubahan untuk disimpan")),
+          );
         }
         setState(() => _saving = false);
         return;
@@ -167,38 +187,27 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
 
       if (!mounted) return;
 
-      // backend mungkin mengembalikan { success: true, data: {...} } atau langsung object
-      final updated = resp is Map && resp.containsKey('data') ? resp['data'] : resp;
+      final updated =
+          resp is Map && resp.containsKey('data') ? resp['data'] : resp;
 
-      // invalidate supaya profile utama reload (parent)
-      try {
-        ref.invalidate(profileDataProvider);
-      } catch (_) {}
+      ref.invalidate(profileDataProvider);
 
-      // Update local UI immediately:
       if (updated is Map<String, dynamic>) {
         setState(() {
-          // If server returned a photo URL, update remote photo URL
-          if (updated['photo'] != null && (updated['photo'] as String).isNotEmpty) {
+          if (updated['photo'] != null &&
+              (updated['photo'] as String).isNotEmpty) {
             _remotePhotoUrl = updated['photo'] as String;
           }
-          // update controllers (name/email/phone)
           _nameCtrl.text = updated['name'] ?? _nameCtrl.text;
           _emailCtrl.text = updated['email'] ?? _emailCtrl.text;
           _phoneCtrl.text = updated['phone'] ?? _phoneCtrl.text;
-          // clear local picked image only after server returns success
           _pickedImage = null;
         });
       }
 
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text("Profil berhasil diperbarui")));
-      }
-    } on DioError catch (dioErr) {
-      if (dioErr.type == DioErrorType.cancel) return;
-      final message = _extractDioMessage(dioErr);
-      if (mounted) setState(() => _error = message);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Profil berhasil diperbarui")),
+      );
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
@@ -210,51 +219,9 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     }
   }
 
-  Future<void> _changePassword() async {
-    final oldPass = _oldPasswordCtrl.text.trim();
-    final newPass = _newPasswordCtrl.text.trim();
-    final confirm = _confirmPasswordCtrl.text.trim();
-
-    if (oldPass.isEmpty || newPass.isEmpty) {
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Isi semua field password")));
-      return;
-    }
-    if (newPass != confirm) {
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text("Password baru dan konfirmasi tidak cocok")));
-      return;
-    }
-
-    setState(() => _changingPassword = true);
-    final repo = ref.read(profileRepositoryProvider);
-
-    try {
-      await repo.changePassword(oldPass, newPass);
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Password berhasil diubah")));
-      _oldPasswordCtrl.clear();
-      _newPasswordCtrl.clear();
-      _confirmPasswordCtrl.clear();
-    } on DioError catch (dioErr) {
-      if (dioErr.type == DioErrorType.cancel) return;
-      final message = _extractDioMessage(dioErr);
-      if (mounted)
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("Gagal: $message")));
-    } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("Gagal: $e")));
-    } finally {
-      if (mounted) setState(() => _changingPassword = false);
-    }
-  }
-
+  // ==========================
+  // DELETE PHOTO
+  // ==========================
   Future<void> _deletePhoto() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -278,8 +245,6 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
 
     try {
       await repo.deletePhoto();
-
-      if (!mounted) return;
       ref.invalidate(profileDataProvider);
 
       setState(() {
@@ -287,42 +252,72 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
         _remotePhotoUrl = null;
       });
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Foto dihapus")));
-    } on DioError catch (dioErr) {
-      if (dioErr.type == DioErrorType.cancel) return;
-      final message = _extractDioMessage(dioErr);
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Gagal hapus foto: $message")));
-    } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("Gagal hapus foto: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Foto berhasil dihapus")),
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
 
+  // ==========================
+  // READ ONLY FIELD
+  // ==========================
+  Widget _readOnlyField({
+    required String label,
+    required String value,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.blue),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style:
+                        const TextStyle(fontSize: 12, color: Colors.black54)),
+                const SizedBox(height: 4),
+                Text(value,
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+          const Icon(Icons.lock_outline, color: Colors.black38),
+        ],
+      ),
+    );
+  }
+
   Widget _avatarWidget() {
-    // priority: local picked image preview > remotePhotoUrl > default avatar
     if (_pickedImage != null) {
-      return CircleAvatar(radius: 48, backgroundImage: FileImage(_pickedImage!));
+      return CircleAvatar(
+          radius: 48, backgroundImage: FileImage(_pickedImage!));
     }
-
     if (_remotePhotoUrl != null && _remotePhotoUrl!.isNotEmpty) {
-      return CircleAvatar(radius: 48, backgroundImage: NetworkImage(_remotePhotoUrl!));
+      return CircleAvatar(
+          radius: 48, backgroundImage: NetworkImage(_remotePhotoUrl!));
     }
-
     return const CircleAvatar(
-        radius: 48,
-        backgroundColor: Colors.blue,
-        child: Icon(Icons.person, size: 40, color: Colors.white));
+      radius: 48,
+      backgroundColor: Colors.blue,
+      child: Icon(Icons.person, size: 40, color: Colors.white),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isBusy = _saving || _changingPassword;
+    final isBusy = _saving;
     return Scaffold(
       appBar: AppBar(
         title: const Text("Profil Saya"),
@@ -340,44 +335,77 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
           Center(
             child: Column(
               children: [
-                _avatarWidget(),
-                const SizedBox(height: 8),
-                // Use controller text so name updates immediately after save
-                Text(_nameCtrl.text,
-                    style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text(
-                    widget.student.nis?.toString() ??
-                        widget.student.username.toString(),
-                    style: const TextStyle(color: Colors.black54)),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
+                Stack(
+                  alignment: Alignment.bottomRight,
                   children: [
-                    TextButton.icon(
-                      onPressed:
-                          isBusy ? null : () => _pickImage(ImageSource.gallery),
-                      icon: const Icon(Icons.photo_library_outlined),
-                      label: const Text("Pilih Foto"),
-                    ),
-                    const SizedBox(width: 8),
-                    TextButton.icon(
-                      onPressed:
-                          isBusy ? null : () => _pickImage(ImageSource.camera),
-                      icon: const Icon(Icons.camera_alt_outlined),
-                      label: const Text("Ambil Foto"),
+                    _avatarWidget(),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: InkWell(
+                        onTap: isBusy ? null : _showPhotoOptions,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.blue,
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                if (_uploadProgress > 0.0 && _uploadProgress < 1.0) ...[
-                  const SizedBox(height: 12),
-                  LinearProgressIndicator(value: _uploadProgress),
-                ]
+                const SizedBox(height: 10),
+                Text(
+                  _nameCtrl.text,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  widget.student.className ?? "-",
+                  style: const TextStyle(color: Colors.black54),
+                ),
               ],
             ),
           ),
+
           const SizedBox(height: 20),
+
+          // ==========================
+          // DATA SISWA (READ ONLY)
+          // ==========================
+          _readOnlyField(
+            label: "Nomor Absen",
+            value: widget.student.absenNumber?.toString() ?? "-",
+            icon: Icons.format_list_numbered,
+          ),
+          const SizedBox(height: 8),
+          _readOnlyField(
+            label: "NIS",
+            value: widget.student.nis ?? "-",
+            icon: Icons.badge_outlined,
+          ),
+          const SizedBox(height: 16),
+
+          const Text(
+            "Nomor Absen dan NIS tidak bisa diubah.\nJika ada kesalahan, hubungi guru ya 😊",
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: Colors.black54),
+          ),
+
+          const SizedBox(height: 20),
+
+          // ==========================
+          // FORM EDIT PROFIL
+          // ==========================
           Card(
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -387,7 +415,6 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                 key: _formKey,
                 child: Column(
                   children: [
-                    // Nama tetap wajib (silakan ubah jadi optional kalau mau)
                     TextFormField(
                       controller: _nameCtrl,
                       decoration: const InputDecoration(labelText: "Nama"),
@@ -396,45 +423,26 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                           : null,
                     ),
                     const SizedBox(height: 8),
-                    // Email -> OPSIONAL: hanya validasi format jika diisi
                     TextFormField(
                       controller: _emailCtrl,
                       decoration: const InputDecoration(labelText: "Email"),
                       keyboardType: TextInputType.emailAddress,
-                      validator: (v) {
-                        final s = v?.trim() ?? '';
-                        if (s.isEmpty) return null; // optional
-                        if (!RegExp(r"^[^@]+@[^@]+\.[^@]+").hasMatch(s))
-                          return "Email tidak valid";
-                        return null;
-                      },
                     ),
                     const SizedBox(height: 8),
-                    // Telepon -> OPSIONAL: hanya validasi jika diisi
                     TextFormField(
                       controller: _phoneCtrl,
                       decoration: const InputDecoration(labelText: "Telepon"),
                       keyboardType: TextInputType.phone,
-                      validator: (v) {
-                        final s = v?.trim() ?? '';
-                        if (s.isEmpty) return null; // optional
-                        // kamu bisa tambahkan validasi nomor telepon lebih ketat jika perlu
-                        if (s.length < 6) return "Nomor telepon terlalu pendek";
-                        return null;
-                      },
                     ),
                     const SizedBox(height: 12),
                     _saving
                         ? const CircularProgressIndicator()
-                        : Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: _saving ? null : _saveProfile,
-                                  child: const Text("Simpan Perubahan"),
-                                ),
-                              ),
-                            ],
+                        : SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _saveProfile,
+                              child: const Text("Simpan Perubahan"),
+                            ),
                           ),
                     if (_error != null) ...[
                       const SizedBox(height: 8),
@@ -442,57 +450,6 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                     ]
                   ],
                 ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Card(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                children: [
-                  const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text("Ganti Password",
-                          style: TextStyle(fontWeight: FontWeight.bold))),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _oldPasswordCtrl,
-                    decoration:
-                        const InputDecoration(labelText: "Password Lama"),
-                    obscureText: true,
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _newPasswordCtrl,
-                    decoration:
-                        const InputDecoration(labelText: "Password Baru"),
-                    obscureText: true,
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _confirmPasswordCtrl,
-                    decoration: const InputDecoration(
-                        labelText: "Konfirmasi Password Baru"),
-                    obscureText: true,
-                  ),
-                  const SizedBox(height: 12),
-                  _changingPassword
-                      ? const CircularProgressIndicator()
-                      : Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed:
-                                    _changingPassword ? null : _changePassword,
-                                child: const Text("Ubah Password"),
-                              ),
-                            ),
-                          ],
-                        ),
-                ],
               ),
             ),
           ),

@@ -1,5 +1,3 @@
-// lib/features/auth/data/auth_repository.dart
-
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,32 +29,57 @@ class AuthRepository {
         await storage.write(key: 'student_data', value: studentJson);
 
         _dio.options.headers['Authorization'] = 'Bearer $token';
-
         return true;
       }
 
       return false;
     } on DioException catch (e) {
-      print("LOGIN ERROR STATUS: ${e.response?.statusCode}");
-      print("LOGIN ERROR DATA: ${e.response?.data}");
-      print("LOGIN ERROR MESSAGE: ${e.message}");
-      return false;
+      final message =
+          e.response?.data?['message'] ?? 'Login gagal';
+      throw Exception(message);
     }
   }
 
-  /// AMBIL TOKEN
+  /// -----------------------
+  /// CHANGE PASSWORD
+  /// -----------------------
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    try {
+      await _dio.post('/student/change-password', data: {
+        'current_password': currentPassword,
+        'new_password': newPassword,
+        'new_password_confirmation': confirmPassword,
+      });
+    } on DioException catch (e) {
+      final message =
+          e.response?.data?['message'] ?? 'Gagal mengubah password';
+      throw Exception(message);
+    }
+  }
+
+  /// -----------------------
+  /// GET TOKEN
+  /// -----------------------
   Future<String?> getToken() async {
     return await storage.read(key: 'auth_token');
   }
 
-  /// AMBIL DATA USER
+  /// -----------------------
+  /// GET STUDENT DATA
+  /// -----------------------
   Future<Map<String, dynamic>?> getStudentData() async {
     final raw = await storage.read(key: 'student_data');
     if (raw == null) return null;
     return jsonDecode(raw);
   }
 
+  /// -----------------------
   /// CLEAR HEADER TOKEN
+  /// -----------------------
   void clearHeader() {
     _dio.options.headers.remove('Authorization');
   }
@@ -66,9 +89,7 @@ class AuthRepository {
   /// -----------------------
   Future<void> logout() async {
     try {
-      final token = await getToken();
-      await _dio.post("/student/logout",
-          options: Options(headers: {"Authorization": "Bearer $token"}));
+      await _dio.post('/student/logout');
     } catch (_) {}
 
     await storage.delete(key: 'auth_token');
@@ -77,4 +98,5 @@ class AuthRepository {
   }
 }
 
-final authRepositoryProvider = Provider((ref) => AuthRepository(dio));
+final authRepositoryProvider =
+    Provider<AuthRepository>((ref) => AuthRepository(dio));

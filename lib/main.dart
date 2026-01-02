@@ -12,6 +12,9 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'features/auth/data/repository/onboarding_repository.dart';
 import 'features/auth/domain/auth_notifier.dart';
 
+// ⭐ THEME PROVIDER
+import 'core/theme/theme_notifier.dart';
+
 // SCREENS
 import 'features/auth/presentation/onboarding_screen.dart';
 import 'features/auth/presentation/login_screen.dart';
@@ -27,7 +30,7 @@ import 'features/course/presentation/screens/assignment_detail_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 🔥 Set bahasa Indonesia untuk timeago
+  // Set bahasa Indonesia untuk timeago
   timeago.setLocaleMessages('id', timeago.IdMessages());
 
   runApp(const ProviderScope(child: MyApp()));
@@ -40,6 +43,9 @@ class MyApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final init = ref.watch(appInitializerProvider);
 
+    // ⭐ AMBIL THEME MODE GLOBAL
+    final themeMode = ref.watch(themeNotifierProvider);
+
     return init.when(
       loading: () => const _AppLoadingView(),
       error: (err, _) => _InitErrorView(error: err.toString()),
@@ -47,23 +53,53 @@ class MyApp extends ConsumerWidget {
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'LMS Student',
+
+          // =========================
+          // ⭐ THEME CONFIGURATION
+          // =========================
+          themeMode: themeMode,
+
           theme: ThemeData(
+            brightness: Brightness.light,
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
             useMaterial3: true,
+            scaffoldBackgroundColor: Colors.white,
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Colors.blueAccent,
+              foregroundColor: Colors.white,
+            ),
           ),
+
+          darkTheme: ThemeData(
+            brightness: Brightness.dark,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.blueAccent,
+              brightness: Brightness.dark,
+            ),
+            useMaterial3: true,
+            scaffoldBackgroundColor: Colors.black,
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
+            ),
+          ),
+
+          // =========================
           scaffoldMessengerKey: scaffoldMessengerKey,
           navigatorKey: NavigationService.instance.navigatorKey,
           home: _buildHomeByState(ref),
+
           routes: {
             '/login': (_) => const LoginScreen(),
             '/home': (_) => const HomeScreen(),
             '/onboarding': (_) => const OnboardingScreen(),
 
-            // 🔥 Route untuk halaman detail tugas
             '/assignment/detail': (context) {
               final assignmentId =
                   ModalRoute.of(context)!.settings.arguments as int;
-              return AssignmentDetailScreen(assignmentId: assignmentId);
+              return AssignmentDetailScreen(
+                assignmentId: assignmentId,
+              );
             },
           },
         ),

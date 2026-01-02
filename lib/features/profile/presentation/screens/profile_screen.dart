@@ -1,5 +1,3 @@
-// lib/features/profile/presentation/screens/profile_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,6 +6,10 @@ import '../../../auth/domain/auth_notifier.dart';
 import '../../../auth/presentation/login_screen.dart';
 import '../../../laporan_harian/presentation/screens/laporan_harian_screen.dart';
 import '../screens/profile_detail_screen.dart';
+import '../../../auth/presentation/change_password_screen.dart';
+
+// ⭐ THEME PROVIDER
+import '../../../../core/theme/theme_notifier.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -16,8 +18,12 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profileData = ref.watch(profileDataProvider);
 
+    // ⭐ AMBIL THEME MODE
+    final themeMode = ref.watch(themeNotifierProvider);
+    final isDark = themeMode == ThemeMode.dark;
+
     return Container(
-      color: Colors.white,
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: profileData.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text("Gagal memuat data profil: $e")),
@@ -41,7 +47,6 @@ class ProfileScreen extends ConsumerWidget {
               // GURU PEMBIMBING
               // ============================
               _sectionTitle("GURU AKADEMIK"),
-
               guru == null
                   ? _emptyTeacherCard()
                   : _teacherCard(
@@ -55,10 +60,37 @@ class ProfileScreen extends ConsumerWidget {
               // ============================
               // PERSONALISASI
               // ============================
-              _sectionTitle("PERSONALISASI"),
-              _switchItem("Mode Gelap", Icons.dark_mode_outlined, false),
+              _sectionTitle("PERSONALISASI & KEAMANAN"),
 
-              const SizedBox(height: 20),
+              // ⭐ MODE GELAP AKTIF
+              _switchItem(
+                title: "Mode Gelap",
+                icon: Icons.dark_mode_outlined,
+                value: isDark,
+                onChanged: (val) {
+                  ref
+                      .read(themeNotifierProvider.notifier)
+                      .toggle(val);
+                },
+              ),
+
+              _menuItem(
+                "Ganti Kata Sandi",
+                Icons.password_outlined,
+                onTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const ChangePasswordScreen()),
+                  );
+
+                  try {
+                    ref.invalidate(profileDataProvider);
+                  } catch (_) {}
+                },
+              ),
+
+              const SizedBox(height: 30),
 
               // ============================
               // TENTANG APLIKASI
@@ -116,63 +148,48 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   // ================================
-  // PROFILE CARD (clickable)
+  // PROFILE CARD
   // ================================
   Widget _profileCard(BuildContext context, WidgetRef ref, dynamic student) {
     final name = (student?.name ?? "").toString();
     final nis = (student?.nis ?? student?.username ?? "-").toString();
-    final className = (student?.className ?? student?.class_name ?? "-").toString();
+    final className =
+        (student?.className ?? student?.class_name ?? "-").toString();
 
-    // Ambil foto: coba beberapa properti yang mungkin ada (photo / photoUrl)
     String? photoUrl;
     try {
       photoUrl = student?.photo ?? student?.photoUrl;
-    } catch (_) {
-      photoUrl = null;
-    }
+    } catch (_) {}
 
     Widget avatar;
-    if (photoUrl != null && photoUrl.toString().isNotEmpty) {
+    if (photoUrl != null && photoUrl.isNotEmpty) {
       avatar = CircleAvatar(
         radius: 32,
-        backgroundColor: Colors.transparent,
-        backgroundImage: NetworkImage(photoUrl.toString()),
+        backgroundImage: NetworkImage(photoUrl),
       );
     } else {
-      // fallback: inisial dari nama
-      String initials = "";
-      if (name.isNotEmpty) {
-        final parts = name.split(' ');
-        if (parts.isNotEmpty) initials = parts.first.substring(0, 1).toUpperCase();
-        if (parts.length > 1) initials += parts[1].substring(0, 1).toUpperCase();
-      }
       avatar = CircleAvatar(
         radius: 32,
         backgroundColor: Colors.blue,
-        child: Text(initials.isEmpty ? "?" : initials,
-            style: const TextStyle(color: Colors.white, fontSize: 20)),
+        child: Text(
+          name.isNotEmpty ? name[0].toUpperCase() : "?",
+          style: const TextStyle(color: Colors.white, fontSize: 20),
+        ),
       );
     }
 
     return Card(
-      color: Colors.white,
       elevation: 2,
-      shadowColor: Colors.black12,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: InkWell(
         onTap: () async {
-          // tunggu sampai user kembali dari detail, lalu invalidate provider agar data reload
           await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => ProfileDetailScreen(student: student),
             ),
           );
-
-          // reload profile data setelah kembali (otomatis refresh foto/nama jika berubah)
-          try {
-            ref.invalidate(profileDataProvider);
-          } catch (_) {}
+          ref.invalidate(profileDataProvider);
         },
         child: Padding(
           padding: const EdgeInsets.all(18),
@@ -186,9 +203,7 @@ class ProfileScreen extends ConsumerWidget {
                   children: [
                     Text(name,
                         style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black)),
+                            fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 6),
                     Text("NIS: $nis",
                         style:
@@ -212,9 +227,7 @@ class ProfileScreen extends ConsumerWidget {
   // ================================
   Widget _teacherCard(String name, String email, String phone) {
     return Card(
-      color: Colors.white,
       elevation: 2,
-      shadowColor: Colors.black12,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: Padding(
         padding: const EdgeInsets.all(18),
@@ -223,15 +236,13 @@ class ProfileScreen extends ConsumerWidget {
           children: [
             Text(name,
                 style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black)),
+                    fontSize: 17, fontWeight: FontWeight.bold)),
             const SizedBox(height: 14),
             Row(
               children: [
                 const Icon(Icons.email_outlined, color: Colors.blue),
                 const SizedBox(width: 12),
-                Text(email, style: const TextStyle(color: Colors.black87)),
+                Text(email),
               ],
             ),
             const SizedBox(height: 10),
@@ -239,7 +250,7 @@ class ProfileScreen extends ConsumerWidget {
               children: [
                 const Icon(Icons.call_outlined, color: Colors.green),
                 const SizedBox(width: 12),
-                Text(phone, style: const TextStyle(color: Colors.black87)),
+                Text(phone),
               ],
             ),
           ],
@@ -248,40 +259,35 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  // ================================
-  // EMPTY TEACHER
-  // ================================
   Widget _emptyTeacherCard() {
     return Card(
-      color: Colors.white,
       elevation: 2,
-      shadowColor: Colors.black12,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: const Padding(
         padding: EdgeInsets.all(18),
-        child: Text(
-          "Belum ada guru pembimbing akademik",
-          style: TextStyle(color: Colors.black54),
-        ),
+        child: Text("Belum ada guru pembimbing akademik"),
       ),
     );
   }
 
   // ================================
-  // SWITCH ITEM
+  // SWITCH ITEM (ACTIVE)
   // ================================
-  Widget _switchItem(String title, IconData icon, bool value) {
+  Widget _switchItem({
+    required String title,
+    required IconData icon,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
     return Card(
-      color: Colors.white,
       elevation: 2,
-      shadowColor: Colors.black12,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ListTile(
-        leading: Icon(icon, color: Colors.blue),
-        title: Text(title, style: const TextStyle(color: Colors.black)),
+        leading: Icon(icon),
+        title: Text(title),
         trailing: Switch(
           value: value,
-          onChanged: (_) {},
+          onChanged: onChanged,
         ),
       ),
     );
@@ -292,27 +298,23 @@ class ProfileScreen extends ConsumerWidget {
   // ================================
   Widget _menuItem(String title, IconData icon, {VoidCallback? onTap}) {
     return Card(
-      color: Colors.white,
       elevation: 2,
-      shadowColor: Colors.black12,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ListTile(
         leading: Icon(icon, color: Colors.purple),
-        title: Text(title, style: const TextStyle(color: Colors.black)),
-        trailing: const Icon(Icons.chevron_right, color: Colors.black45),
+        title: Text(title),
+        trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
       ),
     );
   }
 
   // ================================
-  // LOGOUT BUTTON — FIXED (invalidate profile)
+  // LOGOUT BUTTON
   // ================================
   Widget _logoutButton(BuildContext context, WidgetRef ref) {
     return Card(
-      color: Colors.white,
       elevation: 2,
-      shadowColor: Colors.black12,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ListTile(
         leading: const Icon(Icons.logout, color: Colors.red),
@@ -321,7 +323,7 @@ class ProfileScreen extends ConsumerWidget {
           style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
         ),
         onTap: () async {
-          final konfirmasi = await showDialog(
+          final confirm = await showDialog<bool>(
             context: context,
             builder: (_) => AlertDialog(
               title: const Text("Konfirmasi"),
@@ -337,17 +339,15 @@ class ProfileScreen extends ConsumerWidget {
             ),
           );
 
-          if (konfirmasi != true) return;
+          if (confirm != true) return;
 
           await ref.read(authNotifierProvider.notifier).doLogout();
-
-          ref.invalidate(authNotifierProvider);
           ref.invalidate(profileDataProvider);
 
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (_) => const LoginScreen()),
-            (route) => false,
+            (_) => false,
           );
         },
       ),
