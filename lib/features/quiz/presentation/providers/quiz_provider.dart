@@ -15,7 +15,7 @@ final quizRepositoryProvider = Provider<IQuizRepository>((ref) {
 
 /// ChangeNotifier provider for QuizNotifier (autoDispose to free resources).
 final quizNotifierProvider =
-    ChangeNotifierProvider.autoDispose<QuizNotifier>((ref) {
+    ChangeNotifierProvider<QuizNotifier>((ref) {
   final repo = ref.read(quizRepositoryProvider);
   return QuizNotifier(repository: repo);
 });

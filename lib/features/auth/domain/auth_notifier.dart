@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../data/auth_repository.dart';
+import '../data/repository/auth_repository.dart';
 import '../../profile/presentation/providers/profile_provider.dart';
 import '../../laporan_harian/presentation/providers/laporan_provider.dart';
 import '../../../../core/network/api_client.dart';
@@ -11,9 +11,7 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
   final AuthRepository _repo;
   final Ref ref;
 
-  AuthNotifier(this.ref, this._repo) : super(AuthStatus.unknown) {
-    checkAuthStatus();
-  }
+  AuthNotifier(this.ref, this._repo) : super(AuthStatus.unknown);
 
   /// ==========================
   /// CEK STATUS LOGIN

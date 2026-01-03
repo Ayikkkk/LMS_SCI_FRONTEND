@@ -1,4 +1,3 @@
-//lib/features/auth/presentation/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/auth_notifier.dart';
@@ -16,6 +15,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
 
   bool loading = false;
+  bool _obscurePassword = true; // 👁️ state password
 
   @override
   void dispose() {
@@ -29,24 +29,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     setState(() => loading = true);
 
-    final ok = await ref
-        .read(authNotifierProvider.notifier)
-        .doLogin(_username.text.trim(), _password.text.trim());
+    try {
+      final ok = await ref.read(authNotifierProvider.notifier).doLogin(
+            _username.text.trim(),
+            _password.text.trim(),
+          );
 
-    setState(() => loading = false);
+      setState(() => loading = false);
 
-    if (!ok && mounted) {
+      if (!ok && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.red,
+            content: Text("Login gagal, periksa username & password."),
+          ),
+        );
+        return;
+      }
+
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/home');
+    } catch (e) {
+      setState(() => loading = false);
+
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           backgroundColor: Colors.red,
-          content: Text("Login gagal, periksa username & password."),
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+          ),
         ),
       );
-      return;
     }
-
-    if (!mounted) return;
-    Navigator.pushReplacementNamed(context, '/home');
   }
 
   @override
@@ -67,7 +83,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // App Logo / Icon
                 const Icon(
                   Icons.school,
                   color: Colors.white,
@@ -84,7 +99,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: 30),
 
-                // Card Login
                 Card(
                   elevation: 10,
                   shape: RoundedRectangleBorder(
@@ -113,10 +127,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           const SizedBox(height: 16),
 
-                          // Password
+                          // Password + 👁️ Toggle
                           TextFormField(
                             controller: _password,
-                            obscureText: true,
+                            obscureText: _obscurePassword,
                             validator: (v) =>
                                 v!.isEmpty ? "Tidak boleh kosong" : null,
                             decoration: InputDecoration(
@@ -126,6 +140,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               fillColor: Colors.grey.shade100,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
+                              ),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
                               ),
                             ),
                           ),

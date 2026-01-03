@@ -1,39 +1,25 @@
-// lib/main.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'scaffold_messenger_key.dart';
-
-// INIT
-import 'core/init/app_initializer.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:media_store_plus/media_store_plus.dart';
 
-// PROVIDERS
-import 'features/auth/data/repository/onboarding_repository.dart';
-import 'features/auth/domain/auth_notifier.dart';
-
-// ⭐ THEME PROVIDER
+import 'core/init/app_initializer.dart';
 import 'core/theme/theme_notifier.dart';
+import 'scaffold_messenger_key.dart';
+import 'navigation_service.dart';
 
 // SCREENS
-import 'features/auth/presentation/onboarding_screen.dart';
-import 'features/auth/presentation/login_screen.dart';
-import 'features/home/presentation/screens/home_screen.dart';
-
-// Redirect Middleware
 import 'auth_redirector.dart';
-
-// Navigation service
-import 'navigation_service.dart';
+import 'features/auth/presentation/login_screen.dart';
+import 'features/auth/presentation/onboarding_screen.dart';
+import 'features/home/presentation/screens/home_screen.dart';
 import 'features/course/presentation/screens/assignment_detail_screen.dart';
+import 'core/widgets/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   await MediaStore.ensureInitialized();
 
-  // Set bahasa Indonesia untuk timeago
   timeago.setLocaleMessages('id', timeago.IdMessages());
 
   runApp(const ProviderScope(child: MyApp()));
@@ -45,111 +31,79 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final init = ref.watch(appInitializerProvider);
-
-    // ⭐ AMBIL THEME MODE GLOBAL
     final themeMode = ref.watch(themeNotifierProvider);
 
-    return init.when(
-      loading: () => const _AppLoadingView(),
-      error: (err, _) => _InitErrorView(error: err.toString()),
-      data: (_) => AuthRedirector(
-        child: MaterialApp(
-          debugShowCheckedModeBanner: false,
-          title: 'LMS Student',
+    return AuthRedirector(
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'LMS Student',
 
-          // =========================
-          // ⭐ THEME CONFIGURATION
-          // =========================
-          themeMode: themeMode,
-
-          theme: ThemeData(
-            brightness: Brightness.light,
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
-            useMaterial3: true,
-            scaffoldBackgroundColor: Colors.white,
-            appBarTheme: const AppBarTheme(
-              backgroundColor: Colors.blueAccent,
-              foregroundColor: Colors.white,
-            ),
-          ),
-
-          darkTheme: ThemeData(
-            brightness: Brightness.dark,
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: Colors.blueAccent,
-              brightness: Brightness.dark,
-            ),
-            useMaterial3: true,
-            scaffoldBackgroundColor: Colors.black,
-            appBarTheme: const AppBarTheme(
-              backgroundColor: Colors.black,
-              foregroundColor: Colors.white,
-            ),
-          ),
-
-          // =========================
-          scaffoldMessengerKey: scaffoldMessengerKey,
-          navigatorKey: NavigationService.instance.navigatorKey,
-          home: _buildHomeByState(ref),
-
-          routes: {
-            '/login': (_) => const LoginScreen(),
-            '/home': (_) => const HomeScreen(),
-            '/onboarding': (_) => const OnboardingScreen(),
-
-            '/assignment/detail': (context) {
-              final assignmentId =
-                  ModalRoute.of(context)!.settings.arguments as int;
-              return AssignmentDetailScreen(
-                assignmentId: assignmentId,
-              );
-            },
-          },
+        // =========================
+        // THEME
+        // =========================
+        themeMode: themeMode,
+        theme: ThemeData(
+          brightness: Brightness.light,
+          colorScheme:
+              ColorScheme.fromSeed(seedColor: Colors.blueAccent),
+          useMaterial3: true,
         ),
+        darkTheme: ThemeData(
+          brightness: Brightness.dark,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.blueAccent,
+            brightness: Brightness.dark,
+          ),
+          useMaterial3: true,
+        ),
+
+        scaffoldMessengerKey: scaffoldMessengerKey,
+        navigatorKey: NavigationService.instance.navigatorKey,
+
+        // =========================
+        // ROOT CONTENT (AMAN)
+        // =========================
+        home: init.when(
+          loading: () => const SplashScreen(),
+          error: (e, _) => _InitErrorView(error: e.toString()),
+          data: (_) => const _RootPlaceholder(),
+        ),
+
+        routes: {
+          '/login': (_) => const LoginScreen(),
+          '/home': (_) => const HomeScreen(),
+          '/onboarding': (_) => const OnboardingScreen(),
+          '/assignment/detail': (context) {
+            final assignmentId =
+                ModalRoute.of(context)!.settings.arguments as int;
+            return AssignmentDetailScreen(
+              assignmentId: assignmentId,
+            );
+          },
+        },
       ),
-    );
-  }
-
-  Widget _buildHomeByState(WidgetRef ref) {
-    final onboardingStatus = ref.watch(onboardingStatusProvider);
-    final authStatus = ref.watch(authNotifierProvider);
-
-    return onboardingStatus.when(
-      loading: () => const _AppLoadingView(),
-      error: (err, _) => _InitErrorView(error: err.toString()),
-      data: (hasSeen) {
-        if (!hasSeen) return const OnboardingScreen();
-
-        switch (authStatus) {
-          case AuthStatus.authenticated:
-            return const HomeScreen();
-          case AuthStatus.unauthenticated:
-            return const LoginScreen();
-          default:
-            return const _AppLoadingView();
-        }
-      },
     );
   }
 }
 
 // ======================
-// UI LOADING & ERROR
+// ROOT PLACEHOLDER
 // ======================
 
-class _AppLoadingView extends StatelessWidget {
-  const _AppLoadingView();
+class _RootPlaceholder extends StatelessWidget {
+  const _RootPlaceholder();
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
+    return const Scaffold(
+      body: Center(child: CircularProgressIndicator()),
     );
   }
 }
+
+// ======================
+// SPLASH & ERROR VIEW
+// ======================
 
 class _InitErrorView extends StatelessWidget {
   final String error;
@@ -157,14 +111,12 @@ class _InitErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        body: Center(
-          child: Text(
-            'Init Error: $error',
-            style: const TextStyle(color: Colors.red),
-          ),
+    return Scaffold(
+      body: Center(
+        child: Text(
+          'Init Error: $error',
+          style: const TextStyle(color: Colors.red),
+          textAlign: TextAlign.center,
         ),
       ),
     );

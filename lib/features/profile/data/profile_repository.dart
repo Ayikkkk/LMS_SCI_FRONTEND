@@ -1,6 +1,6 @@
 // lib/features/profile/data/profile_repository.dart
 import 'package:dio/dio.dart';
-import '../../auth/data/auth_repository.dart';
+import '../../auth/data/repository/auth_repository.dart';
 
 class ProfileRepository {
   final Dio _dio;

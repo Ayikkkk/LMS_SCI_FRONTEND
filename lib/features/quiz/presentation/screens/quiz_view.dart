@@ -21,9 +21,19 @@ class QuizView extends ConsumerWidget {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // 🔑 SUDAH SUBMIT → TAMPILKAN HASIL
+    //  SUDAH SUBMIT → TAMPILKAN HASIL
     if (notifier.submitted) {
       return _buildResult(context, notifier);
+    }
+
+    //  JIKA SOAL KOSONG
+    if (notifier.questions.isEmpty) {
+      return const Center(
+        child: Text(
+          "Soal belum tersedia",
+          style: TextStyle(fontSize: 16),
+        ),
+      );
     }
 
     return _buildQuestion(context, notifier);

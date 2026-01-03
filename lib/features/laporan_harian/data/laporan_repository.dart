@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
-import '../../auth/data/auth_repository.dart';
+import '../../auth/data/repository/auth_repository.dart';
 import 'dart:convert';
 
 class LaporanRepository {

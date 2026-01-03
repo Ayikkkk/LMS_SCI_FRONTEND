@@ -276,7 +276,12 @@ lms_frontend
 │  │  ├─ routes
 │  │  ├─ theme
 │  │  │  └─ theme_notifier.dart
+│  │  ├─ utils
+│  │  │  ├─ download_exporter.dart
+│  │  │  ├─ file_downloader.dart
+│  │  │  └─ file_utils.dart
 │  │  └─ widgets
+│  │     ├─ attachment_file_widget.dart
 │  │     └─ section_title.dart
 │  ├─ features
 │  │  ├─ auth
@@ -320,7 +325,24 @@ lms_frontend
 │  │  │        ├─ add_reply_field.dart
 │  │  │        ├─ comment_list_widget.dart
 │  │  │        └─ reply_list_widget.dart
-│  │  ├─ dashboard
+│  │  ├─ grades
+│  │  │  ├─ data
+│  │  │  │  ├─ models
+│  │  │  │  │  ├─ recap_score_model.dart
+│  │  │  │  │  ├─ recap_subject_model.dart
+│  │  │  │  │  └─ student_recap_model.dart
+│  │  │  │  └─ repository
+│  │  │  │     └─ grade_repository.dart
+│  │  │  ├─ domain
+│  │  │  │  └─ providers
+│  │  │  │     └─ grade_provider.dart
+│  │  │  └─ presentation
+│  │  │     ├─ screens
+│  │  │     │  └─ recap_grade_screen.dart
+│  │  │     └─ widgets
+│  │  │        ├─ recap_table.dart
+│  │  │        ├─ score_cell.dart
+│  │  │        └─ subject_section.dart
 │  │  ├─ home
 │  │  │  ├─ data
 │  │  │  │  ├─ models

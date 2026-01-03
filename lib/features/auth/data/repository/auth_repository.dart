@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../../../core/network/api_client.dart';
+import '../../../../core/network/api_client.dart';
 
 class AuthRepository {
   final Dio _dio;

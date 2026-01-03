@@ -1,3 +1,4 @@
+//lib/features/auth/presentation/onboarding_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/repository/onboarding_repository.dart';
@@ -25,6 +26,13 @@ class OnboardingScreen extends ConsumerWidget {
       // 2. Paksa Riverpod untuk mengecek status Login lagi
       // Ini akan membawa user ke LoginScreen (karena authStatus menjadi unauthenticated)
       ref.invalidate(onboardingStatusProvider);
+
+      if (context.mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/login',
+          (route) => false,
+        );
+      }
     }
 
     return Scaffold(
@@ -42,7 +50,10 @@ class OnboardingScreen extends ConsumerWidget {
             const SizedBox(height: 30),
             Text(
               onboardingData[0]['title']!,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color.fromARGB(221, 189, 124, 245)),
+              style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color.fromARGB(221, 189, 124, 245)),
             ),
             const SizedBox(height: 10),
             Padding(

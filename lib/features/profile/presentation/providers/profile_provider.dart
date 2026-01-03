@@ -1,7 +1,7 @@
 // lib/features/profile/presentation/providers/profile_provider.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/profile_repository.dart';
-import '../../../auth/data/auth_repository.dart';
+import '../../../auth/data/repository/auth_repository.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../auth/data/models/student_model.dart';
 
