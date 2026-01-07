@@ -66,10 +66,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 🔥 LISTEN: Jika Dashboard menyuruh pindah ke Tab "Tugas"
     ref.listen<int>(courseTabProvider, (prev, next) {
       setState(() {
-        _selectedIndex = 1; // otomatis ke Tab Materi/Tugas
+        _selectedIndex = 1;
       });
     });
 
@@ -88,8 +87,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.menu_book), label: 'Materi'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.video_camera_front), label: 'Online'),
+          BottomNavigationBarItem(icon: Icon(Icons.video_camera_front), label: 'Online'),
           BottomNavigationBarItem(icon: Icon(Icons.quiz), label: 'Quiz'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
         ],
@@ -127,15 +125,21 @@ class _DashboardContent extends ConsumerWidget {
         onRetry: () => ref.invalidate(dashboardDataProvider),
       ),
       data: (data) {
-        final todayMeetings =
-            data.meetingsToday.where((m) => m.isUpcoming || m.isLive).toList();
-        final pending = data.pendingTasks;
         final now = DateTime.now();
 
+        // Tugas belum dikerjakan & BELUM lewat deadline
+        final pending = data.pendingTasks.where((task) {
+          return task.dueDate.isAfter(now);
+        }).toList();
+
+        // Urgent tasks (< 24 jam)
         final urgentTasks = pending.where((task) {
           final diff = task.dueDate.difference(now);
-          return !diff.isNegative && diff.inHours < 24;
+          return diff.inHours < 24;
         }).toList();
+
+        final todayMeetings =
+            data.meetingsToday.where((m) => m.isUpcoming || m.isLive).toList();
 
         return RefreshIndicator(
           onRefresh: () async => ref.invalidate(dashboardDataProvider),
@@ -147,10 +151,15 @@ class _DashboardContent extends ConsumerWidget {
               const SectionTitle('Ringkasan Akademik'),
               _StatsGrid(stats: data.stats),
               const SizedBox(height: 28),
+
               if (urgentTasks.isNotEmpty)
                 _UrgentBanner(urgentTasks: urgentTasks),
-              if (urgentTasks.isNotEmpty) const SizedBox(height: 20),
+
+              if (urgentTasks.isNotEmpty)
+                const SizedBox(height: 20),
+
               _AssignmentsPreview(tasks: pending, onNavigate: onNavigate),
+
               const SizedBox(height: 28),
               SectionTitle('Kelas Online Hari Ini (${todayMeetings.length})'),
               _MeetingsList(todayMeetings),
@@ -204,17 +213,14 @@ class _StatsGrid extends StatelessWidget {
       children: [
         _stat('Total Tugas', stats.totalTasks, Icons.assignment, Colors.orange),
         _stat('Total Quiz', stats.totalExercises, Icons.quiz, Colors.purple),
-        _stat('Rata-rata Tugas', stats.averageTaskScore, Icons.score,
-            Colors.green),
-        _stat('Rata-rata Quiz', stats.averageExerciseScore, Icons.star,
-            Colors.blue),
+        _stat('Rata-rata Tugas', stats.averageTaskScore, Icons.score, Colors.green),
+        _stat('Rata-rata Quiz', stats.averageExerciseScore, Icons.star, Colors.blue),
       ],
     );
   }
 
   Widget _stat(String title, dynamic value, IconData icon, Color color) {
-    final display =
-        value is double ? value.toStringAsFixed(2) : value.toString();
+    final display = value is double ? value.toStringAsFixed(2) : value.toString();
 
     return Card(
       elevation: 2,
@@ -230,8 +236,7 @@ class _StatsGrid extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               display,
-              style: TextStyle(
-                  fontSize: 22, fontWeight: FontWeight.bold, color: color),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color),
             ),
           ],
         ),
@@ -241,7 +246,7 @@ class _StatsGrid extends StatelessWidget {
 }
 
 // ==============================================================
-// WARNING BANNER (Urgent Tasks)
+// URGENT TASK BANNER
 // ==============================================================
 
 class _UrgentBanner extends StatelessWidget {
@@ -276,7 +281,7 @@ class _UrgentBanner extends StatelessWidget {
 }
 
 // ==============================================================
-// ASSIGNMENTS PREVIEW
+// PENDING ASSIGNMENTS PREVIEW
 // ==============================================================
 
 class _AssignmentsPreview extends ConsumerWidget {
@@ -302,8 +307,7 @@ class _AssignmentsPreview extends ConsumerWidget {
           return Card(
             color: Colors.orange.shade50,
             child: ListTile(
-              leading:
-                  const Icon(Icons.assignment_outlined, color: Colors.orange),
+              leading: const Icon(Icons.assignment_outlined, color: Colors.orange),
               title: Text(task.title,
                   style: const TextStyle(fontWeight: FontWeight.bold)),
               subtitle: Text(
@@ -324,7 +328,7 @@ class _AssignmentsPreview extends ConsumerWidget {
           child: TextButton(
             onPressed: () {
               ref.read(courseTabProvider.notifier).state = 1;
-              onNavigate(1); // pindah ke screen Materi/Tugas
+              onNavigate(1);
             },
             child: const Text("Lihat Semua"),
           ),
@@ -335,7 +339,7 @@ class _AssignmentsPreview extends ConsumerWidget {
 }
 
 // ==============================================================
-// MEETINGS
+// MEETINGS LIST
 // ==============================================================
 
 class _MeetingsList extends StatelessWidget {
@@ -353,8 +357,10 @@ class _MeetingsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (meetings.isEmpty) {
-      return const Text('Tidak ada kelas online hari ini',
-          style: TextStyle(color: Colors.grey));
+      return const Text(
+        'Tidak ada kelas online hari ini',
+        style: TextStyle(color: Colors.grey),
+      );
     }
 
     return Column(
@@ -362,13 +368,15 @@ class _MeetingsList extends StatelessWidget {
         return Card(
           margin: const EdgeInsets.only(bottom: 10),
           child: ListTile(
-            leading: Icon(Icons.video_call,
-                color: m.isLive ? Colors.red : Colors.orange),
+            leading:
+                Icon(Icons.video_call, color: m.isLive ? Colors.red : Colors.orange),
             title: Row(
               children: [
                 Expanded(
-                  child: Text(m.title,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text(
+                    m.title,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
                 m.isLive
                     ? InkWell(
@@ -380,8 +388,7 @@ class _MeetingsList extends StatelessWidget {
                         },
                         child: const Chip(
                           label: Text('LIVE',
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 11)),
+                              style: TextStyle(color: Colors.white, fontSize: 11)),
                           backgroundColor: Colors.red,
                         ),
                       )
@@ -421,10 +428,8 @@ class _QuickMenu extends StatelessWidget {
       mainAxisSpacing: 10,
       children: [
         _item('Materi', Icons.folder_open, Colors.blue, () => onNavigate(1)),
-        _item('Tugas', Icons.check_circle_outline, Colors.orange,
-            () => onNavigate(1)),
-        _item('Online', Icons.video_camera_front, Colors.red,
-            () => onNavigate(2)),
+        _item('Tugas', Icons.check_circle_outline, Colors.orange, () => onNavigate(1)),
+        _item('Online', Icons.video_camera_front, Colors.red, () => onNavigate(2)),
         _item('Quiz', Icons.quiz, Colors.green, () => onNavigate(3)),
         _item('Rekap Nilai', Icons.assessment, Colors.teal, () {
           Navigator.push(

@@ -1,7 +1,7 @@
 // lib/features/quiz/presentation/quiz_view.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../../domain/quiz_notifier.dart';
 import '../providers/quiz_provider.dart';
 
@@ -17,26 +17,37 @@ class QuizView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.watch(quizNotifierProvider);
 
+    // LOADING STATE
     if (notifier.loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
 
-    //  SUDAH SUBMIT → TAMPILKAN HASIL
+    // RESULT STATE
     if (notifier.submitted) {
-      return _buildResult(context, notifier);
+      return Scaffold(
+        appBar: AppBar(title: const Text("Hasil Quiz")),
+        body: _buildResult(context, notifier),
+      );
     }
 
-    //  JIKA SOAL KOSONG
+    // EMPTY QUESTIONS
     if (notifier.questions.isEmpty) {
-      return const Center(
-        child: Text(
-          "Soal belum tersedia",
-          style: TextStyle(fontSize: 16),
+      return const Scaffold(
+        body: Center(
+          child: Text("Soal belum tersedia", style: TextStyle(fontSize: 18)),
         ),
       );
     }
 
-    return _buildQuestion(context, notifier);
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Quiz Berlangsung"),
+        automaticallyImplyLeading: false, // cegah back default
+      ),
+      body: _buildQuestion(context, notifier),
+    );
   }
 
   // ================= QUESTION VIEW =================
@@ -47,26 +58,23 @@ class QuizView extends ConsumerWidget {
     final seconds = notifier.remainingSeconds % 60;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // TIMER
         Container(
-          width: double.infinity,
           padding: const EdgeInsets.all(14),
           color: Colors.red.shade50,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                "Sisa Waktu",
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
+              const Text("Sisa Waktu",
+                  style: TextStyle(fontWeight: FontWeight.w600)),
               Text(
                 "${minutes.toString().padLeft(2, '0')}:"
                 "${seconds.toString().padLeft(2, '0')}",
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 18,
+                  fontSize: 20,
                   color: Colors.red,
                 ),
               ),
@@ -74,46 +82,43 @@ class QuizView extends ConsumerWidget {
           ),
         ),
 
-        // QUESTION
+        // QUESTION TEXT
         Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
-            '''Soal ${notifier.currentIndex + 1} / ${notifier.questions.length}
-
-${question.question}''',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
+            "Soal ${notifier.currentIndex + 1} / ${notifier.questions.length}\n\n"
+            "${question.question}",
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
           ),
         ),
 
-        // OPTIONS
+        // ANSWER OPTIONS
         Expanded(
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             children: question.options.map((opt) {
-              final selected = notifier.selectedAnswers[question.id] == opt.id;
+              final selected =
+                  notifier.selectedAnswers[question.id] == opt.id;
 
               return Card(
+                elevation: 2,
                 child: ListTile(
                   leading: Radio<String>(
                     value: opt.id,
                     groupValue: notifier.selectedAnswers[question.id],
-                    onChanged: (_) => notifier.selectOption(
-                      question.id,
-                      opt.id,
-                    ),
+                    onChanged: (value) {
+                      notifier.selectOption(question.id, value!);
+                    },
                   ),
                   title: Text(opt.text),
-                  tileColor: selected ? Colors.red.shade50 : null,
+                  tileColor: selected ? Colors.orange.shade50 : null,
                 ),
               );
             }).toList(),
           ),
         ),
 
-        // NAV
+        // NAVIGATION BUTTONS
         Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -141,36 +146,15 @@ ${question.question}''',
 
   // ================= RESULT VIEW =================
   Widget _buildResult(BuildContext context, QuizNotifier notifier) {
-    // ⏳ TUNGGU NILAI DARI BACKEND
-    if (notifier.finalScore == null) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text("Mengambil hasil quiz..."),
-          ],
-        ),
-      );
-    }
-
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.emoji_events,
-            size: 90,
-            color: Colors.green,
-          ),
+          const Icon(Icons.emoji_events, size: 90, color: Colors.green),
           const SizedBox(height: 16),
           const Text(
             "Hasil Quiz",
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           Text(
@@ -183,7 +167,7 @@ ${question.question}''',
           ),
           const SizedBox(height: 12),
           const Text(
-            "Quiz hanya dapat dikerjakan satu kali",
+            "Quiz hanya bisa dikerjakan sekali.",
             style: TextStyle(color: Colors.grey),
           ),
         ],

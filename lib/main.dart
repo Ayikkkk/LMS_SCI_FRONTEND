@@ -25,11 +25,46 @@ void main() async {
   runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends ConsumerWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// ===========================================
+  /// DETEKSI HOME BUTTON / APP KE BACKGROUND
+  /// ===========================================
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final nav = NavigationService.instance;
+
+    if (!nav.isQuizLocked) return;
+    if (nav.currentExerciseId == null) return;
+
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      Future.delayed(const Duration(milliseconds: 300), () {
+        nav.forceBackToQuiz();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final init = ref.watch(appInitializerProvider);
     final themeMode = ref.watch(themeNotifierProvider);
 
@@ -38,14 +73,10 @@ class MyApp extends ConsumerWidget {
         debugShowCheckedModeBanner: false,
         title: 'LMS Student',
 
-        // =========================
-        // THEME
-        // =========================
         themeMode: themeMode,
         theme: ThemeData(
           brightness: Brightness.light,
-          colorScheme:
-              ColorScheme.fromSeed(seedColor: Colors.blueAccent),
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
           useMaterial3: true,
         ),
         darkTheme: ThemeData(
@@ -60,9 +91,6 @@ class MyApp extends ConsumerWidget {
         scaffoldMessengerKey: scaffoldMessengerKey,
         navigatorKey: NavigationService.instance.navigatorKey,
 
-        // =========================
-        // ROOT CONTENT (AMAN)
-        // =========================
         home: init.when(
           loading: () => const SplashScreen(),
           error: (e, _) => _InitErrorView(error: e.toString()),
@@ -89,7 +117,6 @@ class MyApp extends ConsumerWidget {
 // ======================
 // ROOT PLACEHOLDER
 // ======================
-
 class _RootPlaceholder extends StatelessWidget {
   const _RootPlaceholder();
 
@@ -104,7 +131,6 @@ class _RootPlaceholder extends StatelessWidget {
 // ======================
 // SPLASH & ERROR VIEW
 // ======================
-
 class _InitErrorView extends StatelessWidget {
   final String error;
   const _InitErrorView({required this.error});

@@ -1,10 +1,12 @@
 // lib/features/quiz/presentation/quiz_remote_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/quiz_notifier.dart';
 import '../providers/quiz_provider.dart';
-import 'quiz_view.dart';
+import '../../../../navigation_service.dart';
+import '../screens/quiz_screen.dart';
 
 class QuizRemoteScreen extends ConsumerStatefulWidget {
   final String exerciseId;
@@ -15,19 +17,15 @@ class QuizRemoteScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<QuizRemoteScreen> createState() =>
-      _QuizRemoteScreenState();
+  ConsumerState<QuizRemoteScreen> createState() => _QuizRemoteScreenState();
 }
 
-class _QuizRemoteScreenState
-    extends ConsumerState<QuizRemoteScreen> {
-  bool started = false;
-
+class _QuizRemoteScreenState extends ConsumerState<QuizRemoteScreen> {
   @override
   void initState() {
     super.initState();
 
-    // CEK STATUS QUIZ SAAT MASUK SCREEN
+    // Load quiz saat masuk screen
     Future.microtask(() {
       ref.read(quizNotifierProvider).loadQuiz(
             exerciseId: widget.exerciseId,
@@ -35,18 +33,56 @@ class _QuizRemoteScreenState
     });
   }
 
+  // Cegah back saat sudah selesai quiz
+  Future<bool> _onWillPop() async {
+    final notifier = ref.read(quizNotifierProvider);
+
+    // QUIZ SUDAH SELESAI → IZINKAN BACK
+    if (notifier.submitted || notifier.alreadyDone) {
+      return true;
+    }
+
+    // QUIZ BELUM DIMULAI → IZINKAN BACK
+    if (!NavigationService.instance.isQuizLocked) {
+      return true;
+    }
+
+    // QUIZ SEDANG BERLANGSUNG → BLOK BACK
+    await _showWarningPopup();
+    return false;
+  }
+
+  Future<void> _showWarningPopup() async {
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Tidak bisa keluar!"),
+        content: const Text(
+            "Anda harus menyelesaikan quiz sebelum keluar halaman ini."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Mengerti"),
+          )
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final notifier = ref.watch(quizNotifierProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Quiz"),
-        centerTitle: true,
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text("Quiz"),
+          centerTitle: true,
+        ),
+        body: _buildPreview(context, notifier),
       ),
-      body: started
-          ? QuizView(exerciseId: widget.exerciseId)
-          : _buildPreview(context, notifier),
     );
   }
 
@@ -66,24 +102,18 @@ class _QuizRemoteScreenState
             ),
             const SizedBox(height: 20),
             Text(
-              alreadyDone
-                  ? "Quiz sudah dikerjakan"
-                  : "Quiz siap dimulai",
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              alreadyDone ? "Quiz sudah dikerjakan" : "Quiz siap dimulai",
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             Text(
               alreadyDone
-                  ? "Lihat hasil nilai quiz kamu"
-                  : "Kerjakan quiz dengan sungguh-sungguh",
-              style: const TextStyle(color: Colors.grey),
+                  ? "Lihat nilai quiz kamu"
+                  : "Kerjakan quiz dengan jujur dan fokus",
               textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 32),
-
             if (notifier.loading)
               const CircularProgressIndicator()
             else
@@ -91,19 +121,27 @@ class _QuizRemoteScreenState
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    // 👉 Tidak perlu loadQuiz lagi
-                    setState(() => started = true);
+                    NavigationService.instance.runOrQueue((nav) {
+                      nav.pushReplacement(
+                        MaterialPageRoute(
+                          settings:
+                              RouteSettings(name: "quiz_${widget.exerciseId}"),
+                          builder: (_) => QuizScreen(
+                            exerciseId: widget.exerciseId,
+                          ),
+                        ),
+                      );
+                    });
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
-                        alreadyDone ? Colors.green : null,
+                        alreadyDone ? Colors.green : Colors.blueAccent,
                   ),
                   child: Text(
                     alreadyDone ? "Lihat Nilai" : "Mulai Quiz",
                   ),
                 ),
               ),
-
             if (notifier.error != null) ...[
               const SizedBox(height: 16),
               Text(

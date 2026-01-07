@@ -22,9 +22,21 @@ lms_frontend
 │  │     │  │  └─ com
 │  │     │  └─ res
 │  │     │     ├─ drawable
+│  │     │     │  ├─ background.png
 │  │     │     │  └─ launch_background.xml
+│  │     │     ├─ drawable-hdpi
+│  │     │     │  └─ splash.png
+│  │     │     ├─ drawable-mdpi
+│  │     │     │  └─ splash.png
 │  │     │     ├─ drawable-v21
+│  │     │     │  ├─ background.png
 │  │     │     │  └─ launch_background.xml
+│  │     │     ├─ drawable-xhdpi
+│  │     │     │  └─ splash.png
+│  │     │     ├─ drawable-xxhdpi
+│  │     │     │  └─ splash.png
+│  │     │     ├─ drawable-xxxhdpi
+│  │     │     │  └─ splash.png
 │  │     │     ├─ mipmap-hdpi
 │  │     │     │  └─ ic_launcher.png
 │  │     │     ├─ mipmap-mdpi
@@ -37,7 +49,11 @@ lms_frontend
 │  │     │     │  └─ ic_launcher.png
 │  │     │     ├─ values
 │  │     │     │  └─ styles.xml
-│  │     │     └─ values-night
+│  │     │     ├─ values-night
+│  │     │     │  └─ styles.xml
+│  │     │     ├─ values-night-v31
+│  │     │     │  └─ styles.xml
+│  │     │     └─ values-v31
 │  │     │        └─ styles.xml
 │  │     └─ profile
 │  │        └─ AndroidManifest.xml
@@ -282,15 +298,16 @@ lms_frontend
 │  │  │  └─ file_utils.dart
 │  │  └─ widgets
 │  │     ├─ attachment_file_widget.dart
-│  │     └─ section_title.dart
+│  │     ├─ section_title.dart
+│  │     └─ splash_screen.dart
 │  ├─ features
 │  │  ├─ auth
 │  │  │  ├─ data
-│  │  │  │  ├─ auth_repository.dart
 │  │  │  │  ├─ models
 │  │  │  │  │  ├─ guru_model.dart
 │  │  │  │  │  └─ student_model.dart
 │  │  │  │  └─ repository
+│  │  │  │     ├─ auth_repository.dart
 │  │  │  │     └─ onboarding_repository.dart
 │  │  │  ├─ domain
 │  │  │  │  └─ auth_notifier.dart
