@@ -4,7 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-const String apiHost = "http://192.168.110.49:8000";
+const String apiHost = "http://192.168.110.47:8000";
 const String apiBaseUrl = "$apiHost/api/";
 
 final Dio dio = Dio(
@@ -20,7 +20,7 @@ final Dio dio = Dio(
 
 const FlutterSecureStorage storage = FlutterSecureStorage();
 
-// 🚀 TOKEN INTERCEPTOR
+//  TOKEN INTERCEPTOR
 class TokenInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
@@ -32,7 +32,7 @@ class TokenInterceptor extends Interceptor {
   }
 }
 
-// 🔥 Pasang interceptor saat init
+//  Pasang interceptor saat init
 Future<void> configureDio() async {
   dio.interceptors.clear();
   dio.interceptors.add(TokenInterceptor());

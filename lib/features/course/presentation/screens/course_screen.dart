@@ -159,9 +159,7 @@ class _MateriListView extends ConsumerWidget {
 // ==========================================================
 // TUGAS LIST
 // ==========================================================
-// ==========================================================
-// TUGAS LIST (AUTO REFRESH ACTIVE)
-// ==========================================================
+
 class _TugasListView extends ConsumerWidget {
   const _TugasListView();
 
@@ -222,7 +220,7 @@ class _TugasListView extends ConsumerWidget {
                         ),
                       ),
                     ).then((_) {
-                      // 🔄 Auto refresh after returning from detail screen
+                      // Auto refresh after returning from detail screen
                       ref.invalidate(courseAssignmentsProvider);
                     });
                   },

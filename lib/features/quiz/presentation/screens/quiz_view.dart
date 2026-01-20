@@ -41,21 +41,42 @@ class QuizView extends ConsumerWidget {
       );
     }
 
+    // QUIZ SCREEN
     return Scaffold(
       appBar: AppBar(
         title: const Text("Quiz Berlangsung"),
         automaticallyImplyLeading: false, // cegah back default
       ),
-      body: _buildQuestion(context, notifier),
+      body: _buildQuestion(context, notifier, ref),
     );
   }
 
   // ================= QUESTION VIEW =================
-  Widget _buildQuestion(BuildContext context, QuizNotifier notifier) {
+  Widget _buildQuestion(
+      BuildContext context, QuizNotifier notifier, WidgetRef ref) {
     final question = notifier.questions[notifier.currentIndex];
-
     final minutes = notifier.remainingSeconds ~/ 60;
     final seconds = notifier.remainingSeconds % 60;
+
+    final answered = notifier.selectedAnswers.containsKey(question.id);
+
+    // 🧩 Jika waktu habis tapi hasil belum tampil (auto-submit sedang jalan)
+    if (notifier.remainingSeconds <= 0 && !notifier.submitted) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 20),
+            Text(
+              "Waktu habis!\nMengirim hasil kuis...",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -70,12 +91,13 @@ class QuizView extends ConsumerWidget {
               const Text("Sisa Waktu",
                   style: TextStyle(fontWeight: FontWeight.w600)),
               Text(
-                "${minutes.toString().padLeft(2, '0')}:"
-                "${seconds.toString().padLeft(2, '0')}",
-                style: const TextStyle(
+                "${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}",
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 20,
-                  color: Colors.red,
+                  color: notifier.remainingSeconds <= 10
+                      ? Colors.red
+                      : Colors.black87,
                 ),
               ),
             ],
@@ -130,7 +152,34 @@ class QuizView extends ConsumerWidget {
                 ),
               const Spacer(),
               ElevatedButton(
-                onPressed: notifier.next,
+                onPressed: () {
+                  // 🧩 Logika navigasi + validasi wajib jawab
+                  if (notifier.currentIndex == notifier.questions.length - 1) {
+                    // Jika di soal terakhir, cek apakah semua sudah dijawab
+                    if (notifier.allAnswered) {
+                      notifier.submit(context: context);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                              "Harap jawab semua pertanyaan sebelum menyelesaikan kuis."),
+                        ),
+                      );
+                    }
+                  } else {
+                    // Kalau belum di soal terakhir, pastikan sudah jawab soal ini
+                    if (!answered) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content:
+                              Text("Harap pilih jawaban terlebih dahulu."),
+                        ),
+                      );
+                      return;
+                    }
+                    notifier.next();
+                  }
+                },
                 child: Text(
                   notifier.currentIndex == notifier.questions.length - 1
                       ? "Selesai"

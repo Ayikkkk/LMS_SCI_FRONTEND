@@ -100,11 +100,13 @@ class RemoteQuizRepository implements IQuizRepository {
   Future<void> submitQuiz({
     required String exerciseId,
     required Map<String, String> answers,
+    bool auto = false,
   }) async {
     await dio.post(
       'student/exercises/$exerciseId/submit',
       data: {
         'answers': answers,
+        'auto_submit': auto,
       },
     );
   }

@@ -1,7 +1,6 @@
-// lib/features/quiz/domain/quiz_notifier.dart
-
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import '../../../navigation_service.dart';
 import '../data/quiz_repository.dart';
 import 'models/question_model.dart';
@@ -11,7 +10,7 @@ class QuizNotifier extends ChangeNotifier {
 
   QuizNotifier({required this.repository});
 
-  static const int totalQuizSeconds = 30 * 60;
+  static const int totalQuizSeconds = 2 * 60;
 
   late String _exerciseId;
 
@@ -43,7 +42,6 @@ class QuizNotifier extends ChangeNotifier {
   int get remainingSeconds => _remainingSeconds;
 
   // ============ QUIZ LOCK HANDLER ============
-
   void startQuizLock(String exerciseId) {
     NavigationService.instance.currentExerciseId = exerciseId;
     NavigationService.instance.isQuizLocked = true;
@@ -70,7 +68,7 @@ class QuizNotifier extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Cek apakah sudah pernah submit
+      // 🔍 Cek apakah sudah pernah dikerjakan
       final existingScore = await repository.getResultScore(
         exerciseId: exerciseId,
       );
@@ -79,20 +77,17 @@ class QuizNotifier extends ChangeNotifier {
         _finalScore = existingScore;
         _submitted = true;
         _loading = false;
-        endQuizLock(); // tidak mengunci quiz yang sudah selesai
+        endQuizLock();
         notifyListeners();
         return;
       }
 
-      // load soal
-      _questions = await repository.fetchQuiz(
-        exerciseId: exerciseId,
-      );
-
+      // 🧩 Load soal dari backend
+      _questions = await repository.fetchQuiz(exerciseId: exerciseId);
       _remainingSeconds = totalQuizSeconds;
 
       if (_questions.isNotEmpty) {
-        startQuizLock(exerciseId);     // <--- LOCK quiz di sini!
+        startQuizLock(exerciseId);
         _startGlobalTimer();
       }
     } catch (e) {
@@ -107,13 +102,13 @@ class QuizNotifier extends ChangeNotifier {
   void _startGlobalTimer() {
     _quizTimer?.cancel();
 
-    _quizTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _quizTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       _remainingSeconds--;
 
       if (_remainingSeconds <= 0) {
         timer.cancel();
-        submit();
-        endQuizLock(); // waktu habis → unlock
+        await submit(auto: true); // ⏱️ waktu habis → auto submit
+        endQuizLock();
       }
 
       notifyListeners();
@@ -127,7 +122,15 @@ class QuizNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ================= NAV =================
+  // ================= VALIDATION =================
+  bool get allAnswered {
+    if (_questions.isEmpty) return false;
+    return _questions.every((q) => _selectedAnswers.containsKey(q.id));
+  }
+
+  bool get canSubmit => allAnswered && !_submitted && !alreadyDone;
+
+  // ================= NAVIGATION =================
   void next() {
     if (_currentIndex < _questions.length - 1) {
       _currentIndex++;
@@ -144,22 +147,43 @@ class QuizNotifier extends ChangeNotifier {
   }
 
   // ================= SUBMIT =================
-  Future<void> submit() async {
+  Future<void> submit({bool auto = false, BuildContext? context}) async {
     if (_submitted || alreadyDone) return;
+
+    // ⚠️ Validasi hanya berlaku untuk submit manual
+    if (!auto && !allAnswered) {
+      debugPrint("Harap jawab semua pertanyaan sebelum menyelesaikan kuis!");
+      if (context != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Harap jawab semua pertanyaan dulu!"),
+          ),
+        );
+      }
+      return;
+    }
 
     _quizTimer?.cancel();
 
     try {
+      // 🧩 Kirim jawaban ke backend
       await repository.submitQuiz(
         exerciseId: _exerciseId,
         answers: _selectedAnswers,
+        auto: auto,
       );
 
-      final score = await repository.getResultScore(
-        exerciseId: _exerciseId,
-      );
+      // 🧩 Tunggu sebentar agar backend sempat menyimpan skor
+      await Future.delayed(const Duration(milliseconds: 500));
 
-      _finalScore = score ?? 0;
+      // 🧩 Ambil nilai final dari backend (sumber kebenaran)
+      final backendScore =
+          await repository.getResultScore(exerciseId: _exerciseId);
+
+      // ✅ Gunakan skor dari backend langsung (tanpa hitung ulang)
+      _finalScore = backendScore ?? 0;
+
+      debugPrint('✅ Final score (from backend): $_finalScore');
     } catch (e) {
       debugPrint('Submit error: $e');
       _finalScore = 0;
@@ -167,8 +191,7 @@ class QuizNotifier extends ChangeNotifier {
 
     _submitted = true;
     notifyListeners();
-
-    endQuizLock(); // selesai submit → unlock
+    endQuizLock();
   }
 
   // ================= RESET =================
@@ -180,7 +203,7 @@ class QuizNotifier extends ChangeNotifier {
     _selectedAnswers.clear();
     _remainingSeconds = totalQuizSeconds;
 
-    startQuizLock(_exerciseId); 
+    startQuizLock(_exerciseId);
     _startGlobalTimer();
     notifyListeners();
   }
