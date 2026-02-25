@@ -3,9 +3,12 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import '../network/api_client.dart';
 import '../../features/auth/domain/auth_notifier.dart';
+import '../utils/logger.dart';
 
 final appInitializerProvider = FutureProvider<void>((ref) async {
   try {
+    AppLogger.info('Starting app initialization', 'AppInitializer');
+
     // Init Dio + Token
     await configureDio();
 
@@ -16,9 +19,9 @@ final appInitializerProvider = FutureProvider<void>((ref) async {
     final authNotifier = ref.read(authNotifierProvider.notifier);
     await authNotifier.checkAuthStatus();
 
-    print("App initialization completed");
+    AppLogger.success('App initialization completed', 'AppInitializer');
   } catch (e, s) {
-    print("Error during app initialization: $e");
-    print(s);
+    AppLogger.error('App initialization failed', e, s, 'AppInitializer');
+    rethrow;
   }
 });

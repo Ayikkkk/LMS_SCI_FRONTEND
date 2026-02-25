@@ -15,7 +15,7 @@ import '../../presentation/widgets/comment_list_widget.dart';
 import '../../presentation/widgets/add_comment_field.dart';
 
 // DATA SISWA LOGIN
-import '../../../profile/presentation/providers/profile_provider.dart';
+import '../../../auth/domain/auth_notifier.dart'; // studentProvider is here now
 
 Future<void> _launchExternalUrl(String url, BuildContext context) async {
   try {
@@ -182,7 +182,9 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen> {
                               fileName: item.attachment!.split('/').last,
                               fileType: item.attachment!.split('.').last),
                         if (item.embed?.isNotEmpty == true) ...[
-                          const SizedBox(height: 24),
+                          const Text("Video",
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 10),
                           VideoEmbedWidget(embedCode: item.embed!),
                         ],
                         const SizedBox(height: 20),

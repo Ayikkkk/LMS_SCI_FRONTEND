@@ -34,10 +34,8 @@ dependencies:
   dio: ^5.0.0 # Koneksi API
   flutter_riverpod: ^2.4.9 # State Management
   flutter_secure_storage: ^9.0.0 # Penyimpanan Token Aman
-  get: ^4.6.6 # Navigasi & Utility (opsional)
   flutter_native_splash: ^2.4.7 # Native Splash Screen
   shared_preferences: ^2.2.2 # Untuk status Onboarding
-  provider: ^6.1.1
   intl: ^0.18.1 # Internationalization & Formatting
   url_launcher: ^6.2.2
   webview_flutter: ^4.7.0

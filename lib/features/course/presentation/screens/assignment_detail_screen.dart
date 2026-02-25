@@ -13,7 +13,7 @@ import '../../domain/providers/comment_provider.dart';
 import '../../presentation/widgets/comment_list_widget.dart';
 import '../../presentation/widgets/add_comment_field.dart';
 import '../../../home/presentation/providers/home_provider.dart';
-import '../../../profile/presentation/providers/profile_provider.dart';
+import '../../../auth/domain/auth_notifier.dart'; // studentProvider is here now
 
 class AssignmentDetailScreen extends ConsumerStatefulWidget {
   final int assignmentId;

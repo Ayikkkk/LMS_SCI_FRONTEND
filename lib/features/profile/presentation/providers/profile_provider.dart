@@ -20,13 +20,5 @@ final profileDataProvider = FutureProvider<StudentModel>((ref) async {
   return StudentModel.fromJson(raw);
 });
 
-/// PROVIDER GLOBAL DATA SISWA LOGIN
-final studentProvider = Provider<StudentModel?>((ref) {
-  final profile = ref.watch(profileDataProvider);
-
-  return profile.when(
-    data: (student) => student,
-    loading: () => null,
-    error: (_, __) => null,
-  );
-});
+/// NOTE: studentProvider is now defined in auth_notifier.dart
+/// Import from: features/auth/domain/auth_notifier.dart

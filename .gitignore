@@ -55,6 +55,13 @@ android/app/debug
 android/app/profile
 android/app/release
 
+# Android backup folder (not needed in version control)
+android_backup/
+
+# Android error logs
+android/*.log
+android/hs_err_*.log
+
 # ---------------------------------------------------------
 # iOS
 # ---------------------------------------------------------

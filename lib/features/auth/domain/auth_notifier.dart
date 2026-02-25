@@ -85,13 +85,18 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
   }
 }
 
+/// ============================
+/// PROVIDERS
+/// ============================
+
 /// PROVIDER UTAMA AUTH
 final authNotifierProvider =
     StateNotifierProvider<AuthNotifier, AuthStatus>((ref) {
   return AuthNotifier(ref, ref.read(authRepositoryProvider));
 });
 
-/// PROVIDER STUDENT LOGIN
+/// PROVIDER GLOBAL DATA SISWA LOGIN
+/// This is the single source of truth for student data across the app
 final studentProvider = Provider<StudentModel?>((ref) {
   final profileAsync = ref.watch(profileDataProvider);
 

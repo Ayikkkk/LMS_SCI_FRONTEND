@@ -26,13 +26,19 @@ class QuizNotifier extends ChangeNotifier {
   int _currentIndex = 0;
   int get currentIndex => _currentIndex;
 
-  final Map<String, String> _selectedAnswers = {};
-  Map<String, String> get selectedAnswers => _selectedAnswers;
+  final Map<String, dynamic> _selectedAnswers = {};
+  Map<String, dynamic> get selectedAnswers => _selectedAnswers;
 
   int? _finalScore;
   int? get finalScore => _finalScore;
 
-  bool get alreadyDone => _finalScore != null;
+  bool _isPendingReview = false;
+  bool get isPendingReview => _isPendingReview;
+
+  String? _exerciseTypeName;
+  String? get exerciseTypeName => _exerciseTypeName;
+
+  bool get alreadyDone => _finalScore != null || _isPendingReview;
 
   bool _submitted = false;
   bool get submitted => _submitted;
@@ -60,6 +66,8 @@ class QuizNotifier extends ChangeNotifier {
     _error = null;
     _submitted = false;
     _finalScore = null;
+    _isPendingReview = false;
+    _exerciseTypeName = null;
     _currentIndex = 0;
     _selectedAnswers.clear();
     _questions.clear();
@@ -69,21 +77,36 @@ class QuizNotifier extends ChangeNotifier {
 
     try {
       // 🔍 Cek apakah sudah pernah dikerjakan
-      final existingScore = await repository.getResultScore(
-        exerciseId: exerciseId,
-      );
+      final result = await repository.getResult(exerciseId: exerciseId);
 
-      if (existingScore != null) {
-        _finalScore = existingScore;
-        _submitted = true;
-        _loading = false;
-        endQuizLock();
-        notifyListeners();
-        return;
+      if (result != null) {
+        _exerciseTypeName = result['exercise_type_name'];
+
+        // Cek apakah pending review (untuk tipe AKM)
+        if (result['is_pending_review'] == true) {
+          _isPendingReview = true;
+          _submitted = true;
+          _loading = false;
+          endQuizLock();
+          notifyListeners();
+          return;
+        }
+
+        // Jika sudah ada score
+        if (result['score'] != null) {
+          _finalScore = result['score'];
+          _submitted = true;
+          _loading = false;
+          endQuizLock();
+          notifyListeners();
+          return;
+        }
       }
 
       // 🧩 Load soal dari backend
-      _questions = await repository.fetchQuiz(exerciseId: exerciseId);
+      final quizData = await repository.fetchQuiz(exerciseId: exerciseId);
+      _questions = quizData['questions'];
+      _exerciseTypeName = quizData['exercise_type_name'];
       _remainingSeconds = totalQuizSeconds;
 
       if (_questions.isNotEmpty) {
@@ -116,10 +139,57 @@ class QuizNotifier extends ChangeNotifier {
   }
 
   // ================= ANSWER =================
+  /// Select single option (for multiple choice, true/false, yes/no)
   void selectOption(String questionId, String optionId) {
     if (_submitted || alreadyDone) return;
     _selectedAnswers[questionId] = optionId;
     notifyListeners();
+  }
+
+  /// Toggle multiple options (for multiple answer questions)
+  void toggleMultipleOption(String questionId, String optionId) {
+    if (_submitted || alreadyDone) return;
+
+    if (_selectedAnswers[questionId] is! List) {
+      _selectedAnswers[questionId] = <String>[];
+    }
+
+    final List<String> selected =
+        List<String>.from(_selectedAnswers[questionId] as List);
+
+    if (selected.contains(optionId)) {
+      selected.remove(optionId);
+    } else {
+      selected.add(optionId);
+    }
+
+    _selectedAnswers[questionId] = selected;
+    notifyListeners();
+  }
+
+  /// Set text answer (for essay, short answer, fill in the blank)
+  void setTextAnswer(String questionId, String text) {
+    if (_submitted || alreadyDone) return;
+    _selectedAnswers[questionId] = text;
+    notifyListeners();
+  }
+
+  /// Check if multiple option is selected
+  bool isMultipleOptionSelected(String questionId, String optionId) {
+    final answer = _selectedAnswers[questionId];
+    if (answer is List) {
+      return answer.contains(optionId);
+    }
+    return false;
+  }
+
+  /// Get text answer
+  String getTextAnswer(String questionId) {
+    final answer = _selectedAnswers[questionId];
+    if (answer is String) {
+      return answer;
+    }
+    return '';
   }
 
   // ================= VALIDATION =================
@@ -167,26 +237,38 @@ class QuizNotifier extends ChangeNotifier {
 
     try {
       // 🧩 Kirim jawaban ke backend
-      await repository.submitQuiz(
+      final submitResult = await repository.submitQuiz(
         exerciseId: _exerciseId,
         answers: _selectedAnswers,
         auto: auto,
       );
 
-      // 🧩 Tunggu sebentar agar backend sempat menyimpan skor
+      // 🧩 DEBUG: Print response dari backend
+      debugPrint('📦 Submit Result: $submitResult');
+      debugPrint('📦 is_pending_review: ${submitResult['is_pending_review']}');
+      debugPrint('📦 score: ${submitResult['score']}');
+
+      // 🧩 Tunggu sebentar agar backend sempat menyimpan
       await Future.delayed(const Duration(milliseconds: 500));
 
-      // 🧩 Ambil nilai final dari backend (sumber kebenaran)
-      final backendScore =
-          await repository.getResultScore(exerciseId: _exerciseId);
+      // Cek apakah perlu review manual (untuk tipe AKM)
+      if (submitResult['is_pending_review'] == true) {
+        _isPendingReview = true;
+        _finalScore = null;
+        debugPrint('✅ Pending review mode activated');
+      } else {
+        // 🧩 Ambil nilai final dari backend (sumber kebenaran)
+        final result = await repository.getResult(exerciseId: _exerciseId);
+        debugPrint('📦 Get Result: $result');
 
-      // ✅ Gunakan skor dari backend langsung (tanpa hitung ulang)
-      _finalScore = backendScore ?? 0;
-
-      debugPrint('✅ Final score (from backend): $_finalScore');
+        _finalScore = result?['score'] ?? 0;
+        _isPendingReview = false;
+        debugPrint('✅ Final score: $_finalScore');
+      }
     } catch (e) {
-      debugPrint('Submit error: $e');
+      debugPrint('❌ Submit error: $e');
       _finalScore = 0;
+      _isPendingReview = false;
     }
 
     _submitted = true;

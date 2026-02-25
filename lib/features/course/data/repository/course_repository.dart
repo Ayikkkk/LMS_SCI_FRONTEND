@@ -2,7 +2,11 @@
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lms_frontend/core/network/api_client.dart';
+
+import '../../../../core/network/api_client.dart';
+import '../../../../core/constants/api_endpoints.dart';
+import '../../../../core/constants/error_messages.dart';
+import '../../../../core/utils/logger.dart';
 import '../models/assignment_model.dart';
 import '../models/course_material_model.dart';
 
@@ -10,38 +14,48 @@ class CourseRepository {
   final Dio _dio;
   CourseRepository(this._dio);
 
-  /// 📘 Ambil daftar materi siswa
+  ///  Ambil daftar materi siswa
   Future<List<CourseMaterialModel>> fetchMaterials() async {
     try {
-      final response = await _dio.get('/student/materials');
+      final response = await _dio.get(ApiEndpoints.materials);
       final List<dynamic> data = response.data['materials'] ?? [];
       return data
           .map((e) => CourseMaterialModel.fromJson(e as Map<String, dynamic>))
           .toList();
     } on DioException catch (e) {
-      print('Error fetching materials: ${e.response?.data ?? e.message}');
-      throw Exception('Gagal memuat materi');
+      AppLogger.error(
+        ErrorMessages.fetchMaterialsFailed,
+        e.response?.data ?? e.message,
+        null,
+        'CourseRepository',
+      );
+      throw Exception(ErrorMessages.fetchMaterialsFailed);
     }
   }
 
-  /// 📄 Ambil daftar tugas siswa
+  ///  Ambil daftar tugas siswa
   Future<List<AssignmentModel>> fetchAssignments() async {
     try {
-      final response = await _dio.get('/student/assignments');
+      final response = await _dio.get(ApiEndpoints.assignments);
       final List<dynamic> data = response.data['assignments'] ?? [];
       return data
           .map((e) => AssignmentModel.fromJson(e as Map<String, dynamic>))
           .toList();
     } on DioException catch (e) {
-      print('Error fetching assignments: ${e.response?.data ?? e.message}');
-      throw Exception('Gagal memuat daftar tugas');
+      AppLogger.error(
+        ErrorMessages.fetchAssignmentsFailed,
+        e.response?.data ?? e.message,
+        null,
+        'CourseRepository',
+      );
+      throw Exception(ErrorMessages.fetchAssignmentsFailed);
     }
   }
 
-  /// 📘 Ambil detail materi
+  /// Ambil detail materi
   Future<CourseMaterialModel> fetchMaterialDetail(int id) async {
     try {
-      final response = await _dio.get('/student/posts/$id');
+      final response = await _dio.get(ApiEndpoints.materialDetail(id));
 
       // PERBAIKAN: Mengutamakan key 'material' yang sekarang dikirim oleh Laravel
       final data = response.data;
@@ -56,26 +70,38 @@ class CourseRepository {
 
       return CourseMaterialModel.fromJson(materialJson as Map<String, dynamic>);
     } on DioException catch (e) {
-      print('Error fetching material detail: ${e.response?.data ?? e.message}');
-      throw Exception('Gagal memuat detail materi');
+      AppLogger.error(
+        ErrorMessages.fetchMaterialDetailFailed,
+        e.response?.data ?? e.message,
+        null,
+        'CourseRepository',
+      );
+      throw Exception(ErrorMessages.fetchMaterialDetailFailed);
     }
   }
 
-  /// 📄 Ambil detail tugas
+  ///  Ambil detail tugas
   Future<AssignmentModel> fetchAssignmentDetail(int id) async {
     try {
       // gunakan endpoint khusus detail tugas /student/assignments/$id,
       // yang akan kembali menggunakan PostController@show dan key 'assignment'.
-      final response = await _dio.get('/student/assignments/$id');
+      final response = await _dio.get(ApiEndpoints.assignmentDetail(id));
       final assignmentJson = response.data['assignment'] ?? response.data;
       return AssignmentModel.fromJson(assignmentJson as Map<String, dynamic>);
     } on DioException catch (e) {
-      print(
-          'Error fetching assignment detail: ${e.response?.data ?? e.message}');
-      throw Exception('Gagal memuat detail tugas');
+      AppLogger.error(
+        ErrorMessages.fetchAssignmentDetailFailed,
+        e.response?.data ?? e.message,
+        null,
+        'CourseRepository',
+      );
+      throw Exception(ErrorMessages.fetchAssignmentDetailFailed);
     }
   }
 }
 
 /// Provider untuk CourseRepository
-final courseRepositoryProvider = Provider((ref) => CourseRepository(dio));
+final courseRepositoryProvider = Provider((ref) {
+  final dio = ref.read(apiClientProvider);
+  return CourseRepository(dio);
+});

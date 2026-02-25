@@ -1,8 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/network/api_client.dart';
-import '../../auth/data/repository/auth_repository.dart';
 import 'dart:convert';
+
+import '../../../core/network/api_client.dart';
+import '../../../core/constants/error_messages.dart';
+import '../../../core/utils/logger.dart';
+import '../../auth/data/repository/auth_repository.dart';
 
 class LaporanRepository {
   final Dio _dio;
@@ -24,6 +27,7 @@ class LaporanRepository {
 
       return res.data["data"] ?? [];
     } catch (e) {
+      AppLogger.error(ErrorMessages.fetchLaporanFailed, e, null, 'LaporanRepository');
       rethrow;
     }
   }
@@ -42,6 +46,7 @@ class LaporanRepository {
 
       return res.data["filled"] ?? false;
     } catch (e) {
+      AppLogger.error('Check laporan error', e, null, 'LaporanRepository');
       return false;
     }
   }
@@ -82,8 +87,10 @@ class LaporanRepository {
           contentType: "multipart/form-data",
         ),
       );
+
+      AppLogger.success('Laporan submitted successfully', 'LaporanRepository');
     } catch (e) {
-      print("❌ ERROR SUBMIT: $e");
+      AppLogger.error(ErrorMessages.submitLaporanFailed, e, null, 'LaporanRepository');
       rethrow;
     }
   }
@@ -91,6 +98,7 @@ class LaporanRepository {
 
 // Provider repository
 final laporanRepositoryProvider = Provider((ref) {
+  final dio = ref.read(apiClientProvider);
   final auth = ref.read(authRepositoryProvider);
   return LaporanRepository(dio, auth);
 });

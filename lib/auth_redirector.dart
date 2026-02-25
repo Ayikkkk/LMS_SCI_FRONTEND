@@ -19,7 +19,7 @@ class AuthRedirector extends ConsumerWidget {
     ref.listen<AuthStatus>(authNotifierProvider, (prev, next) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         NavigationService.instance.runOrQueue((nav) async {
-          // 1️⃣ CEK ONBOARDING
+          // 1 CEK ONBOARDING
           final hasSeenOnboarding =
               await ref.read(onboardingStatusProvider.future);
 
@@ -31,7 +31,7 @@ class AuthRedirector extends ConsumerWidget {
             return;
           }
 
-          // 2️⃣ BARU CEK AUTH
+          // 2️ BARU CEK AUTH
           if (next == AuthStatus.authenticated) {
             nav.pushNamedAndRemoveUntil('/home', (route) => false);
           } else if (next == AuthStatus.unauthenticated) {

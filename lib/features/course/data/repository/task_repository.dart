@@ -1,11 +1,13 @@
 // lib/features/course/data/repository/task_repository.dart
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http_parser/http_parser.dart';
 
 import '../../../../core/network/api_client.dart';
+import '../../../../core/constants/api_endpoints.dart';
+import '../../../../core/constants/error_messages.dart';
+import '../../../../core/utils/logger.dart';
 
 // ===============================================
 // PROVIDER
@@ -75,14 +77,19 @@ class TaskRepository {
   Future<bool> checkSubmission(int assignmentId) async {
     try {
       final response = await _dio.get(
-        'student/assignment/$assignmentId/status',
+        ApiEndpoints.assignmentStatus(assignmentId),
       );
 
       // Contoh response:
       // { "is_submitted": true }
       return response.data['is_submitted'] == true;
     } on DioException catch (e) {
-      debugPrint('❌ checkSubmission error: ${e.response?.data}');
+      AppLogger.error(
+        'Check submission error',
+        e.response?.data,
+        null,
+        'TaskRepository',
+      );
       return false;
     }
   }
@@ -102,26 +109,23 @@ class TaskRepository {
 
       MultipartFile attachment;
 
-      if (kIsWeb) {
-        if (file.bytes == null) {
-          return 'File tidak memiliki bytes.';
-        }
-
+      // Web platform
+      if (file.bytes != null) {
         attachment = MultipartFile.fromBytes(
           file.bytes!,
           filename: file.name,
           contentType: mediaType,
         );
-      } else {
-        if (file.path == null) {
-          return 'Path file tidak ditemukan.';
-        }
-
+      }
+      // Mobile/Desktop platform
+      else if (file.path != null) {
         attachment = await MultipartFile.fromFile(
           file.path!,
           filename: file.name,
           contentType: mediaType,
         );
+      } else {
+        return 'File tidak valid';
       }
 
       final formData = FormData.fromMap({
@@ -131,19 +135,22 @@ class TaskRepository {
       });
 
       final response = await _dio.post(
-        'student/submit-task',
+        ApiEndpoints.submitTask,
         data: formData,
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        AppLogger.success('Task submitted successfully', 'TaskRepository');
         return null; // sukses
       }
 
       return 'Server error (${response.statusCode})';
     } on DioException catch (e) {
       final msg = e.response?.data.toString() ?? e.message;
-      return 'Gagal submit: $msg';
+      AppLogger.error(ErrorMessages.submitTaskFailed, msg, null, 'TaskRepository');
+      return '${ErrorMessages.submitTaskFailed}: $msg';
     } catch (e) {
+      AppLogger.error('Unknown error', e, null, 'TaskRepository');
       return 'Error tidak diketahui: $e';
     }
   }

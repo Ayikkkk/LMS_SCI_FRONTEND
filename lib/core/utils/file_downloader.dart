@@ -1,7 +1,8 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
+
+import 'logger.dart';
 
 class FileDownloader {
   FileDownloader._();
@@ -15,21 +16,27 @@ class FileDownloader {
       final dir = await getApplicationDocumentsDirectory();
       final filePath = '${dir.path}/$fileName';
 
-      debugPrint('⬇️ DOWNLOAD START');
-      debugPrint('URL      : $url');
-      debugPrint('SAVE TO  : $filePath');
+      AppLogger.download('Starting download: $fileName');
+      AppLogger.debug('URL: $url', 'FileDownloader');
+      AppLogger.debug('Save to: $filePath', 'FileDownloader');
 
       final response = await dio.download(url, filePath);
 
-      if (response.statusCode != 200) return null;
+      if (response.statusCode != 200) {
+        AppLogger.error('Download failed with status: ${response.statusCode}', null, null, 'FileDownloader');
+        return null;
+      }
 
       final file = File(filePath);
-      if (!file.existsSync()) return null;
+      if (!file.existsSync()) {
+        AppLogger.error('File does not exist after download', null, null, 'FileDownloader');
+        return null;
+      }
 
-      debugPrint('📂 FILE SAVED: ${file.path}');
+      AppLogger.success('File saved: ${file.path}', 'FileDownloader');
       return file;
     } catch (e) {
-      debugPrint('❌ DOWNLOAD ERROR: $e');
+      AppLogger.error('Download error', e, null, 'FileDownloader');
       return null;
     }
   }
