@@ -29,7 +29,13 @@ class QuizView extends ConsumerWidget {
     // RESULT STATE
     if (notifier.submitted) {
       return Scaffold(
-        appBar: AppBar(title: const Text("Hasil Quiz")),
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: const Text("Hasil Quiz"),
+        ),
         body: _buildResult(context, notifier),
       );
     }

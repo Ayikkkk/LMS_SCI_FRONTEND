@@ -1,11 +1,15 @@
 // lib/features/quiz/presentation/quiz_screen.dart
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../screens/quiz_view.dart';
 import '../../../../navigation_service.dart';
 import '../providers/quiz_provider.dart';
+import '../../data/quiz_log_service.dart';
 
 class QuizScreen extends ConsumerStatefulWidget {
   final String exerciseId;
@@ -21,41 +25,124 @@ class QuizScreen extends ConsumerStatefulWidget {
 
 class _QuizScreenState extends ConsumerState<QuizScreen>
     with WidgetsBindingObserver {
+  // ===============================
+  // STATE VARIABLES
+  // ===============================
+
+  DateTime? _backgroundTime;
+  AppLifecycleState? _lastLifecycleState;
+  bool _isInBackground = false;
+
+  late StreamSubscription<ConnectivityResult> _connectionSubscription;
+
+  // ===============================
+  // INIT
+  // ===============================
   @override
   void initState() {
     super.initState();
+
     WidgetsBinding.instance.addObserver(this);
 
-    // Set current exercise ke NavigationService agar forceBackToQuiz bekerja
     NavigationService.instance.currentExerciseId = widget.exerciseId;
+
+    _initConnectivityListener();
   }
 
+  void _initConnectivityListener() {
+    _connectionSubscription =
+        Connectivity().onConnectivityChanged.listen((result) {
+      if (!NavigationService.instance.isQuizLocked) return;
+
+      final logService = ref.read(quizLogServiceProvider);
+
+      if (result == ConnectivityResult.none) {
+        logService.logEvent(
+          eventType: "DISCONNECTED",
+          exerciseId: widget.exerciseId,
+          timestamp: DateTime.now(),
+        );
+      } else {
+        logService.logEvent(
+          eventType: "RECONNECTED",
+          exerciseId: widget.exerciseId,
+          timestamp: DateTime.now(),
+        );
+      }
+    });
+  }
+
+  // ===============================
+  // DISPOSE
+  // ===============================
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _connectionSubscription.cancel();
     super.dispose();
   }
 
-  // ====================================================
-  // DETEKSI HOME / BACKGROUND -> PAKSA KEMBALI KE QUIZ
-  // ====================================================
+  // ===============================
+  // LIFECYCLE MONITORING (FIXED)
+  // ===============================
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final nav = NavigationService.instance;
-
     if (!nav.isQuizLocked) return;
 
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
+    final logService = ref.read(quizLogServiceProvider);
+
+    // Hindari duplicate lifecycle state
+    if (_lastLifecycleState == state) return;
+    _lastLifecycleState = state;
+
+    // =========================
+    // MASUK BACKGROUND
+    // =========================
+    if (state == AppLifecycleState.paused) {
+      if (_isInBackground) return;
+      _isInBackground = true;
+
+      _backgroundTime = DateTime.now();
+
+      logService.logEvent(
+        eventType: "APP_BACKGROUND",
+        exerciseId: widget.exerciseId,
+        timestamp: _backgroundTime!,
+      );
+
+      // Paksa kembali ke quiz
       Future.delayed(const Duration(milliseconds: 300), () {
-        nav.forceBackToQuiz(); // TANPA PARAMETER
+        nav.forceBackToQuiz();
       });
+    }
+
+    // =========================
+    // KEMBALI KE APLIKASI
+    // =========================
+    if (state == AppLifecycleState.resumed) {
+      if (!_isInBackground) return;
+      _isInBackground = false;
+
+      final now = DateTime.now();
+
+      if (_backgroundTime != null) {
+        final duration = now.difference(_backgroundTime!);
+
+        logService.logEvent(
+          eventType: "APP_RESUME",
+          exerciseId: widget.exerciseId,
+          timestamp: now,
+          durationInSeconds: duration.inSeconds,
+          suspiciousFlag: duration.inSeconds > 5,
+        );
+      }
     }
   }
 
-  // ====================================================
-  // POPUP WARNING KETIKA TEKAN BACK
-  // ====================================================
+  // ===============================
+  // WARNING POPUP
+  // ===============================
   Future<void> _showWarningPopup() async {
     if (!mounted) return;
 
@@ -80,27 +167,39 @@ class _QuizScreenState extends ConsumerState<QuizScreen>
     );
   }
 
-  // ====================================================
-  // BACK BUTTON HANDLER
-  // ====================================================
-  Future<bool> _onWillPop() async {
-    final nav = NavigationService.instance;
-    final notifier = ref.read(quizNotifierProvider);
-
-    // Jika quiz sudah selesai (submitted) → izinkan keluar
-    if (notifier.submitted || !nav.isQuizLocked) {
-      return true;
-    }
-
-    // Jika masih berlangsung → tampilkan warning
-    await _showWarningPopup();
-    return false;
-  }
-
+  // ===============================
+  // BUILD
+  // ===============================
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: _onWillPop,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+
+        final notifier = ref.read(quizNotifierProvider);
+        final nav = NavigationService.instance;
+
+        // Check if can pop
+        final canPop = notifier.submitted || !nav.isQuizLocked;
+
+        if (canPop) {
+          // Allow navigation
+          if (context.mounted) {
+            Navigator.of(context).pop();
+          }
+        } else {
+          // Block and show warning
+          await _showWarningPopup();
+
+          final logService = ref.read(quizLogServiceProvider);
+          logService.logEvent(
+            eventType: "BACK_BUTTON_BLOCKED",
+            exerciseId: widget.exerciseId,
+            timestamp: DateTime.now(),
+          );
+        }
+      },
       child: QuizView(exerciseId: widget.exerciseId),
     );
   }

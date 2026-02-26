@@ -1,5 +1,7 @@
 // lib/features/quiz/domain/models/question_model.dart
 
+import '../../../../core/utils/logger.dart';
+
 /// Question types supported by the quiz system
 enum QuestionType {
   multipleChoice, // Single choice (radio buttons)
@@ -179,8 +181,9 @@ class QuestionModel {
       final optionsList = json['options'] as List;
 
       // Debug
-      print(
-          'DEBUG QuestionModel: Parsing ${optionsList.length} options for question ${json['id']}');
+      AppLogger.debug(
+          'Parsing ${optionsList.length} options for question ${json['id']}',
+          'QuestionModel');
 
       for (int i = 0; i < optionsList.length; i++) {
         final opt = optionsList[i];
@@ -193,16 +196,19 @@ class QuestionModel {
             text: opt.toString(),
           );
           options.add(optionModel);
-          print(
-              'DEBUG QuestionModel: Created option ${optionModel.id}: ${optionModel.text}');
+          AppLogger.debug(
+              'Created option ${optionModel.id}: ${optionModel.text}',
+              'QuestionModel');
         }
       }
 
-      print('DEBUG QuestionModel: Total ${options.length} options created');
+      AppLogger.debug(
+          'Total ${options.length} options created', 'QuestionModel');
       return options;
     } else {
-      print(
-          'DEBUG QuestionModel: No options array found. json[options] = ${json['options']}');
+      AppLogger.debug(
+          'No options array found. json[options] = ${json['options']}',
+          'QuestionModel');
     }
 
     return options;
