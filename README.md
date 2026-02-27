@@ -1,511 +1,453 @@
+# LMS Frontend - Flutter Application
+
+Learning Management System (LMS) mobile application untuk siswa, dibangun dengan Flutter.
+
+## 📋 Table of Contents
+
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+- [Environment Configuration](#environment-configuration)
+- [Build Commands](#build-commands)
+- [Project Structure](#project-structure)
+- [Development](#development)
+- [Testing](#testing)
+- [Deployment](#deployment)
+
+---
+
+## ✨ Features
+
+- 🔐 **Authentication** - Login, logout, change password
+- 📚 **Course Management** - View materials, assignments, and quizzes
+- 📝 **Quiz System** - Multiple question types with anti-cheating mechanism
+- 📊 **Grades & Reports** - View grades and daily reports
+- 🎥 **Online Class** - Jitsi Meet integration for virtual classes
+- 👤 **Profile Management** - View and update profile
+- 🌓 **Theme Support** - Light and dark mode
+- 📱 **Responsive UI** - Works on various screen sizes
+
+---
+
+## 🛠 Tech Stack
+
+- **Framework:** Flutter 3.x
+- **Language:** Dart 3.x
+- **State Management:** Riverpod 2.4.9
+- **HTTP Client:** Dio 5.0.0
+- **Secure Storage:** flutter_secure_storage 9.0.0
+- **Architecture:** Clean Architecture with feature-based structure
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Flutter SDK (3.0.0 or higher)
+- Dart SDK (3.0.0 or higher)
+- Android Studio / VS Code
+- Android SDK / Xcode (for iOS)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd lms_frontend
+   ```
+
+2. **Install dependencies**
+   ```bash
+   flutter pub get
+   ```
+
+3. **Run the app**
+   ```bash
+   flutter run
+   ```
+
+---
+
+## 🌍 Environment Configuration
+
+Aplikasi ini mendukung 3 environment berbeda:
+
+### 1. Development (Default)
+- API URL: `http://192.168.101.82:8000/api/`
+- Debug features: Enabled
+- Logging: Verbose
+- App name: "LMS Student (Dev)"
+
+### 2. Staging
+- API URL: `https://staging-api.yourdomain.com/api/`
+- Debug features: Enabled
+- Logging: Moderate
+- App name: "LMS Student (Staging)"
+
+### 3. Production
+- API URL: `https://api.yourdomain.com/api/`
+- Debug features: Disabled
+- Logging: Minimal (errors only)
+- App name: "LMS Student"
+
+### Mengubah Environment
+
+Environment dikonfigurasi di `lib/core/config/environment.dart`. Untuk mengubah URL API:
+
+```dart
+// lib/core/config/environment.dart
+static String get apiBaseUrl {
+  switch (_environment) {
+    case Environment.development:
+      return 'http://YOUR_DEV_IP:8000/api/';
+    case Environment.staging:
+      return 'https://staging-api.yourdomain.com/api/';
+    case Environment.production:
+      return 'https://api.yourdomain.com/api/';
+  }
+}
+```
+
+---
+
+## 🔨 Build Commands
+
+### Development
+
+```bash
+# Run in development mode (default)
+flutter run
+
+# Run with hot reload
+flutter run --hot
+
+# Run on specific device
+flutter run -d <device-id>
+
+# List available devices
+flutter devices
+```
+
+### Staging
+
+```bash
+# Run in staging mode
+flutter run --dart-define=ENV=staging
+
+# Build APK for staging
+flutter build apk --dart-define=ENV=staging --debug
+
+# Build AAB for staging
+flutter build appbundle --dart-define=ENV=staging --debug
+```
+
+### Production
+
+```bash
+# Build APK for production (with obfuscation)
+flutter build apk \
+  --dart-define=ENV=production \
+  --obfuscate \
+  --split-debug-info=build/app/outputs/symbols \
+  --release
+
+# Build AAB for Google Play Store (with obfuscation)
+flutter build appbundle \
+  --dart-define=ENV=production \
+  --obfuscate \
+  --split-debug-info=build/app/outputs/symbols \
+  --release
+
+# Build iOS for production
+flutter build ios \
+  --dart-define=ENV=production \
+  --obfuscate \
+  --split-debug-info=build/ios/symbols \
+  --release
+```
+
+### Analyze & Clean
+
+```bash
+# Analyze code
+flutter analyze
+
+# Clean build artifacts
+flutter clean
+
+# Get dependencies
+flutter pub get
+
+# Upgrade dependencies
+flutter pub upgrade
+
+# Check outdated packages
+flutter pub outdated
+```
+
+---
+
+## 📁 Project Structure
 
 ```
-lms_frontend
-├─ .flutter-plugins-dependencies
-├─ analysis_options.yaml
-├─ android
-│  ├─ .kotlin
-│  │  └─ sessions
-│  ├─ app
-│  │  ├─ build.gradle.kts
-│  │  └─ src
-│  │     ├─ debug
-│  │     │  └─ AndroidManifest.xml
-│  │     ├─ main
-│  │     │  ├─ AndroidManifest.xml
-│  │     │  ├─ java
-│  │     │  │  └─ io
-│  │     │  │     └─ flutter
-│  │     │  │        └─ plugins
-│  │     │  │           └─ GeneratedPluginRegistrant.java
-│  │     │  ├─ kotlin
-│  │     │  │  └─ com
-│  │     │  └─ res
-│  │     │     ├─ drawable
-│  │     │     │  ├─ background.png
-│  │     │     │  └─ launch_background.xml
-│  │     │     ├─ drawable-hdpi
-│  │     │     │  └─ splash.png
-│  │     │     ├─ drawable-mdpi
-│  │     │     │  └─ splash.png
-│  │     │     ├─ drawable-v21
-│  │     │     │  ├─ background.png
-│  │     │     │  └─ launch_background.xml
-│  │     │     ├─ drawable-xhdpi
-│  │     │     │  └─ splash.png
-│  │     │     ├─ drawable-xxhdpi
-│  │     │     │  └─ splash.png
-│  │     │     ├─ drawable-xxxhdpi
-│  │     │     │  └─ splash.png
-│  │     │     ├─ mipmap-hdpi
-│  │     │     │  └─ ic_launcher.png
-│  │     │     ├─ mipmap-mdpi
-│  │     │     │  └─ ic_launcher.png
-│  │     │     ├─ mipmap-xhdpi
-│  │     │     │  └─ ic_launcher.png
-│  │     │     ├─ mipmap-xxhdpi
-│  │     │     │  └─ ic_launcher.png
-│  │     │     ├─ mipmap-xxxhdpi
-│  │     │     │  └─ ic_launcher.png
-│  │     │     ├─ values
-│  │     │     │  └─ styles.xml
-│  │     │     ├─ values-night
-│  │     │     │  └─ styles.xml
-│  │     │     ├─ values-night-v31
-│  │     │     │  └─ styles.xml
-│  │     │     └─ values-v31
-│  │     │        └─ styles.xml
-│  │     └─ profile
-│  │        └─ AndroidManifest.xml
-│  ├─ build.gradle.kts
-│  ├─ gradle
-│  │  └─ wrapper
-│  │     ├─ gradle-wrapper.jar
-│  │     └─ gradle-wrapper.properties
-│  ├─ gradle.properties
-│  ├─ gradlew
-│  ├─ gradlew.bat
-│  └─ settings.gradle.kts
-├─ android_backup
-│  ├─ .kotlin
-│  │  ├─ errors
-│  │  └─ sessions
-│  ├─ android
-│  │  ├─ app
-│  │  │  ├─ build.gradle.kts
-│  │  │  └─ src
-│  │  │     ├─ debug
-│  │  │     │  └─ AndroidManifest.xml
-│  │  │     ├─ main
-│  │  │     │  ├─ AndroidManifest.xml
-│  │  │     │  ├─ java
-│  │  │     │  │  ├─ com
-│  │  │     │  │  └─ io
-│  │  │     │  │     └─ flutter
-│  │  │     │  │        └─ plugins
-│  │  │     │  │           └─ GeneratedPluginRegistrant.java
-│  │  │     │  └─ res
-│  │  │     │     ├─ drawable
-│  │  │     │     │  └─ launch_background.xml
-│  │  │     │     ├─ drawable-v21
-│  │  │     │     │  └─ launch_background.xml
-│  │  │     │     ├─ mipmap-hdpi
-│  │  │     │     │  └─ ic_launcher.png
-│  │  │     │     ├─ mipmap-mdpi
-│  │  │     │     │  └─ ic_launcher.png
-│  │  │     │     ├─ mipmap-xhdpi
-│  │  │     │     │  └─ ic_launcher.png
-│  │  │     │     ├─ mipmap-xxhdpi
-│  │  │     │     │  └─ ic_launcher.png
-│  │  │     │     ├─ mipmap-xxxhdpi
-│  │  │     │     │  └─ ic_launcher.png
-│  │  │     │     ├─ values
-│  │  │     │     │  └─ styles.xml
-│  │  │     │     └─ values-night
-│  │  │     │        └─ styles.xml
-│  │  │     └─ profile
-│  │  │        └─ AndroidManifest.xml
-│  │  ├─ build.gradle.kts
-│  │  ├─ gradle
-│  │  │  └─ wrapper
-│  │  │     ├─ gradle-wrapper.jar
-│  │  │     └─ gradle-wrapper.properties
-│  │  ├─ gradle.properties
-│  │  ├─ gradlew
-│  │  ├─ gradlew.bat
-│  │  └─ settings.gradle.kts
-│  ├─ app
-│  │  ├─ .cxx
-│  │  │  └─ Debug
-│  │  │     └─ f681r3w1
-│  │  │        ├─ arm64-v8a
-│  │  │        │  ├─ .cmake
-│  │  │        │  │  └─ api
-│  │  │        │  │     └─ v1
-│  │  │        │  │        ├─ query
-│  │  │        │  │        │  └─ client-agp
-│  │  │        │  │        │     ├─ cache-v2
-│  │  │        │  │        │     ├─ cmakeFiles-v1
-│  │  │        │  │        │     └─ codemodel-v2
-│  │  │        │  │        └─ reply
-│  │  │        │  │           ├─ cache-v2-157b62acf69d00fb4f68.json
-│  │  │        │  │           ├─ cmakeFiles-v1-aba66791edd716b68210.json
-│  │  │        │  │           ├─ codemodel-v2-b13c8b2268c1dac50aa6.json
-│  │  │        │  │           ├─ directory-.-Debug-d0094a50bb2071803777.json
-│  │  │        │  │           └─ index-2025-12-25T12-50-52-0956.json
-│  │  │        │  ├─ additional_project_files.txt
-│  │  │        │  ├─ android_gradle_build.json
-│  │  │        │  ├─ android_gradle_build_mini.json
-│  │  │        │  ├─ build.ninja
-│  │  │        │  ├─ build_file_index.txt
-│  │  │        │  ├─ CMakeCache.txt
-│  │  │        │  ├─ CMakeFiles
-│  │  │        │  │  ├─ 3.22.1-g37088a8-dirty
-│  │  │        │  │  │  ├─ CMakeCCompiler.cmake
-│  │  │        │  │  │  ├─ CMakeCXXCompiler.cmake
-│  │  │        │  │  │  ├─ CMakeDetermineCompilerABI_C.bin
-│  │  │        │  │  │  ├─ CMakeDetermineCompilerABI_CXX.bin
-│  │  │        │  │  │  ├─ CMakeSystem.cmake
-│  │  │        │  │  │  ├─ CompilerIdC
-│  │  │        │  │  │  │  ├─ CMakeCCompilerId.c
-│  │  │        │  │  │  │  ├─ CMakeCCompilerId.o
-│  │  │        │  │  │  │  └─ tmp
-│  │  │        │  │  │  └─ CompilerIdCXX
-│  │  │        │  │  │     ├─ CMakeCXXCompilerId.cpp
-│  │  │        │  │  │     ├─ CMakeCXXCompilerId.o
-│  │  │        │  │  │     └─ tmp
-│  │  │        │  │  ├─ cmake.check_cache
-│  │  │        │  │  ├─ CMakeTmp
-│  │  │        │  │  ├─ rules.ninja
-│  │  │        │  │  └─ TargetDirectories.txt
-│  │  │        │  ├─ cmake_install.cmake
-│  │  │        │  ├─ configure_fingerprint.bin
-│  │  │        │  ├─ metadata_generation_command.txt
-│  │  │        │  ├─ prefab_config.json
-│  │  │        │  └─ symbol_folder_index.txt
-│  │  │        └─ hash_key.txt
-│  │  ├─ build.gradle.kts
-│  │  └─ src
-│  │     ├─ debug
-│  │     ├─ main
-│  │     │  ├─ AndroidManifest.xml
-│  │     │  ├─ java
-│  │     │  │  ├─ com
-│  │     │  │  └─ io
-│  │     │  │     └─ flutter
-│  │     │  │        └─ plugins
-│  │     │  │           └─ GeneratedPluginRegistrant.java
-│  │     │  ├─ kotlin
-│  │     │  │  └─ com
-│  │     │  └─ res
-│  │     │     ├─ drawable
-│  │     │     │  ├─ background.png
-│  │     │     │  └─ launch_background.xml
-│  │     │     ├─ drawable-hdpi
-│  │     │     ├─ drawable-mdpi
-│  │     │     ├─ drawable-v21
-│  │     │     │  ├─ background.png
-│  │     │     │  └─ launch_background.xml
-│  │     │     ├─ drawable-xhdpi
-│  │     │     ├─ drawable-xxhdpi
-│  │     │     ├─ drawable-xxxhdpi
-│  │     │     ├─ mipmap-hdpi
-│  │     │     │  └─ ic_launcher.png
-│  │     │     ├─ mipmap-mdpi
-│  │     │     │  └─ ic_launcher.png
-│  │     │     ├─ mipmap-xhdpi
-│  │     │     │  └─ ic_launcher.png
-│  │     │     ├─ mipmap-xxhdpi
-│  │     │     │  └─ ic_launcher.png
-│  │     │     ├─ mipmap-xxxhdpi
-│  │     │     │  └─ ic_launcher.png
-│  │     │     ├─ values
-│  │     │     │  └─ styles.xml
-│  │     │     ├─ values-night
-│  │     │     │  └─ styles.xml
-│  │     │     ├─ values-night-v31
-│  │     │     │  └─ styles.xml
-│  │     │     ├─ values-v31
-│  │     │     │  └─ styles.xml
-│  │     │     └─ xml
-│  │     │        └─ file_paths.xml
-│  │     └─ profile
-│  │        └─ AndroidManifest.xml
-│  ├─ build.gradle.kts
-│  ├─ gradle
-│  │  └─ wrapper
-│  │     ├─ gradle-wrapper.jar
-│  │     └─ gradle-wrapper.properties
-│  ├─ gradle.properties
-│  ├─ gradlew
-│  ├─ gradlew.bat
-│  └─ settings.gradle.kts
-├─ assets
-│  └─ images
-│     ├─ logosci.png
-│     ├─ onboarding_1.png
-│     └─ splashscreen.png
-├─ ios
-│  ├─ Flutter
-│  │  ├─ AppFrameworkInfo.plist
-│  │  ├─ Debug.xcconfig
-│  │  ├─ flutter_export_environment.sh
-│  │  ├─ Generated.xcconfig
-│  │  └─ Release.xcconfig
-│  ├─ Runner
-│  │  ├─ AppDelegate.swift
-│  │  ├─ Assets.xcassets
-│  │  │  ├─ AppIcon.appiconset
-│  │  │  │  ├─ Contents.json
-│  │  │  │  ├─ Icon-App-1024x1024@1x.png
-│  │  │  │  ├─ Icon-App-20x20@1x.png
-│  │  │  │  ├─ Icon-App-20x20@2x.png
-│  │  │  │  ├─ Icon-App-20x20@3x.png
-│  │  │  │  ├─ Icon-App-29x29@1x.png
-│  │  │  │  ├─ Icon-App-29x29@2x.png
-│  │  │  │  ├─ Icon-App-29x29@3x.png
-│  │  │  │  ├─ Icon-App-40x40@1x.png
-│  │  │  │  ├─ Icon-App-40x40@2x.png
-│  │  │  │  ├─ Icon-App-40x40@3x.png
-│  │  │  │  ├─ Icon-App-60x60@2x.png
-│  │  │  │  ├─ Icon-App-60x60@3x.png
-│  │  │  │  ├─ Icon-App-76x76@1x.png
-│  │  │  │  ├─ Icon-App-76x76@2x.png
-│  │  │  │  └─ Icon-App-83.5x83.5@2x.png
-│  │  │  ├─ LaunchBackground.imageset
-│  │  │  │  ├─ background.png
-│  │  │  │  └─ Contents.json
-│  │  │  └─ LaunchImage.imageset
-│  │  │     ├─ Contents.json
-│  │  │     ├─ LaunchImage.png
-│  │  │     ├─ LaunchImage@2x.png
-│  │  │     ├─ LaunchImage@3x.png
-│  │  │     └─ README.md
-│  │  ├─ Base.lproj
-│  │  │  ├─ LaunchScreen.storyboard
-│  │  │  └─ Main.storyboard
-│  │  ├─ GeneratedPluginRegistrant.h
-│  │  ├─ GeneratedPluginRegistrant.m
-│  │  ├─ Info.plist
-│  │  └─ Runner-Bridging-Header.h
-│  ├─ Runner.xcodeproj
-│  │  ├─ project.pbxproj
-│  │  ├─ project.xcworkspace
-│  │  │  ├─ contents.xcworkspacedata
-│  │  │  └─ xcshareddata
-│  │  │     ├─ IDEWorkspaceChecks.plist
-│  │  │     └─ WorkspaceSettings.xcsettings
-│  │  └─ xcshareddata
-│  │     └─ xcschemes
-│  │        └─ Runner.xcscheme
-│  └─ RunnerTests
-│     └─ RunnerTests.swift
-├─ lib
-│  ├─ auth_redirector.dart
-│  ├─ core
-│  │  ├─ constants
-│  │  ├─ errors
-│  │  ├─ init
-│  │  │  └─ app_initializer.dart
-│  │  ├─ network
-│  │  │  └─ api_client.dart
-│  │  ├─ routes
-│  │  ├─ theme
-│  │  │  └─ theme_notifier.dart
-│  │  ├─ utils
-│  │  │  ├─ download_exporter.dart
-│  │  │  ├─ file_downloader.dart
-│  │  │  └─ file_utils.dart
-│  │  └─ widgets
-│  │     ├─ attachment_file_widget.dart
-│  │     ├─ section_title.dart
-│  │     └─ splash_screen.dart
-│  ├─ features
-│  │  ├─ auth
-│  │  │  ├─ data
-│  │  │  │  ├─ models
-│  │  │  │  │  ├─ guru_model.dart
-│  │  │  │  │  └─ student_model.dart
-│  │  │  │  └─ repository
-│  │  │  │     ├─ auth_repository.dart
-│  │  │  │     └─ onboarding_repository.dart
-│  │  │  ├─ domain
-│  │  │  │  └─ auth_notifier.dart
-│  │  │  └─ presentation
-│  │  │     ├─ change_password_screen.dart
-│  │  │     ├─ login_screen.dart
-│  │  │     └─ onboarding_screen.dart
-│  │  ├─ course
-│  │  │  ├─ data
-│  │  │  │  ├─ models
-│  │  │  │  │  ├─ assignment_model.dart
-│  │  │  │  │  ├─ course_material_model.dart
-│  │  │  │  │  ├─ post_child_comment_model.dart
-│  │  │  │  │  └─ post_comment_model.dart
-│  │  │  │  └─ repository
-│  │  │  │     ├─ course_repository.dart
-│  │  │  │     ├─ post_comment_repository.dart
-│  │  │  │     └─ task_repository.dart
-│  │  │  ├─ domain
-│  │  │  │  └─ providers
-│  │  │  │     ├─ comment_provider.dart
-│  │  │  │     ├─ course_providers.dart
-│  │  │  │     └─ course_tab_provider.dart
-│  │  │  └─ presentation
-│  │  │     ├─ screens
-│  │  │     │  ├─ assignment_detail_screen.dart
-│  │  │     │  ├─ course_screen.dart
-│  │  │     │  ├─ material_detail_screen.dart
-│  │  │     │  └─ submit_task_screen.dart
-│  │  │     └─ widgets
-│  │  │        ├─ add_comment_field.dart
-│  │  │        ├─ add_reply_field.dart
-│  │  │        ├─ comment_list_widget.dart
-│  │  │        └─ reply_list_widget.dart
-│  │  ├─ grades
-│  │  │  ├─ data
-│  │  │  │  ├─ models
-│  │  │  │  │  ├─ recap_score_model.dart
-│  │  │  │  │  ├─ recap_subject_model.dart
-│  │  │  │  │  └─ student_recap_model.dart
-│  │  │  │  └─ repository
-│  │  │  │     └─ grade_repository.dart
-│  │  │  ├─ domain
-│  │  │  │  └─ providers
-│  │  │  │     └─ grade_provider.dart
-│  │  │  └─ presentation
-│  │  │     ├─ screens
-│  │  │     │  └─ recap_grade_screen.dart
-│  │  │     └─ widgets
-│  │  │        ├─ recap_table.dart
-│  │  │        ├─ score_cell.dart
-│  │  │        └─ subject_section.dart
-│  │  ├─ home
-│  │  │  ├─ data
-│  │  │  │  ├─ models
-│  │  │  │  │  ├─ dashboard_meeting_model.dart
-│  │  │  │  │  ├─ dashboard_model.dart
-│  │  │  │  │  └─ dashboard_pending_task_model.dart
-│  │  │  │  └─ repository
-│  │  │  │     └─ home_repository.dart
-│  │  │  └─ presentation
-│  │  │     ├─ providers
-│  │  │     │  └─ home_provider.dart
-│  │  │     └─ screens
-│  │  │        └─ home_screen.dart
-│  │  ├─ laporan_harian
-│  │  │  ├─ data
-│  │  │  │  └─ laporan_repository.dart
-│  │  │  └─ presentation
-│  │  │     ├─ providers
-│  │  │     │  └─ laporan_provider.dart
-│  │  │     └─ screens
-│  │  │        └─ laporan_harian_screen.dart
-│  │  ├─ online_class
-│  │  │  ├─ data
-│  │  │  │  ├─ models
-│  │  │  │  │  └─ online_meeting_model.dart
-│  │  │  │  └─ repository
-│  │  │  │     └─ online_meeting_repository.dart
-│  │  │  ├─ domain
-│  │  │  │  └─ providers
-│  │  │  │     └─ online_meeting_provider.dart
-│  │  │  └─ presentation
-│  │  │     └─ screens
-│  │  │        ├─ jitsi_helper.dart
-│  │  │        └─ online_class_screen.dart
-│  │  ├─ profile
-│  │  │  ├─ data
-│  │  │  │  └─ profile_repository.dart
-│  │  │  └─ presentation
-│  │  │     ├─ providers
-│  │  │     │  └─ profile_provider.dart
-│  │  │     └─ screens
-│  │  │        ├─ profile_detail_screen.dart
-│  │  │        └─ profile_screen.dart
-│  │  └─ quiz
-│  │     ├─ data
-│  │     │  ├─ quiz_repository.dart
-│  │     │  └─ remote_quiz_repository.dart
-│  │     ├─ domain
-│  │     │  ├─ models
-│  │     │  │  └─ question_model.dart
-│  │     │  └─ quiz_notifier.dart
-│  │     └─ presentation
-│  │        ├─ providers
-│  │        │  └─ quiz_provider.dart
-│  │        └─ screens
-│  │           ├─ exercise_list_screen.dart
-│  │           ├─ lessons_quiz_screen.dart
-│  │           ├─ quiz_remote_screen.dart
-│  │           ├─ quiz_screen.dart
-│  │           └─ quiz_view.dart
-│  ├─ main.dart
-│  ├─ navigation_service.dart
-│  └─ scaffold_messenger_key.dart
-├─ linux
-│  ├─ CMakeLists.txt
-│  ├─ flutter
-│  │  ├─ CMakeLists.txt
-│  │  └─ generated_plugins.cmake
-│  └─ runner
-│     ├─ CMakeLists.txt
-│     ├─ main.cc
-│     ├─ my_application.cc
-│     └─ my_application.h
-├─ macos
-│  ├─ Flutter
-│  │  ├─ Flutter-Debug.xcconfig
-│  │  ├─ Flutter-Release.xcconfig
-│  │  └─ GeneratedPluginRegistrant.swift
-│  ├─ Runner
-│  │  ├─ AppDelegate.swift
-│  │  ├─ Assets.xcassets
-│  │  │  └─ AppIcon.appiconset
-│  │  │     ├─ app_icon_1024.png
-│  │  │     ├─ app_icon_128.png
-│  │  │     ├─ app_icon_16.png
-│  │  │     ├─ app_icon_256.png
-│  │  │     ├─ app_icon_32.png
-│  │  │     ├─ app_icon_512.png
-│  │  │     ├─ app_icon_64.png
-│  │  │     └─ Contents.json
-│  │  ├─ Base.lproj
-│  │  │  └─ MainMenu.xib
-│  │  ├─ Configs
-│  │  │  ├─ AppInfo.xcconfig
-│  │  │  ├─ Debug.xcconfig
-│  │  │  ├─ Release.xcconfig
-│  │  │  └─ Warnings.xcconfig
-│  │  ├─ DebugProfile.entitlements
-│  │  ├─ Info.plist
-│  │  ├─ MainFlutterWindow.swift
-│  │  └─ Release.entitlements
-│  ├─ Runner.xcodeproj
-│  │  ├─ project.pbxproj
-│  │  ├─ project.xcworkspace
-│  │  │  └─ xcshareddata
-│  │  │     └─ IDEWorkspaceChecks.plist
-│  │  └─ xcshareddata
-│  │     └─ xcschemes
-│  │        └─ Runner.xcscheme
-│  └─ RunnerTests
-│     └─ RunnerTests.swift
-├─ pubspec.lock
-├─ pubspec.yaml
-├─ README.md
-├─ test
-│  └─ widget_test.dart
-├─ web
-│  ├─ favicon.png
-│  ├─ icons
-│  │  ├─ Icon-192.png
-│  │  ├─ Icon-512.png
-│  │  ├─ Icon-maskable-192.png
-│  │  └─ Icon-maskable-512.png
-│  ├─ index.html
-│  ├─ manifest.json
-│  └─ splash
-│     └─ img
-│        └─ light-background.png
-└─ windows
-   ├─ CMakeLists.txt
-   ├─ flutter
-   │  ├─ CMakeLists.txt
-   │  └─ generated_plugins.cmake
-   └─ runner
-      ├─ CMakeLists.txt
-      ├─ flutter_window.cpp
-      ├─ flutter_window.h
-      ├─ main.cpp
-      ├─ resource.h
-      ├─ resources
-      │  └─ app_icon.ico
-      ├─ runner.exe.manifest
-      ├─ Runner.rc
-      ├─ utils.cpp
-      ├─ utils.h
-      ├─ win32_window.cpp
-      └─ win32_window.h
+lib/
+├── core/                       # Core functionality
+│   ├── config/                 # Configuration (environment, etc.)
+│   ├── constants/              # App constants
+│   ├── errors/                 # Error handling
+│   ├── init/                   # App initialization
+│   ├── network/                # API client & networking
+│   ├── routes/                 # Navigation routes
+│   ├── theme/                  # Theme configuration
+│   ├── utils/                  # Utility functions
+│   └── widgets/                # Reusable widgets
+│
+├── features/                   # Feature modules
+│   ├── auth/                   # Authentication
+│   │   ├── data/               # Data layer (repositories)
+│   │   ├── domain/             # Domain layer (models, notifiers)
+│   │   └── presentation/       # Presentation layer (screens, widgets)
+│   │
+│   ├── course/                 # Course management
+│   ├── grades/                 # Grades & reports
+│   ├── home/                   # Home dashboard
+│   ├── laporan_harian/         # Daily reports
+│   ├── online_class/           # Online classes
+│   ├── profile/                # User profile
+│   └── quiz/                   # Quiz system
+│
+├── auth_redirector.dart        # Auth state redirector
+├── main.dart                   # App entry point
+├── navigation_service.dart     # Navigation service
+└── scaffold_messenger_key.dart # Global messenger key
+```
+
+---
+
+## 💻 Development
+
+### Code Style
+
+Project ini menggunakan `flutter_lints` untuk code analysis. Pastikan code Anda mengikuti style guide:
+
+```bash
+# Run analyzer
+flutter analyze
+
+# Format code
+flutter format lib/
+```
+
+### State Management
+
+Menggunakan **Riverpod** untuk state management:
+
+```dart
+// Provider example
+final myProvider = Provider<MyService>((ref) {
+  return MyService();
+});
+
+// StateNotifier example
+final myNotifierProvider = StateNotifierProvider<MyNotifier, MyState>((ref) {
+  return MyNotifier();
+});
+
+// Consumer widget
+class MyWidget extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(myNotifierProvider);
+    return Text(state.value);
+  }
+}
+```
+
+### API Client
+
+API client dikonfigurasi di `lib/core/network/api_client.dart`:
+
+```dart
+// Make API call
+final response = await dio.get('/endpoint');
+
+// With authentication (automatic via TokenInterceptor)
+final response = await dio.post('/protected-endpoint', data: {...});
+```
+
+---
+
+## 🧪 Testing
+
+### Run Tests
+
+```bash
+# Run all tests
+flutter test
+
+# Run specific test file
+flutter test test/features/auth/domain/auth_notifier_test.dart
+
+# Run with coverage
+flutter test --coverage
+
+# View coverage report
+genhtml coverage/lcov.info -o coverage/html
+open coverage/html/index.html  # macOS
+start coverage/html/index.html # Windows
+```
+
+### Test Structure
 
 ```
+test/
+├── features/
+│   ├── auth/
+│   │   ├── domain/
+│   │   │   └── auth_notifier_test.dart
+│   │   └── data/
+│   │       └── auth_repository_test.dart
+│   └── ...
+└── core/
+    ├── network/
+    │   └── api_client_test.dart
+    └── utils/
+        └── logger_test.dart
+```
+
+---
+
+## 🚢 Deployment
+
+### Android
+
+1. **Generate Keystore** (first time only)
+   ```bash
+   keytool -genkey -v -keystore ~/upload-keystore.jks \
+     -keyalg RSA -keysize 2048 -validity 10000 \
+     -alias upload
+   ```
+
+2. **Configure Signing** in `android/key.properties`:
+   ```properties
+   storePassword=<password>
+   keyPassword=<password>
+   keyAlias=upload
+   storeFile=<path-to-keystore>
+   ```
+
+3. **Build Release**
+   ```bash
+   flutter build appbundle \
+     --dart-define=ENV=production \
+     --obfuscate \
+     --split-debug-info=build/app/outputs/symbols \
+     --release
+   ```
+
+4. **Upload to Play Store**
+   - Go to Google Play Console
+   - Upload `build/app/outputs/bundle/release/app-release.aab`
+
+### iOS
+
+1. **Configure Signing** in Xcode
+   - Open `ios/Runner.xcworkspace`
+   - Select Runner > Signing & Capabilities
+   - Configure Team and Bundle Identifier
+
+2. **Build Release**
+   ```bash
+   flutter build ios \
+     --dart-define=ENV=production \
+     --obfuscate \
+     --split-debug-info=build/ios/symbols \
+     --release
+   ```
+
+3. **Archive & Upload**
+   - Open Xcode
+   - Product > Archive
+   - Distribute App > App Store Connect
+
+---
+
+## 📝 Environment Variables
+
+Aplikasi menggunakan `--dart-define` untuk environment variables:
+
+| Variable | Values | Default | Description |
+|----------|--------|---------|-------------|
+| ENV | development, staging, production | development | Application environment |
+
+**Example:**
+```bash
+flutter run --dart-define=ENV=production
+```
+
+---
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+**1. Gradle build failed**
+```bash
+cd android
+./gradlew clean
+cd ..
+flutter clean
+flutter pub get
+```
+
+**2. CocoaPods issues (iOS)**
+```bash
+cd ios
+pod deintegrate
+pod install
+cd ..
+```
+
+**3. Network error / API not reachable**
+- Check if backend server is running
+- Verify API URL in `lib/core/config/environment.dart`
+- Check device/emulator network connection
+
+**4. Hot reload not working**
+```bash
+# Stop app and run again
+flutter run
+```
+
+---
+
+## 📚 Additional Resources
+
+- [Flutter Documentation](https://docs.flutter.dev/)
+- [Riverpod Documentation](https://riverpod.dev/)
+- [Dio Documentation](https://pub.dev/packages/dio)
+- [Clean Architecture Guide](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
+
+---
+
+## 📄 License
+
+[Add your license here]
+
+---
+
+## 👥 Contributors
+
+[Add contributors here]
+
+---
+
+## 📞 Support
+
+For support, email [your-email] or create an issue in the repository.
+
+---
+
+**Last Updated:** February 26, 2026
+**Version:** 1.0.0+1

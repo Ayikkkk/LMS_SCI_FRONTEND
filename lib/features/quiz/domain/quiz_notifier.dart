@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../navigation_service.dart';
+import '../../../core/utils/logger.dart';
 import '../data/quiz_repository.dart';
 import 'models/question_model.dart';
 
@@ -222,7 +222,10 @@ class QuizNotifier extends ChangeNotifier {
 
     // ⚠️ Validasi hanya berlaku untuk submit manual
     if (!auto && !allAnswered) {
-      debugPrint("Harap jawab semua pertanyaan sebelum menyelesaikan kuis!");
+      AppLogger.warning(
+        'Submit blocked: Not all questions answered',
+        'QuizNotifier',
+      );
       if (context != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -243,10 +246,12 @@ class QuizNotifier extends ChangeNotifier {
         auto: auto,
       );
 
-      // 🧩 DEBUG: Print response dari backend
-      debugPrint('📦 Submit Result: $submitResult');
-      debugPrint('📦 is_pending_review: ${submitResult['is_pending_review']}');
-      debugPrint('📦 score: ${submitResult['score']}');
+      AppLogger.debug('Submit Result: $submitResult', 'QuizNotifier');
+      AppLogger.debug(
+        'is_pending_review: ${submitResult['is_pending_review']}',
+        'QuizNotifier',
+      );
+      AppLogger.debug('score: ${submitResult['score']}', 'QuizNotifier');
 
       // 🧩 Tunggu sebentar agar backend sempat menyimpan
       await Future.delayed(const Duration(milliseconds: 500));
@@ -255,18 +260,18 @@ class QuizNotifier extends ChangeNotifier {
       if (submitResult['is_pending_review'] == true) {
         _isPendingReview = true;
         _finalScore = null;
-        debugPrint('✅ Pending review mode activated');
+        AppLogger.info('Pending review mode activated', 'QuizNotifier');
       } else {
         // 🧩 Ambil nilai final dari backend (sumber kebenaran)
         final result = await repository.getResult(exerciseId: _exerciseId);
-        debugPrint('📦 Get Result: $result');
+        AppLogger.debug('Get Result: $result', 'QuizNotifier');
 
         _finalScore = result?['score'] ?? 0;
         _isPendingReview = false;
-        debugPrint('✅ Final score: $_finalScore');
+        AppLogger.success('Final score: $_finalScore', 'QuizNotifier');
       }
     } catch (e) {
-      debugPrint('❌ Submit error: $e');
+      AppLogger.error('Submit error', e, null, 'QuizNotifier');
       _finalScore = 0;
       _isPendingReview = false;
     }

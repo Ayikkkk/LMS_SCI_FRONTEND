@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 
 import '../../../../core/network/api_client.dart';
+import '../../../../core/utils/logger.dart';
 import 'quiz_remote_screen.dart';
 
 class ExerciseListScreen extends ConsumerStatefulWidget {
@@ -22,8 +23,7 @@ class ExerciseListScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<ExerciseListScreen> createState() =>
-      _ExerciseListScreenState();
+  ConsumerState<ExerciseListScreen> createState() => _ExerciseListScreenState();
 }
 
 class _ExerciseListScreenState extends ConsumerState<ExerciseListScreen> {
@@ -60,7 +60,7 @@ class _ExerciseListScreenState extends ConsumerState<ExerciseListScreen> {
       setState(() {
         _error = e.toString();
       });
-      debugPrint("Error fetch exercises: $e\n$st");
+      AppLogger.error('Error fetch exercises', e, st, 'ExerciseListScreen');
     } finally {
       setState(() {
         _loading = false;
@@ -79,8 +79,7 @@ class _ExerciseListScreenState extends ConsumerState<ExerciseListScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) =>
-                QuizRemoteScreen(exerciseId: ex["id"].toString()),
+            builder: (_) => QuizRemoteScreen(exerciseId: ex["id"].toString()),
           ),
         );
       },

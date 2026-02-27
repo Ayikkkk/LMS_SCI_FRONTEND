@@ -1,0 +1,150 @@
+// lib/core/config/environment.dart
+
+import 'package:flutter/foundation.dart';
+
+/// Environment types for the application
+enum Environment {
+  development,
+  staging,
+  production,
+}
+
+/// Environment configuration class
+/// Manages API URLs and environment-specific settings
+class EnvironmentConfig {
+  static Environment _environment = Environment.development;
+
+  /// Set the current environment
+  static void setEnvironment(Environment env) {
+    _environment = env;
+  }
+
+  /// Get current environment
+  static Environment get currentEnvironment => _environment;
+
+  /// Get API base URL based on current environment
+  static String get apiBaseUrl {
+    switch (_environment) {
+      case Environment.development:
+        // Local development server
+        return 'http://192.168.101.82:8000/api/';
+
+      case Environment.staging:
+        // Staging server
+        return 'https://staging-api.yourdomain.com/api/';
+
+      case Environment.production:
+        // Production server
+        return 'https://api.yourdomain.com/api/';
+    }
+  }
+
+  /// Get API host (without /api/)
+  static String get apiHost {
+    switch (_environment) {
+      case Environment.development:
+        return 'http://192.168.101.82:8000';
+
+      case Environment.staging:
+        return 'https://staging-api.yourdomain.com';
+
+      case Environment.production:
+        return 'https://api.yourdomain.com';
+    }
+  }
+
+  /// Check if current environment is production
+  static bool get isProduction => _environment == Environment.production;
+
+  /// Check if current environment is development
+  static bool get isDevelopment => _environment == Environment.development;
+
+  /// Check if current environment is staging
+  static bool get isStaging => _environment == Environment.staging;
+
+  /// Get environment name as string
+  static String get environmentName {
+    switch (_environment) {
+      case Environment.development:
+        return 'Development';
+      case Environment.staging:
+        return 'Staging';
+      case Environment.production:
+        return 'Production';
+    }
+  }
+
+  /// Get environment-specific timeout durations
+  static Duration get connectTimeout {
+    return _environment == Environment.development
+        ? const Duration(seconds: 60) // Longer timeout for development
+        : const Duration(seconds: 30);
+  }
+
+  static Duration get receiveTimeout {
+    return _environment == Environment.development
+        ? const Duration(seconds: 60)
+        : const Duration(seconds: 30);
+  }
+
+  /// Enable/disable debug features based on environment
+  static bool get enableDebugFeatures {
+    return _environment != Environment.production;
+  }
+
+  /// Get app name with environment suffix
+  static String getAppName(String baseName) {
+    switch (_environment) {
+      case Environment.development:
+        return '$baseName (Dev)';
+      case Environment.staging:
+        return '$baseName (Staging)';
+      case Environment.production:
+        return baseName;
+    }
+  }
+
+  /// Initialize environment from build configuration
+  static void initialize() {
+    // Read environment from build-time constant
+    const envString = String.fromEnvironment(
+      'ENV',
+      defaultValue: 'development',
+    );
+
+    switch (envString.toLowerCase()) {
+      case 'production':
+      case 'prod':
+        _environment = Environment.production;
+        break;
+      case 'staging':
+      case 'stg':
+        _environment = Environment.staging;
+        break;
+      case 'development':
+      case 'dev':
+      default:
+        _environment = Environment.development;
+        break;
+    }
+  }
+
+  /// Print current configuration (for debugging)
+  static void printConfig() {
+    if (!enableDebugFeatures) return; // Don't print in production
+
+    // Use single print for better formatting
+    debugPrint('''
+=================================
+Environment Configuration
+=================================
+Environment: $environmentName
+API Base URL: $apiBaseUrl
+API Host: $apiHost
+Is Production: $isProduction
+Debug Features: $enableDebugFeatures
+Connect Timeout: ${connectTimeout.inSeconds}s
+Receive Timeout: ${receiveTimeout.inSeconds}s
+=================================''');
+  }
+}

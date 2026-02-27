@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:media_store_plus/media_store_plus.dart';
 
+import 'core/config/environment.dart';
 import 'core/init/app_initializer.dart';
 import 'core/theme/theme_notifier.dart';
 import 'scaffold_messenger_key.dart';
@@ -18,6 +19,15 @@ import 'core/widgets/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize environment configuration
+  EnvironmentConfig.initialize();
+
+  // Print configuration in debug mode
+  if (EnvironmentConfig.enableDebugFeatures) {
+    EnvironmentConfig.printConfig();
+  }
+
   await MediaStore.ensureInitialized();
 
   timeago.setLocaleMessages('id', timeago.IdMessages());
@@ -71,8 +81,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     return AuthRedirector(
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'LMS Student',
-
+        title: EnvironmentConfig.getAppName('LMS Student'),
         themeMode: themeMode,
         theme: ThemeData(
           brightness: Brightness.light,
@@ -87,16 +96,13 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
           ),
           useMaterial3: true,
         ),
-
         scaffoldMessengerKey: scaffoldMessengerKey,
         navigatorKey: NavigationService.instance.navigatorKey,
-
         home: init.when(
           loading: () => const SplashScreen(),
           error: (e, _) => _InitErrorView(error: e.toString()),
           data: (_) => const _RootPlaceholder(),
         ),
-
         routes: {
           '/login': (_) => const LoginScreen(),
           '/home': (_) => const HomeScreen(),

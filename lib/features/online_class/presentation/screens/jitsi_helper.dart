@@ -1,5 +1,7 @@
 import 'package:jitsi_meet_flutter_sdk/jitsi_meet_flutter_sdk.dart';
 
+import '../../../../core/utils/logger.dart';
+
 typedef OnMeetingLeft = Future<void> Function();
 
 class JitsiHelper {
@@ -30,10 +32,10 @@ class JitsiHelper {
 
     final listener = JitsiMeetEventListener(
       conferenceJoined: (url) {
-        print("Jitsi conference joined: $url");
+        AppLogger.info('Jitsi conference joined: $url', 'JitsiHelper');
       },
       conferenceTerminated: (url, error) async {
-        print("Jitsi conference terminated");
+        AppLogger.info('Jitsi conference terminated', 'JitsiHelper');
         if (onMeetingLeft != null) {
           await onMeetingLeft();
         }

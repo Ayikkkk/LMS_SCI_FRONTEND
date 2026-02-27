@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 
 import '../../../../core/network/api_client.dart';
+import '../../../../core/utils/logger.dart';
 import 'exercise_list_screen.dart';
 
 class LessonsQuizScreen extends ConsumerStatefulWidget {
@@ -72,14 +73,19 @@ class _LessonsQuizScreenState extends ConsumerState<LessonsQuizScreen> {
           _error = dioErr.message;
         });
       }
-      debugPrint("ERR LessonsQuizScreen (Dio): $dioErr");
+      AppLogger.error(
+        'LessonsQuizScreen (Dio)',
+        dioErr,
+        null,
+        'LessonsQuizScreen',
+      );
     } catch (e, st) {
       if (mounted) {
         setState(() {
           _error = e.toString();
         });
       }
-      debugPrint("ERR LessonsQuizScreen: $e\n$st");
+      AppLogger.error('LessonsQuizScreen', e, st, 'LessonsQuizScreen');
     } finally {
       if (mounted) {
         setState(() {
