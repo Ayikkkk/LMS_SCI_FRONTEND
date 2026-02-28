@@ -87,7 +87,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.menu_book), label: 'Materi'),
-          BottomNavigationBarItem(icon: Icon(Icons.video_camera_front), label: 'Online'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.video_camera_front), label: 'Online'),
           BottomNavigationBarItem(icon: Icon(Icons.quiz), label: 'Quiz'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
         ],
@@ -151,17 +152,13 @@ class _DashboardContent extends ConsumerWidget {
               const SectionTitle('Ringkasan Akademik'),
               _StatsGrid(stats: data.stats),
               const SizedBox(height: 28),
-
               if (urgentTasks.isNotEmpty)
                 _UrgentBanner(urgentTasks: urgentTasks),
-
-              if (urgentTasks.isNotEmpty)
-                const SizedBox(height: 20),
-
+              if (urgentTasks.isNotEmpty) const SizedBox(height: 20),
               _AssignmentsPreview(tasks: pending, onNavigate: onNavigate),
-
               const SizedBox(height: 28),
-              SectionTitle('Kelas Online Hari Ini (${todayMeetings.length})'),
+              SectionTitle(
+                  '🎥 Kelas Online Hari Ini (${todayMeetings.length})'),
               _MeetingsList(todayMeetings),
               const SizedBox(height: 28),
               const SectionTitle('Akses Cepat'),
@@ -184,12 +181,60 @@ class _ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      'Halo, ${student.name}',
-      style: Theme.of(context)
-          .textTheme
-          .headlineSmall
-          ?.copyWith(fontWeight: FontWeight.bold),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDark
+              ? [Colors.blue.shade800, Colors.purple.shade800]
+              : [Colors.blue.shade400, Colors.purple.shade400],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.school,
+              size: 36,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Halo,',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  student.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -204,39 +249,67 @@ class _StatsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 2,
       crossAxisSpacing: 12,
       mainAxisSpacing: 12,
+      childAspectRatio: 1.5,
       children: [
-        _stat('Total Tugas', stats.totalTasks, Icons.assignment, Colors.orange),
-        _stat('Total Quiz', stats.totalExercises, Icons.quiz, Colors.purple),
-        _stat('Rata-rata Tugas', stats.averageTaskScore, Icons.score, Colors.green),
-        _stat('Rata-rata Quiz', stats.averageExerciseScore, Icons.star, Colors.blue),
+        _stat('Total Tugas', stats.totalTasks, Icons.assignment_rounded,
+            [Colors.blue.shade400, Colors.blue.shade600], isDark),
+        _stat('Total Quiz', stats.totalExercises, Icons.quiz_rounded,
+            [Colors.blue.shade400, Colors.blue.shade600], isDark),
+        _stat('Nilai Tugas', stats.averageTaskScore, Icons.star_rounded,
+            [Colors.orange.shade400, Colors.orange.shade600], isDark),
+        _stat('Nilai Quiz', stats.averageExerciseScore, Icons.star_rounded,
+            [Colors.orange.shade400, Colors.orange.shade600], isDark),
       ],
     );
   }
 
-  Widget _stat(String title, dynamic value, IconData icon, Color color) {
-    final display = value is double ? value.toStringAsFixed(2) : value.toString();
+  Widget _stat(String title, dynamic value, IconData icon, List<Color> colors,
+      bool isDark) {
+    final display =
+        value is double ? value.toStringAsFixed(0) : value.toString();
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(icon, color: color),
-            const Spacer(),
-            Text(title, style: const TextStyle(color: Colors.grey)),
+            Icon(icon, color: colors[0], size: 24),
             const SizedBox(height: 4),
-            Text(
-              display,
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    display,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: colors[0],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -255,26 +328,30 @@ class _UrgentBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.warning, color: Colors.red, size: 28),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              "Ada ${urgentTasks.length} tugas akan segera jatuh tempo!",
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Colors.red,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Card(
+      color: isDark
+          ? Colors.red.shade900.withValues(alpha: 0.3)
+          : Colors.red.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(Icons.warning_rounded, color: Colors.red.shade700, size: 32),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                "Ada ${urgentTasks.length} tugas akan segera jatuh tempo!",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: isDark ? Colors.red.shade200 : Colors.red.shade900,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -304,15 +381,30 @@ class _AssignmentsPreview extends ConsumerWidget {
         SectionTitle("Tugas Belum Dikerjakan (${tasks.length})"),
         const SizedBox(height: 8),
         ...preview.map((task) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
           return Card(
-            color: Colors.orange.shade50,
+            margin: const EdgeInsets.only(bottom: 10),
+            color: isDark ? null : Colors.orange.shade50,
             child: ListTile(
-              leading: const Icon(Icons.assignment_outlined, color: Colors.orange),
-              title: Text(task.title,
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              leading: Icon(Icons.assignment_rounded,
+                  color: Colors.orange.shade700, size: 28),
+              title: Text(
+                task.title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
               subtitle: Text(
-                  "Deadline: ${task.dueDate.day}/${task.dueDate.month}/${task.dueDate.year}"),
-              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                "⏰ ${task.dueDate.day}/${task.dueDate.month}/${task.dueDate.year}",
+                style: const TextStyle(
+                  fontSize: 12,
+                ),
+              ),
+              trailing: const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16,
+              ),
               onTap: () {
                 Navigator.pushNamed(
                   context,
@@ -325,12 +417,13 @@ class _AssignmentsPreview extends ConsumerWidget {
         }),
         Align(
           alignment: Alignment.centerRight,
-          child: TextButton(
+          child: TextButton.icon(
             onPressed: () {
               ref.read(courseTabProvider.notifier).state = 1;
               onNavigate(1);
             },
-            child: const Text("Lihat Semua"),
+            icon: const Icon(Icons.list_alt_rounded),
+            label: const Text("Lihat Semua"),
           ),
         ),
       ],
@@ -356,10 +449,29 @@ class _MeetingsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     if (meetings.isEmpty) {
-      return const Text(
-        'Tidak ada kelas online hari ini',
-        style: TextStyle(color: Colors.grey),
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Icon(Icons.event_busy_rounded,
+                  color: Colors.grey.shade400, size: 32),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Tidak ada kelas online hari ini',
+                  style: TextStyle(
+                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -367,15 +479,24 @@ class _MeetingsList extends StatelessWidget {
       children: meetings.map((m) {
         return Card(
           margin: const EdgeInsets.only(bottom: 10),
+          color: m.isLive
+              ? (isDark ? null : Colors.green.shade50)
+              : (isDark ? null : Colors.blue.shade50),
           child: ListTile(
-            leading:
-                Icon(Icons.video_call, color: m.isLive ? Colors.red : Colors.orange),
+            leading: Icon(
+              Icons.video_camera_front_rounded,
+              color: m.isLive ? Colors.green.shade700 : Colors.blue.shade700,
+              size: 28,
+            ),
             title: Row(
               children: [
                 Expanded(
                   child: Text(
                     m.title,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
                 m.isLive
@@ -386,22 +507,41 @@ class _MeetingsList extends StatelessWidget {
                             displayName: 'Siswa',
                           );
                         },
-                        child: const Chip(
-                          label: Text('LIVE',
-                              style: TextStyle(color: Colors.white, fontSize: 11)),
-                          backgroundColor: Colors.red,
+                        child: Chip(
+                          label: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.circle, color: Colors.white, size: 8),
+                              SizedBox(width: 4),
+                              Text(
+                                'LIVE',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          backgroundColor: Colors.green,
                         ),
                       )
                     : Chip(
                         label: Text(
                           _countdown(m.startTime),
-                          style: const TextStyle(fontSize: 11),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
               ],
             ),
             subtitle: Text(
-              'Mulai ${m.startTime.hour.toString().padLeft(2, '0')}:${m.startTime.minute.toString().padLeft(2, '0')}',
+              '🕐 ${m.startTime.hour.toString().padLeft(2, '0')}:${m.startTime.minute.toString().padLeft(2, '0')}',
+              style: const TextStyle(
+                fontSize: 12,
+              ),
             ),
           ),
         );
@@ -420,36 +560,62 @@ class _QuickMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 3,
-      crossAxisSpacing: 10,
-      mainAxisSpacing: 10,
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: 1.0,
       children: [
-        _item('Materi', Icons.folder_open, Colors.blue, () => onNavigate(1)),
-        _item('Tugas', Icons.check_circle_outline, Colors.orange, () => onNavigate(1)),
-        _item('Online', Icons.video_camera_front, Colors.red, () => onNavigate(2)),
-        _item('Quiz', Icons.quiz, Colors.green, () => onNavigate(3)),
-        _item('Rekap Nilai', Icons.assessment, Colors.teal, () {
+        _item(
+            'Materi',
+            Icons.menu_book_rounded,
+            [Colors.blue.shade400, Colors.blue.shade600],
+            () => onNavigate(1),
+            isDark),
+        _item(
+            'Tugas',
+            Icons.edit_note_rounded,
+            [Colors.orange.shade400, Colors.orange.shade600],
+            () => onNavigate(1),
+            isDark),
+        _item(
+            'Online',
+            Icons.video_camera_front_rounded,
+            [Colors.green.shade400, Colors.green.shade600],
+            () => onNavigate(2),
+            isDark),
+        _item(
+            'Quiz',
+            Icons.quiz_rounded,
+            [Colors.blue.shade400, Colors.blue.shade600],
+            () => onNavigate(3),
+            isDark),
+        _item('Nilai', Icons.assessment_rounded,
+            [Colors.orange.shade400, Colors.orange.shade600], () {
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => const RecapGradeScreen(),
             ),
           );
-        }),
-        _item('Laporan', Icons.event_note, Colors.purple, () {
+        }, isDark),
+        _item('Laporan', Icons.event_note_rounded,
+            [Colors.green.shade400, Colors.green.shade600], () {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const LaporanHarianScreen()),
           );
-        }),
+        }, isDark),
       ],
     );
   }
 
-  Widget _item(String label, IconData icon, Color color, VoidCallback onTap) {
+  Widget _item(String label, IconData icon, List<Color> colors,
+      VoidCallback onTap, bool isDark) {
     return Card(
       elevation: 2,
       child: InkWell(
@@ -458,9 +624,16 @@ class _QuickMenu extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color),
-            const SizedBox(height: 6),
-            Text(label, style: const TextStyle(fontSize: 12)),
+            Icon(icon, color: colors[0], size: 32),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
       ),

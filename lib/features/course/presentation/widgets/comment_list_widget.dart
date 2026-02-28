@@ -11,7 +11,8 @@ class CommentListWidget extends ConsumerWidget {
   final int postId;
   final StudentModel currentUser;
   final void Function(int commentId) onReplySelected;
-  final void Function(int replyId, String message, int parentId)? onEditReplySelected;
+  final void Function(int replyId, String message, int parentId)?
+      onEditReplySelected;
 
   /// 🔥 PARAMETER BARU UNTUK EDIT KOMENTAR
   final void Function(int commentId, String message)? onEditSelected;
@@ -91,10 +92,20 @@ class CommentListWidget extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey[800]
+                              : Colors.grey.shade200,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Text(comment.message),
+                        child: Text(
+                          comment.message,
+                          style: TextStyle(
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : Colors.black,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 6),
                       Row(
@@ -235,11 +246,24 @@ class CommentListWidget extends ConsumerWidget {
                                         Container(
                                           padding: const EdgeInsets.all(10),
                                           decoration: BoxDecoration(
-                                            color: Colors.white,
+                                            color:
+                                                Theme.of(context).brightness ==
+                                                        Brightness.dark
+                                                    ? Colors.grey[850]
+                                                    : Colors.white,
                                             borderRadius:
                                                 BorderRadius.circular(10),
                                           ),
-                                          child: Text(reply.message),
+                                          child: Text(
+                                            reply.message,
+                                            style: TextStyle(
+                                              color: Theme.of(context)
+                                                          .brightness ==
+                                                      Brightness.dark
+                                                  ? Colors.white
+                                                  : Colors.black,
+                                            ),
+                                          ),
                                         ),
                                       ],
                                     ),

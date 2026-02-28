@@ -266,12 +266,16 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     required String value,
     required IconData icon,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: isDark ? Colors.grey[850] : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(
+          color: isDark ? Colors.grey[700]! : Colors.grey.shade300,
+        ),
       ),
       child: Row(
         children: [
@@ -281,17 +285,29 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style:
-                        const TextStyle(fontSize: 12, color: Colors.black54)),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.grey[400] : Colors.black54,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(value,
-                    style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.bold)),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                ),
               ],
             ),
           ),
-          const Icon(Icons.lock_outline, color: Colors.black38),
+          Icon(
+            Icons.lock_outline,
+            color: isDark ? Colors.grey[600] : Colors.black38,
+          ),
         ],
       ),
     );
@@ -369,7 +385,12 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                 const SizedBox(height: 4),
                 Text(
                   widget.student.className ?? "-",
-                  style: const TextStyle(color: Colors.black54),
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey[300]
+                        : Colors.black54,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
@@ -393,10 +414,15 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
           ),
           const SizedBox(height: 16),
 
-          const Text(
+          Text(
             "Nomor Absen dan NIS tidak bisa diubah.\nJika ada kesalahan, hubungi guru ya 😊",
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: Colors.black54),
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey[400]
+                  : Colors.black54,
+            ),
           ),
 
           const SizedBox(height: 20),

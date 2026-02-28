@@ -105,6 +105,11 @@ full_logcat.txt
 *.env
 .env.*
 
+# Firebase
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+
 # ---------------------------------------------------------
 # TEST / COVERAGE
 # ---------------------------------------------------------

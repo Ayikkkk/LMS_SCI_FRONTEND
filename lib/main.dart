@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:media_store_plus/media_store_plus.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 import 'core/config/environment.dart';
+import 'core/services/crashlytics_service.dart';
+import 'core/services/analytics_service.dart';
+import 'core/services/version_service.dart';
 import 'core/init/app_initializer.dart';
 import 'core/theme/theme_notifier.dart';
 import 'scaffold_messenger_key.dart';
@@ -27,6 +33,35 @@ void main() async {
   if (EnvironmentConfig.enableDebugFeatures) {
     EnvironmentConfig.printConfig();
   }
+
+  // Initialize Firebase
+  if (kDebugMode) {
+    debugPrint('🔥 Initializing Firebase...');
+  }
+  await Firebase.initializeApp();
+  if (kDebugMode) {
+    debugPrint('✅ Firebase initialized successfully');
+  }
+
+  // Initialize Crashlytics
+  await CrashlyticsService.initialize();
+
+  // Initialize Analytics
+  await AnalyticsService.initialize();
+
+  // Initialize Version Service
+  await VersionService.initialize();
+
+  // Pass all uncaught errors from the framework to Crashlytics
+  FlutterError.onError = (errorDetails) {
+    FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+  };
+
+  // Pass all uncaught asynchronous errors to Crashlytics
+  PlatformDispatcher.instance.onError = (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    return true;
+  };
 
   await MediaStore.ensureInitialized();
 
@@ -85,8 +120,18 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
         themeMode: themeMode,
         theme: ThemeData(
           brightness: Brightness.light,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.blueAccent,
+            brightness: Brightness.light,
+          ),
           useMaterial3: true,
+          scaffoldBackgroundColor: Colors.grey[50],
+          cardTheme: const CardThemeData(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(16)),
+            ),
+          ),
         ),
         darkTheme: ThemeData(
           brightness: Brightness.dark,
@@ -95,6 +140,14 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
             brightness: Brightness.dark,
           ),
           useMaterial3: true,
+          scaffoldBackgroundColor: Colors.grey[900],
+          cardTheme: CardThemeData(
+            elevation: 2,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(16)),
+            ),
+            color: Colors.grey[850],
+          ),
         ),
         scaffoldMessengerKey: scaffoldMessengerKey,
         navigatorKey: NavigationService.instance.navigatorKey,

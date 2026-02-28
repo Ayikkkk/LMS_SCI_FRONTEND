@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../navigation_service.dart';
 import '../../../core/utils/logger.dart';
+import '../../../core/services/analytics_service.dart';
 import '../data/quiz_repository.dart';
 import 'models/question_model.dart';
 
@@ -112,6 +113,13 @@ class QuizNotifier extends ChangeNotifier {
       if (_questions.isNotEmpty) {
         startQuizLock(exerciseId);
         _startGlobalTimer();
+
+        // Track quiz start in Analytics
+        await AnalyticsService.logQuizStart(
+          quizId: exerciseId,
+          quizName: _exerciseTypeName ?? 'Unknown',
+          quizType: _exerciseTypeName ?? 'Unknown',
+        );
       }
     } catch (e) {
       _error = e.toString();
@@ -279,6 +287,18 @@ class QuizNotifier extends ChangeNotifier {
     _submitted = true;
     notifyListeners();
     endQuizLock();
+
+    // Track quiz completion in Analytics
+    final duration = totalQuizSeconds - _remainingSeconds;
+    await AnalyticsService.logQuizComplete(
+      quizId: _exerciseId,
+      quizName: _exerciseTypeName ?? 'Unknown',
+      quizType: _exerciseTypeName ?? 'Unknown',
+      score: _finalScore,
+      duration: duration,
+      totalQuestions: _questions.length,
+      answeredQuestions: _selectedAnswers.length,
+    );
   }
 
   // ================= RESET =================

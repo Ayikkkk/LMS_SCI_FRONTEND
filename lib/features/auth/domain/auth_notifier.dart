@@ -3,6 +3,8 @@ import '../data/repository/auth_repository.dart';
 import '../../profile/presentation/providers/profile_provider.dart';
 import '../../laporan_harian/presentation/providers/laporan_provider.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/services/crashlytics_service.dart';
+import '../../../../core/services/analytics_service.dart';
 import '../data/models/student_model.dart';
 
 enum AuthStatus { unknown, authenticated, unauthenticated }
@@ -45,6 +47,30 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
         ref.invalidate(laporanCheckProvider);
 
         state = AuthStatus.authenticated;
+
+        // Set user identifier for Crashlytics
+        final student = ref.read(studentProvider);
+        if (student != null) {
+          await CrashlyticsService.setUserIdentifier(student.id.toString());
+          await CrashlyticsService.setCustomKey('student_name', student.name);
+          await CrashlyticsService.setCustomKey(
+              'student_nis', student.nis ?? '');
+
+          // Track login event in Analytics
+          await AnalyticsService.logLogin(
+            method: 'username_password',
+            userId: student.id.toString(),
+          );
+          await AnalyticsService.setUserId(student.id.toString());
+          await AnalyticsService.setUserProperty(
+            name: 'student_name',
+            value: student.name,
+          );
+          await AnalyticsService.setUserProperty(
+            name: 'class_name',
+            value: student.className ?? 'Unknown',
+          );
+        }
       }
 
       return success;
@@ -76,6 +102,13 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
   /// ==========================
   Future<void> doLogout() async {
     await _repo.logout();
+
+    // Track logout event in Analytics
+    await AnalyticsService.logLogout();
+    await AnalyticsService.clearUserData();
+
+    // Clear Crashlytics user identifier
+    await CrashlyticsService.clearUserIdentifier();
 
     // reset semua provider terkait user
     ref.invalidate(profileDataProvider);

@@ -11,6 +11,9 @@ import '../../../auth/presentation/change_password_screen.dart';
 // THEME PROVIDER
 import '../../../../core/theme/theme_notifier.dart';
 
+// VERSION SERVICE
+import '../../../../core/providers/version_provider.dart';
+
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -43,7 +46,7 @@ class ProfileScreen extends ConsumerWidget {
                 // ============================
                 // AKUN SISWA
                 // ============================
-                _sectionTitle("AKUN"),
+                _sectionTitle("AKUN", context),
                 _profileCard(context, ref, student),
 
                 const SizedBox(height: 20),
@@ -51,7 +54,7 @@ class ProfileScreen extends ConsumerWidget {
                 // ============================
                 // GURU PEMBIMBING
                 // ============================
-                _sectionTitle("GURU AKADEMIK"),
+                _sectionTitle("GURU AKADEMIK", context),
                 guru == null
                     ? _emptyTeacherCard()
                     : _teacherCard(
@@ -65,7 +68,7 @@ class ProfileScreen extends ConsumerWidget {
                 // ============================
                 // PERSONALISASI
                 // ============================
-                _sectionTitle("PERSONALISASI & KEAMANAN"),
+                _sectionTitle("PERSONALISASI & KEAMANAN", context),
 
                 //  MODE GELAP AKTIF
                 _switchItem(
@@ -98,7 +101,7 @@ class ProfileScreen extends ConsumerWidget {
                 // ============================
                 // TENTANG APLIKASI
                 // ============================
-                _sectionTitle("TENTANG APLIKASI"),
+                _sectionTitle("TENTANG APLIKASI", context),
 
                 _menuItem(
                   "Laporan Harian",
@@ -118,6 +121,8 @@ class ProfileScreen extends ConsumerWidget {
                   onTap: () {},
                 ),
 
+                _versionItem(ref),
+
                 const SizedBox(height: 30),
 
                 // ============================
@@ -136,15 +141,17 @@ class ProfileScreen extends ConsumerWidget {
   // ================================
   // SECTION TITLE
   // ================================
-  Widget _sectionTitle(String title) {
+  Widget _sectionTitle(String title, BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 15,
           fontWeight: FontWeight.bold,
-          color: Colors.black54,
+          color: isDark ? Colors.grey[400] : Colors.black54,
           letterSpacing: 0.5,
         ),
       ),
@@ -210,11 +217,21 @@ class ProfileScreen extends ConsumerWidget {
                             fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 6),
                     Text("NIS: $nis",
-                        style:
-                            TextStyle(color: Colors.grey[700], fontSize: 14)),
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey[300]
+                              : Colors.grey[700],
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        )),
                     const SizedBox(height: 4),
                     Text("Kelas • $className",
-                        style: TextStyle(color: Colors.grey[600])),
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey[300]
+                              : Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        )),
                   ],
                 ),
               ),
@@ -287,11 +304,22 @@ class ProfileScreen extends ConsumerWidget {
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ListTile(
-        leading: Icon(icon),
+        leading: Icon(
+          icon,
+          color: value ? Colors.amber : Colors.grey,
+        ),
         title: Text(title),
+        subtitle: Text(
+          value ? 'Aktif' : 'Nonaktif',
+          style: TextStyle(
+            fontSize: 12,
+            color: value ? Colors.amber : Colors.grey,
+          ),
+        ),
         trailing: Switch(
           value: value,
           onChanged: onChanged,
+          activeColor: Colors.amber,
         ),
       ),
     );
@@ -309,6 +337,30 @@ class ProfileScreen extends ConsumerWidget {
         title: Text(title),
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
+      ),
+    );
+  }
+
+  // ================================
+  // VERSION ITEM
+  // ================================
+  Widget _versionItem(WidgetRef ref) {
+    final version = ref.watch(currentVersionProvider);
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ListTile(
+        leading: const Icon(Icons.info_outline, color: Colors.blue),
+        title: const Text("Versi Aplikasi"),
+        subtitle: Text(
+          'v$version',
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.grey,
+          ),
+        ),
+        trailing: const Icon(Icons.chevron_right, color: Colors.transparent),
       ),
     );
   }

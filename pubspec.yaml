@@ -31,11 +31,17 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Firebase
+  firebase_core: ^2.24.2
+  firebase_crashlytics: ^3.4.9
+  firebase_analytics: ^10.8.0
+
   dio: ^5.0.0 # Koneksi API
   flutter_riverpod: ^2.4.9 # State Management
   flutter_secure_storage: ^9.0.0 # Penyimpanan Token Aman
   flutter_native_splash: ^2.4.7 # Native Splash Screen
   shared_preferences: ^2.2.2 # Untuk status Onboarding
+  package_info_plus: ^8.0.0 # App version info
   intl: ^0.18.1 # Internationalization & Formatting
   url_launcher: ^6.2.2
   webview_flutter: ^4.7.0

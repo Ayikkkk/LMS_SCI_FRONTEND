@@ -55,18 +55,49 @@ class OnlineMeetingState {
 class OnlineMeetingNotifier extends StateNotifier<OnlineMeetingState> {
   final OnlineMeetingRepository repository;
 
-  OnlineMeetingNotifier(this.repository)
-      : super(OnlineMeetingState.initial());
+  OnlineMeetingNotifier(this.repository) : super(OnlineMeetingState.initial());
 
   /// 🔹 Load meetings siswa
+  /// Filter: hanya tampilkan meeting hari ini dan mendatang
   Future<void> loadMeetings() async {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final meetings = await repository.fetchMeetings();
+      final allMeetings = await repository.fetchMeetings();
+
+      // Filter: hanya meeting hari ini dan mendatang
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+
+      final filteredMeetings = allMeetings.where((meeting) {
+        if (meeting.startTime == null) {
+          return true; // Tampilkan jika tidak ada tanggal
+        }
+
+        final meetingDate = DateTime(
+          meeting.startTime!.year,
+          meeting.startTime!.month,
+          meeting.startTime!.day,
+        );
+
+        // Debug: print untuk melihat perbandingan tanggal
+        final isValid =
+            meetingDate.isAtSameMomentAs(today) || meetingDate.isAfter(today);
+
+        // Uncomment untuk debugging:
+        // print('Meeting: ${meeting.title}');
+        // print('Meeting Date: $meetingDate');
+        // print('Today: $today');
+        // print('Is Valid: $isValid');
+        // print('---');
+
+        // Tampilkan jika meeting >= hari ini
+        return isValid;
+      }).toList();
+
       state = state.copyWith(
         isLoading: false,
-        meetings: meetings,
+        meetings: filteredMeetings,
       );
     } catch (e) {
       state = state.copyWith(

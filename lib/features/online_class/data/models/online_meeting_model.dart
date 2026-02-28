@@ -26,7 +26,9 @@ class OnlineMeetingModel {
       if (value == null) return null;
       final s = value.toString();
       if (s.isEmpty) return null;
-      return DateTime.tryParse(s);
+      final parsed = DateTime.tryParse(s);
+      // Convert to local time if parsed successfully
+      return parsed?.toLocal();
     }
 
     return OnlineMeetingModel(
