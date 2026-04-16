@@ -26,15 +26,17 @@ class EnvironmentConfig {
   static String get apiBaseUrl {
     switch (_environment) {
       case Environment.development:
-        // Local development server
-        return 'http://192.168.101.82:8000/api/';
+        // Read from --dart-define=DEV_API_URL=http://192.168.x.x:8000/api/
+        const devUrl = String.fromEnvironment(
+          'DEV_API_URL',
+          defaultValue: 'http://192.168.101.78:8000/api/',
+        );
+        return devUrl;
 
       case Environment.staging:
-        // Staging server
         return 'https://staging-api.yourdomain.com/api/';
 
       case Environment.production:
-        // Production server
         return 'https://api.yourdomain.com/api/';
     }
   }
@@ -43,7 +45,11 @@ class EnvironmentConfig {
   static String get apiHost {
     switch (_environment) {
       case Environment.development:
-        return 'http://192.168.101.82:8000';
+        const devHost = String.fromEnvironment(
+          'DEV_API_HOST',
+          defaultValue: 'http://192.168.101.78:8000',
+        );
+        return devHost;
 
       case Environment.staging:
         return 'https://staging-api.yourdomain.com';

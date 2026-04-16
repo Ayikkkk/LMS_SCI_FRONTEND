@@ -14,12 +14,10 @@ final dashboardAssignmentsProvider = FutureProvider((ref) async {
   final repo = ref.watch(homeRepositoryProvider);
   final assignments = await repo.fetchAssignments();
 
-  // Filter tugas yang belum dikerjakan dan belum lewat deadline
   final now = DateTime.now();
 
   return assignments
       .where((a) => !a.isSubmitted && a.dueDate.isAfter(now))
       .toList()
-    ..sort((a, b) => a.dueDate.compareTo(b.dueDate)); // Urut dari deadline terdekat
+    ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
 });
-

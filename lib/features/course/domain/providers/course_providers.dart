@@ -2,10 +2,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/repository/course_repository.dart';
-
 import '../../data/models/assignment_model.dart';
 import '../../data/models/course_material_model.dart';
-
 
 // Provider untuk data daftar materi
 final courseMaterialsProvider =

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -20,9 +22,12 @@ class CourseScreen extends ConsumerStatefulWidget {
 }
 
 class _CourseScreenState extends ConsumerState<CourseScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
   bool _didListen = false;
+  Timer? _refreshTimer;
+
+  static const Duration _pollInterval = Duration(seconds: 30);
 
   @override
   void initState() {
@@ -32,11 +37,39 @@ class _CourseScreenState extends ConsumerState<CourseScreen>
       vsync: this,
       initialIndex: ref.read(courseTabProvider),
     );
+    WidgetsBinding.instance.addObserver(this);
+    _startPolling();
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  void _startPolling() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(_pollInterval, (_) => _refresh());
+  }
+
+  void _refresh() {
+    if (!mounted) return;
+    ref.invalidate(courseMaterialsProvider);
+    ref.invalidate(courseAssignmentsProvider);
+  }
+
+  // Refresh saat app kembali ke foreground
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refresh();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    /// 💡 Setup listener here — SAFE & recommended by Riverpod Team
     if (!_didListen) {
       _didListen = true;
       ref.listen<int>(courseTabProvider, (prev, next) {
@@ -80,14 +113,7 @@ class _CourseScreenState extends ConsumerState<CourseScreen>
       ),
     );
   }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
 }
-
 
 // ==========================================================
 // MATERI LIST

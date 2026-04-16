@@ -249,67 +249,61 @@ class _StatsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 2,
       crossAxisSpacing: 12,
       mainAxisSpacing: 12,
-      childAspectRatio: 1.5,
+      childAspectRatio: 2.2,
       children: [
         _stat('Total Tugas', stats.totalTasks, Icons.assignment_rounded,
-            [Colors.blue.shade400, Colors.blue.shade600], isDark),
+            [Colors.blue.shade400, Colors.blue.shade600]),
+        _stat('Total Materi', stats.totalMaterials, Icons.menu_book_rounded,
+            [Colors.teal.shade400, Colors.teal.shade600]),
         _stat('Total Quiz', stats.totalExercises, Icons.quiz_rounded,
-            [Colors.blue.shade400, Colors.blue.shade600], isDark),
-        _stat('Nilai Tugas', stats.averageTaskScore, Icons.star_rounded,
-            [Colors.orange.shade400, Colors.orange.shade600], isDark),
-        _stat('Nilai Quiz', stats.averageExerciseScore, Icons.star_rounded,
-            [Colors.orange.shade400, Colors.orange.shade600], isDark),
+            [Colors.purple.shade400, Colors.purple.shade600]),
+        _stat('Laporan Harian', stats.reportCount, Icons.event_note_rounded,
+            [Colors.orange.shade400, Colors.orange.shade600]),
       ],
     );
   }
 
-  Widget _stat(String title, dynamic value, IconData icon, List<Color> colors,
-      bool isDark) {
+  Widget _stat(String title, dynamic value, IconData icon, List<Color> colors) {
     final display =
         value is double ? value.toStringAsFixed(0) : value.toString();
 
     return Card(
       elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(
           children: [
             Icon(icon, color: colors[0], size: 24),
-            const SizedBox(height: 4),
-            Flexible(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
                   ),
-                  Text(
-                    display,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: colors[0],
-                    ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  display,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: colors[0],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
         ),
@@ -507,8 +501,8 @@ class _MeetingsList extends StatelessWidget {
                             displayName: 'Siswa',
                           );
                         },
-                        child: Chip(
-                          label: const Row(
+                        child: const Chip(
+                          label: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.circle, color: Colors.white, size: 8),

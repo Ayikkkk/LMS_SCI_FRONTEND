@@ -1,23 +1,24 @@
 // lib/features/course/presentation/screens/assignment_detail_screen.dart
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'dart:async';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
-import '../screens/submit_task_screen.dart';
-import '../../domain/providers/course_providers.dart';
-import '../../data/models/assignment_model.dart';
 import '../../../../core/widgets/attachment_file_widget.dart';
-
-import '../../domain/providers/comment_provider.dart';
-import '../../presentation/widgets/comment_list_widget.dart';
-import '../../presentation/widgets/add_comment_field.dart';
+import '../../../auth/domain/auth_notifier.dart';
 import '../../../home/presentation/providers/home_provider.dart';
-import '../../../auth/domain/auth_notifier.dart'; // studentProvider is here now
+import '../../data/models/assignment_model.dart';
+import '../../domain/providers/comment_provider.dart';
+import '../../domain/providers/course_providers.dart';
+import '../../presentation/widgets/add_comment_field.dart';
+import '../../presentation/widgets/comment_list_widget.dart';
+import '../screens/submit_task_screen.dart';
 
 class AssignmentDetailScreen extends ConsumerStatefulWidget {
   final int assignmentId;
-
   const AssignmentDetailScreen({super.key, required this.assignmentId});
 
   @override
@@ -32,7 +33,6 @@ class _AssignmentDetailScreenState
   int? editingReplyId;
   String? editingInitialText;
   Timer? _refreshTimer;
-  bool _listenerRegistered = false;
 
   int? _parsePoint(dynamic point) {
     if (point == null || point.toString().isEmpty) return null;
@@ -42,20 +42,15 @@ class _AssignmentDetailScreenState
   @override
   void initState() {
     super.initState();
-
-    /// ⏱ Backup auto refresh tiap 5 detik
     _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       final asyncAssignment =
           ref.read(assignmentDetailProvider(widget.assignmentId));
-
       asyncAssignment.whenData((assignment) {
-        final score = _parsePoint(assignment.point);
-        if (assignment.isSubmitted && score == null) {
+        if (assignment.isSubmitted && _parsePoint(assignment.point) == null) {
           ref.invalidate(assignmentDetailProvider(widget.assignmentId));
         }
       });
     });
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(commentProvider.notifier).loadComments(widget.assignmentId);
     });
@@ -72,240 +67,470 @@ class _AssignmentDetailScreenState
     ref.invalidate(dashboardAssignmentsProvider);
   }
 
-  @override
-  @override
+  void _cancelAction() => setState(() {
+        replyToCommentId = null;
+        editingCommentId = null;
+        editingReplyId = null;
+        editingInitialText = null;
+      });
+
   @override
   Widget build(BuildContext context) {
     final asyncAssignment =
         ref.watch(assignmentDetailProvider(widget.assignmentId));
     final student = ref.watch(studentProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Detail Tugas')),
-      body: Consumer(
-        builder: (context, ref2, _) {
-          ref2.listen(
-            assignmentDetailProvider(widget.assignmentId),
-            (prev, next) {
-              next.whenData((assignment) {
-                ref2.invalidate(dashboardAssignmentsProvider);
-              });
-            },
-          );
+    // Listen for changes to refresh dashboard
+    ref.listen(assignmentDetailProvider(widget.assignmentId), (_, next) {
+      next.whenData((_) => ref.invalidate(dashboardAssignmentsProvider));
+    });
 
-          return asyncAssignment.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text("Gagal memuat: $e")),
-            data: (assignment) => _buildContent(context, assignment, student),
-          );
-        },
+    return asyncAssignment.when(
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
       ),
+      error: (e, _) => Scaffold(
+        appBar: AppBar(title: const Text('Detail Tugas')),
+        body: Center(child: Text('Gagal memuat: $e')),
+      ),
+      data: (assignment) {
+        final score = _parsePoint(assignment.point);
+        final canSubmit = !assignment.isSubmitted && !assignment.isLate;
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Detail Tugas'),
+            centerTitle: true,
+          ),
+          // Tombol kumpulkan selalu terlihat di bawah
+          bottomNavigationBar: canSubmit
+              ? _SubmitBar(
+                  onTap: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => SubmitTaskScreen(
+                          assignmentId: assignment.id,
+                          assignmentTitle: assignment.title,
+                          isSubmitted: assignment.isSubmitted,
+                        ),
+                      ),
+                    );
+                    if (result == true) _refreshAssignment();
+                  },
+                )
+              : null,
+          body: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── Header ──────────────────────────────
+                      _HeaderSection(assignment: assignment),
+                      const SizedBox(height: 16),
+
+                      // ── Info card (tenggat, status, nilai) ──
+                      _InfoCard(assignment: assignment, score: score),
+                      const SizedBox(height: 16),
+
+                      // ── Konten tugas ────────────────────────
+                      if (assignment.description?.isNotEmpty == true) ...[
+                        _SectionLabel('Deskripsi'),
+                        const SizedBox(height: 6),
+                        Text(assignment.description!,
+                            style: const TextStyle(height: 1.5)),
+                        const SizedBox(height: 16),
+                      ],
+
+                      if (assignment.embed?.isNotEmpty == true) ...[
+                        _SectionLabel('Video'),
+                        const SizedBox(height: 8),
+                        _VideoEmbedWidget(embedCode: assignment.embed!),
+                        const SizedBox(height: 16),
+                      ],
+
+                      if (assignment.link?.isNotEmpty == true) ...[
+                        _SectionLabel('Tautan'),
+                        const SizedBox(height: 8),
+                        _LinkButton(url: assignment.link!),
+                        const SizedBox(height: 16),
+                      ],
+
+                      if (assignment.attachment?.isNotEmpty == true) ...[
+                        _SectionLabel('Lampiran Guru'),
+                        const SizedBox(height: 8),
+                        AttachmentFileWidget(
+                          postId: assignment.id,
+                          fileName: assignment.attachment!.split('/').last,
+                          fileType: assignment.attachment!.split('.').last,
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // ── Status pengumpulan ───────────────────
+                      if (assignment.isSubmitted)
+                        _StatusBanner(
+                          text: score != null
+                              ? 'Tugas sudah dinilai ✔️'
+                              : 'Menunggu penilaian guru ⏳',
+                          color: score != null ? Colors.green : Colors.orange,
+                        )
+                      else if (assignment.isLate)
+                        const _StatusBanner(
+                          text: 'Batas waktu sudah terlewat ❌',
+                          color: Colors.redAccent,
+                        ),
+
+                      const SizedBox(height: 24),
+
+                      // ── Komentar ─────────────────────────────
+                      _SectionLabel('Komentar'),
+                      const SizedBox(height: 8),
+                      student == null
+                          ? const Center(child: CircularProgressIndicator())
+                          : CommentListWidget(
+                              postId: assignment.id,
+                              currentUser: student,
+                              onReplySelected: (id) => setState(() {
+                                replyToCommentId = id;
+                                editingCommentId = null;
+                                editingReplyId = null;
+                                editingInitialText = null;
+                              }),
+                              onEditSelected: (id, msg) => setState(() {
+                                editingCommentId = id;
+                                editingInitialText = msg;
+                                replyToCommentId = null;
+                                editingReplyId = null;
+                              }),
+                              onEditReplySelected: (rId, msg, pId) =>
+                                  setState(() {
+                                editingReplyId = rId;
+                                replyToCommentId = pId;
+                                editingInitialText = msg;
+                                editingCommentId = null;
+                              }),
+                            ),
+                      const SizedBox(height: 80),
+                    ],
+                  ),
+                ),
+              ),
+
+              // ── Input komentar ───────────────────────────────
+              if (student != null)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    boxShadow: const [
+                      BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 6,
+                          offset: Offset(0, -2))
+                    ],
+                  ),
+                  child: SafeArea(
+                    top: false,
+                    child: AddCommentField(
+                      postId: assignment.id,
+                      commentId: editingReplyId ??
+                          editingCommentId ??
+                          replyToCommentId,
+                      parentCommentId:
+                          editingReplyId != null ? replyToCommentId : null,
+                      isEditing:
+                          editingCommentId != null || editingReplyId != null,
+                      isReply: editingReplyId != null,
+                      initialText: editingInitialText,
+                      onCancelAction: _cancelAction,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
+}
 
-  Widget _buildContent(
-    BuildContext context,
-    AssignmentModel assignment,
-    dynamic student,
-  ) {
-    final score = _parsePoint(assignment.point);
+// ─────────────────────────────────────────────
+// WIDGETS
+// ─────────────────────────────────────────────
 
+class _HeaderSection extends StatelessWidget {
+  final AssignmentModel assignment;
+  const _HeaderSection({required this.assignment});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(assignment.title,
-                    style: const TextStyle(
-                        fontSize: 24, fontWeight: FontWeight.bold)),
-                Text(assignment.subjectName,
-                    style: TextStyle(color: Colors.grey.shade600)),
-                const Divider(height: 32),
-                if (assignment.attachment?.isNotEmpty == true)
-                  AttachmentFileWidget(
-                    postId: assignment.id,
-                    fileName: assignment.attachment!.split('/').last,
-                    fileType: assignment.attachment!.split('.').last,
-                  ),
-                _infoSection(context, assignment, score),
-                const SizedBox(height: 12),
-                if (!assignment.isSubmitted && !assignment.isLate)
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      final result = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => SubmitTaskScreen(
-                            assignmentId: assignment.id,
-                            assignmentTitle: assignment.title,
-                            isSubmitted: assignment.isSubmitted,
-                          ),
-                        ),
-                      );
-                      if (result == true) _refreshAssignment();
-                    },
-                    icon: const Icon(Icons.upload),
-                    label: const Text("Kumpulkan Tugas"),
-                  )
-                else if (!assignment.isSubmitted && assignment.isLate)
-                  _alertBox("Tugas sudah terlewat ❌", Colors.redAccent)
-                else if (assignment.isSubmitted)
-                  _alertBox(
-                    score != null
-                        ? "Tugas sudah dinilai ✔️"
-                        : "Menunggu penilaian ⏳",
-                    score != null ? Colors.green : Colors.orange,
-                  ),
-                const SizedBox(height: 20),
-                const Text("Komentar",
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                student == null
-                    ? const Center(child: CircularProgressIndicator())
-                    : CommentListWidget(
-                        postId: assignment.id,
-                        currentUser: student,
-                        onReplySelected: (id) {
-                          setState(() {
-                            replyToCommentId = id;
-                            editingCommentId = null;
-                            editingReplyId = null;
-                            editingInitialText = null;
-                          });
-                        },
-                        onEditSelected: (id, message) {
-                          setState(() {
-                            editingCommentId = id;
-                            editingInitialText = message;
-                            replyToCommentId = null;
-                            editingReplyId = null;
-                          });
-                        },
-                        onEditReplySelected: (replyId, message, parentId) {
-                          setState(() {
-                            editingReplyId = replyId;
-                            replyToCommentId = parentId;
-                            editingInitialText = message;
-                            editingCommentId = null;
-                          });
-                        },
-                      ),
-                const SizedBox(height: 100),
-              ],
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            assignment.subjectName,
+            style: TextStyle(
+              fontSize: 12,
+              color: colorScheme.onPrimaryContainer,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),
-        _commentInput(student, assignment),
-      ],
-    );
-  }
-
-  Widget _commentInput(dynamic student, AssignmentModel assignment) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      child: SafeArea(
-        top: false,
-        child: student == null
-            ? const SizedBox()
-            : AddCommentField(
-                postId: assignment.id,
-                commentId:
-                    editingReplyId ?? editingCommentId ?? replyToCommentId,
-                parentCommentId:
-                    editingReplyId != null ? replyToCommentId : null,
-                isEditing: editingCommentId != null || editingReplyId != null,
-                isReply: editingReplyId != null,
-                initialText: editingInitialText,
-                onCancelAction: () {
-                  setState(() {
-                    replyToCommentId = null;
-                    editingCommentId = null;
-                    editingReplyId = null;
-                    editingInitialText = null;
-                  });
-                },
-              ),
-      ),
-    );
-  }
-
-  Widget _alertBox(String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: color.withOpacity(.15),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(text,
-          style: TextStyle(
-              color: color, fontWeight: FontWeight.bold, fontSize: 14)),
-    );
-  }
-}
-
-Widget _infoSection(
-  BuildContext context,
-  AssignmentModel assignment,
-  int? score,
-) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      _infoRow(
-        icon: Icons.access_time,
-        label: "Tenggat:",
-        value: DateFormat('EEEE, dd MMM yyyy HH:mm').format(assignment.dueDate),
-        color: Colors.redAccent,
-      ),
-      const SizedBox(height: 10),
-      _infoRow(
-        icon: Icons.check_circle,
-        label: "Status:",
-        value: assignment.status,
-        bold: true,
-        color: assignment.statusColor,
-      ),
-      if (score != null) ...[
-        const SizedBox(height: 10),
-        _infoRow(
-          icon: Icons.grade,
-          label: "Nilai:",
-          value: score.toString(),
-          bold: true,
-          color: Colors.blue,
+        const SizedBox(height: 8),
+        Text(
+          assignment.title,
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
       ],
-    ],
-  );
+    );
+  }
 }
 
-Widget _infoRow({
-  required IconData icon,
-  required String label,
-  required String value,
-  bool bold = false,
-  Color color = Colors.black,
-}) {
-  return Row(
-    children: [
-      Icon(icon, size: 18, color: color),
-      const SizedBox(width: 6),
-      Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-      const SizedBox(width: 4),
-      Expanded(
-        child: Text(
-          value,
-          style: TextStyle(
-            fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-            color: color,
+class _InfoCard extends StatelessWidget {
+  final AssignmentModel assignment;
+  final int? score;
+  const _InfoCard({required this.assignment, required this.score});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey[850] : Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+        ),
+      ),
+      child: Column(
+        children: [
+          _InfoRow(
+            icon: Icons.calendar_today_outlined,
+            label: 'Tenggat',
+            value: DateFormat('EEE, dd MMM yyyy • HH:mm', 'id_ID')
+                .format(assignment.dueDate),
+            valueColor: assignment.isLate ? Colors.redAccent : null,
+          ),
+          const Divider(height: 20),
+          _InfoRow(
+            icon: Icons.assignment_turned_in_outlined,
+            label: 'Status',
+            value: assignment.status,
+            valueColor: assignment.statusColor,
+            bold: true,
+          ),
+          if (score != null) ...[
+            const Divider(height: 20),
+            _InfoRow(
+              icon: Icons.star_outline_rounded,
+              label: 'Nilai',
+              value: '$score',
+              valueColor: Colors.blue,
+              bold: true,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color? valueColor;
+  final bool bold;
+
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.valueColor,
+    this.bold = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = valueColor ?? Theme.of(context).colorScheme.onSurface;
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: color),
+        const SizedBox(width: 8),
+        Text('$label  ',
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+              color: color,
+            ),
           ),
         ),
-      )
-    ],
-  );
+      ],
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  const _SectionLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+    );
+  }
+}
+
+class _StatusBanner extends StatelessWidget {
+  final String text;
+  final Color color;
+  const _StatusBanner({required this.text, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, color: color, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                  color: color, fontWeight: FontWeight.w600, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LinkButton extends StatelessWidget {
+  final String url;
+  const _LinkButton({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      icon: const Icon(Icons.open_in_new, size: 18),
+      label: Text(
+        url.length > 50 ? '${url.substring(0, 50)}...' : url,
+        overflow: TextOverflow.ellipsis,
+      ),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(double.infinity, 48),
+        alignment: Alignment.centerLeft,
+      ),
+      onPressed: () async {
+        try {
+          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+        } catch (_) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Tidak dapat membuka tautan')),
+            );
+          }
+        }
+      },
+    );
+  }
+}
+
+class _SubmitBar extends StatelessWidget {
+  final VoidCallback onTap;
+  const _SubmitBar({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: ElevatedButton.icon(
+          onPressed: onTap,
+          icon: const Icon(Icons.upload_rounded),
+          label: const Text(
+            'Kumpulkan Tugas',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 52),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _VideoEmbedWidget extends StatefulWidget {
+  final String embedCode;
+  const _VideoEmbedWidget({required this.embedCode});
+
+  @override
+  State<_VideoEmbedWidget> createState() => _VideoEmbedWidgetState();
+}
+
+class _VideoEmbedWidgetState extends State<_VideoEmbedWidget> {
+  late final WebViewController _controller;
+  String? _url;
+
+  @override
+  void initState() {
+    super.initState();
+    final regex = RegExp('src=["\']([^"\']+)["\']');
+    _url = regex.firstMatch(widget.embedCode)?.group(1);
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted);
+    if (_url != null) _controller.loadRequest(Uri.parse(_url!));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_url == null) {
+      return const Text('Embed tidak valid',
+          style: TextStyle(color: Colors.red));
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: AspectRatio(
+        aspectRatio: 16 / 9,
+        child: WebViewWidget(controller: _controller),
+      ),
+    );
+  }
 }

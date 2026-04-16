@@ -11,6 +11,8 @@ class NavigationService {
 
   bool isQuizLocked = false;
   String? currentExerciseId;
+  DateTime? quizBackgroundTime;
+  bool pendingNavigateToHome = false;
 
   final List<void Function(NavigatorState)> _pending = [];
 
@@ -24,13 +26,24 @@ class NavigationService {
     if (navigator != null) {
       action(navigator);
     } else {
-      _pending.add(action);
+      // Cap queue at 10 to prevent unbounded growth
+      if (_pending.length < 10) {
+        _pending.add(action);
+      }
     }
   }
 
   void flushPending() {
     final navigator = navigatorKey.currentState;
     if (navigator == null) return;
+
+    // Handle pending home navigation (from auto-submit while in background)
+    if (pendingNavigateToHome) {
+      pendingNavigateToHome = false;
+      navigator.pushNamedAndRemoveUntil('/home', (route) => false);
+      _pending.clear();
+      return;
+    }
 
     for (final action in List.from(_pending)) {
       action(navigator);
@@ -39,10 +52,26 @@ class NavigationService {
   }
 
   // ============================
+  // NAVIGATE TO HOME (safe — works even when app is in background)
+  // Sets a flag that gets executed on next flushPending call (app resume)
+  // ============================
+  void navigateToHomeWhenReady() {
+    final navigator = navigatorKey.currentState;
+    if (navigator != null) {
+      // App is in foreground — navigate immediately
+      navigator.pushNamedAndRemoveUntil('/home', (route) => false);
+    } else {
+      // App is in background — queue for when navigator is ready
+      pendingNavigateToHome = true;
+    }
+  }
+
+  // ============================
   // FORCE BACK TO QUIZ
   // ============================
   void forceBackToQuiz() {
     if (currentExerciseId == null) return;
+    if (!isQuizLocked) return; // sudah unlock = quiz selesai, jangan push
 
     runOrQueue((navigator) {
       final currentRoute = ModalRoute.of(navigator.context);

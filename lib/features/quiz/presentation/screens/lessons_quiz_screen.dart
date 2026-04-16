@@ -61,10 +61,9 @@ class _LessonsQuizScreenState extends ConsumerState<LessonsQuizScreen> {
       setState(() {
         _lessons = resp.data["data"] ?? [];
       });
-    } on DioError catch (dioErr) {
+    } on DioException catch (dioErr) {
       // Jika request dibatalkan, jangan tampilkan error
-      if (dioErr.type == DioErrorType.cancel) {
-        // ignore canceled request
+      if (dioErr.type == DioExceptionType.cancel) {
         return;
       }
 
@@ -138,7 +137,7 @@ class _LessonsQuizScreenState extends ConsumerState<LessonsQuizScreen> {
                       );
                     },
                   );
-                }).toList(),
+                }),
                 if (types.isEmpty)
                   const Padding(
                     padding: EdgeInsets.all(8.0),

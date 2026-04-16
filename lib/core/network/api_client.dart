@@ -37,10 +37,54 @@ class TokenInterceptor extends Interceptor {
   }
 }
 
+/// Interceptor that catches 401 responses and triggers logout via callback.
+/// Sanctum stateless tokens cannot be refreshed, so on 401 we clear storage
+/// and notify the app to redirect to login.
+class AuthExpiredInterceptor extends Interceptor {
+  final void Function() onUnauthorized;
+  bool _isHandling = false;
+
+  AuthExpiredInterceptor({required this.onUnauthorized});
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) async {
+    if (err.response?.statusCode == 401) {
+      // Jika tidak ada token sama sekali, ini bukan expired session
+      // (bisa terjadi saat provider masih firing setelah logout)
+      final token = await storage.read(key: 'auth_token');
+      if (token == null || token.isEmpty) {
+        return handler.next(err);
+      }
+
+      // Cegah double-trigger
+      if (_isHandling) return handler.next(err);
+      _isHandling = true;
+
+      AppLogger.warning(
+        'Token expired or invalid — clearing session',
+        'AuthExpiredInterceptor',
+      );
+      await storage.delete(key: 'auth_token');
+      await storage.delete(key: 'student_data');
+      dio.options.headers.remove('Authorization');
+      onUnauthorized();
+
+      _isHandling = false;
+    }
+    return handler.next(err);
+  }
+}
+
 //  Configure Dio with interceptors
-Future<void> configureDio() async {
+Future<void> configureDio({void Function()? onUnauthorized}) async {
   dio.interceptors.clear();
   dio.interceptors.add(TokenInterceptor());
+
+  if (onUnauthorized != null) {
+    dio.interceptors.add(
+      AuthExpiredInterceptor(onUnauthorized: onUnauthorized),
+    );
+  }
 
   // Add logging interceptor in non-production environments
   if (EnvironmentConfig.enableDebugFeatures) {

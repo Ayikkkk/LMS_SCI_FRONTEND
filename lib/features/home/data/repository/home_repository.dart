@@ -7,7 +7,6 @@ import '../../../../core/network/api_client.dart';
 import '../models/dashboard_model.dart';
 import '../../../course/data/models/assignment_model.dart';
 
-
 // ===============================================
 // PROVIDER
 // ===============================================
@@ -45,21 +44,25 @@ class HomeRepository {
     }
   }
 
-  Future<List<AssignmentModel>> fetchAssignments() async {
-  try {
-    final response = await _dio.get('student/assignments');
+  Future<List<AssignmentModel>> fetchAssignments(
+      {int page = 1, int perPage = 15}) async {
+    try {
+      final response = await _dio.get(
+        'student/assignments',
+        queryParameters: {'page': page, 'per_page': perPage},
+      );
 
-    final dataList = (response.data['assignments'] as List? ?? [])
-        .map((e) => AssignmentModel.fromJson(e))
-        .toList();
+      final dataList = (response.data['assignments'] as List? ?? [])
+          .map((e) => AssignmentModel.fromJson(e))
+          .toList();
 
-    return dataList;
-  } on DioException catch (e) {
-    final message = e.response?.data['message'] ?? e.message ?? 'Unknown error';
-    throw Exception('Assignments API Error: $message');
-  } catch (e) {
-    throw Exception('Assignments Parsing Error: $e');
+      return dataList;
+    } on DioException catch (e) {
+      final message =
+          e.response?.data['message'] ?? e.message ?? 'Unknown error';
+      throw Exception('Assignments API Error: $message');
+    } catch (e) {
+      throw Exception('Assignments Parsing Error: $e');
+    }
   }
-}
-
 }

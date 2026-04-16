@@ -29,9 +29,13 @@ class _QuizScreenState extends ConsumerState<QuizScreen>
   // STATE VARIABLES
   // ===============================
 
-  DateTime? _backgroundTime;
   AppLifecycleState? _lastLifecycleState;
   bool _isInBackground = false;
+  Timer? _backgroundTimer;
+
+  // Debounce: cegah log duplikat dalam window 2 detik
+  final Map<String, DateTime> _lastLogTime = {};
+  static const Duration _dedupWindow = Duration(seconds: 2);
 
   late StreamSubscription<ConnectivityResult> _connectionSubscription;
 
@@ -54,20 +58,10 @@ class _QuizScreenState extends ConsumerState<QuizScreen>
         Connectivity().onConnectivityChanged.listen((result) {
       if (!NavigationService.instance.isQuizLocked) return;
 
-      final logService = ref.read(quizLogServiceProvider);
-
       if (result == ConnectivityResult.none) {
-        logService.logEvent(
-          eventType: "DISCONNECTED",
-          exerciseId: widget.exerciseId,
-          timestamp: DateTime.now(),
-        );
+        _logEvent(eventType: 'DISCONNECTED');
       } else {
-        logService.logEvent(
-          eventType: "RECONNECTED",
-          exerciseId: widget.exerciseId,
-          timestamp: DateTime.now(),
-        );
+        _logEvent(eventType: 'RECONNECTED');
       }
     });
   }
@@ -79,7 +73,31 @@ class _QuizScreenState extends ConsumerState<QuizScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _connectionSubscription.cancel();
+    _backgroundTimer?.cancel();
     super.dispose();
+  }
+
+  // ===============================
+  // DEDUP LOG HELPER
+  // Cegah event yang sama dikirim dalam window 2 detik
+  // ===============================
+  void _logEvent({
+    required String eventType,
+    int? durationInSeconds,
+    bool suspiciousFlag = false,
+  }) {
+    final now = DateTime.now();
+    final last = _lastLogTime[eventType];
+    if (last != null && now.difference(last) < _dedupWindow) return;
+    _lastLogTime[eventType] = now;
+
+    ref.read(quizLogServiceProvider).logEvent(
+          eventType: eventType,
+          exerciseId: widget.exerciseId,
+          timestamp: now,
+          durationInSeconds: durationInSeconds,
+          suspiciousFlag: suspiciousFlag,
+        );
   }
 
   // ===============================
@@ -90,8 +108,6 @@ class _QuizScreenState extends ConsumerState<QuizScreen>
     final nav = NavigationService.instance;
     if (!nav.isQuizLocked) return;
 
-    final logService = ref.read(quizLogServiceProvider);
-
     // Hindari duplicate lifecycle state
     if (_lastLifecycleState == state) return;
     _lastLifecycleState = state;
@@ -100,42 +116,65 @@ class _QuizScreenState extends ConsumerState<QuizScreen>
     // MASUK BACKGROUND
     // =========================
     if (state == AppLifecycleState.paused) {
+      // Jangan paksa kembali jika quiz sudah selesai
+      final submitted = ref.read(quizNotifierProvider).submitted;
+      if (submitted) return;
+
       if (_isInBackground) return;
       _isInBackground = true;
 
-      _backgroundTime = DateTime.now();
+      // Simpan di singleton agar tidak hilang saat widget di-dispose
+      nav.quizBackgroundTime = DateTime.now();
 
-      logService.logEvent(
-        eventType: "APP_BACKGROUND",
-        exerciseId: widget.exerciseId,
-        timestamp: _backgroundTime!,
-      );
+      _logEvent(eventType: 'APP_BACKGROUND');
 
-      // Paksa kembali ke quiz
-      Future.delayed(const Duration(milliseconds: 300), () {
-        nav.forceBackToQuiz();
-      });
+      // HAPUS forceBackToQuiz — biarkan user kembali manual
+      // forceBackToQuiz saat app di background menyebabkan crash/freeze
     }
 
     // =========================
     // KEMBALI KE APLIKASI
     // =========================
     if (state == AppLifecycleState.resumed) {
-      if (!_isInBackground) return;
+      // Cek dari singleton — bisa dari screen lama yang sudah di-dispose
+      final bgTime = nav.quizBackgroundTime;
+      if (bgTime == null) return;
+
+      _backgroundTimer?.cancel();
       _isInBackground = false;
+      nav.quizBackgroundTime = null;
 
-      final now = DateTime.now();
+      final duration = DateTime.now().difference(bgTime);
 
-      if (_backgroundTime != null) {
-        final duration = now.difference(_backgroundTime!);
+      // Suspicious jika keluar lebih dari 5 detik
+      _logEvent(
+        eventType: 'APP_RESUME',
+        durationInSeconds: duration.inSeconds,
+        suspiciousFlag: duration.inSeconds > 5,
+      );
 
-        logService.logEvent(
-          eventType: "APP_RESUME",
-          exerciseId: widget.exerciseId,
-          timestamp: now,
-          durationInSeconds: duration.inSeconds,
-          suspiciousFlag: duration.inSeconds > 5,
-        );
+      // Tampilkan peringatan jika keluar cukup lama (suspicious)
+      if (duration.inSeconds > 5 && mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => AlertDialog(
+              title: const Text('Peringatan!'),
+              content: Text(
+                'Anda keluar dari aplikasi selama ${duration.inSeconds} detik. '
+                'Aktivitas ini telah dicatat.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Mengerti'),
+                ),
+              ],
+            ),
+          );
+        });
       }
     }
   }
@@ -172,33 +211,30 @@ class _QuizScreenState extends ConsumerState<QuizScreen>
   // ===============================
   @override
   Widget build(BuildContext context) {
+    final notifier = ref.watch(quizNotifierProvider);
+    final nav = NavigationService.instance;
+
+    // Saat quiz sudah selesai, izinkan back secara normal
+    final canPop = notifier.submitted || !nav.isQuizLocked;
+
     return PopScope(
-      canPop: false,
+      canPop: canPop,
       onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return;
-
-        final notifier = ref.read(quizNotifierProvider);
-        final nav = NavigationService.instance;
-
-        // Check if can pop
-        final canPop = notifier.submitted || !nav.isQuizLocked;
-
-        if (canPop) {
-          // Allow navigation
+        if (didPop) {
+          // Pop berhasil — pastikan kembali ke home jika stack kosong
           if (context.mounted) {
-            Navigator.of(context).pop();
+            final navigator = Navigator.of(context);
+            if (!navigator.canPop()) {
+              // Stack kosong akibat forceBackToQuiz — navigasi ke home
+              navigator.pushNamedAndRemoveUntil('/home', (route) => false);
+            }
           }
-        } else {
-          // Block and show warning
-          await _showWarningPopup();
-
-          final logService = ref.read(quizLogServiceProvider);
-          logService.logEvent(
-            eventType: "BACK_BUTTON_BLOCKED",
-            exerciseId: widget.exerciseId,
-            timestamp: DateTime.now(),
-          );
+          return;
         }
+
+        // Quiz masih berlangsung dan terkunci — blokir + tampilkan warning
+        await _showWarningPopup();
+        _logEvent(eventType: 'BACK_BUTTON_BLOCKED');
       },
       child: QuizView(exerciseId: widget.exerciseId),
     );

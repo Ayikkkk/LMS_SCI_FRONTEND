@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../presentation/providers/profile_provider.dart';
 import '../../../auth/domain/auth_notifier.dart';
-import '../../../auth/presentation/login_screen.dart';
 import '../../../laporan_harian/presentation/screens/laporan_harian_screen.dart';
 import '../screens/profile_detail_screen.dart';
 import '../../../auth/presentation/change_password_screen.dart';
@@ -397,14 +396,10 @@ class ProfileScreen extends ConsumerWidget {
 
           if (confirm != true) return;
 
+          // doLogout() akan set state = unauthenticated
+          // AuthRedirector akan otomatis redirect ke /login
+          // Tidak perlu manual navigate atau invalidate di sini
           await ref.read(authNotifierProvider.notifier).doLogout();
-          ref.invalidate(profileDataProvider);
-
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (_) => const LoginScreen()),
-            (_) => false,
-          );
         },
       ),
     );

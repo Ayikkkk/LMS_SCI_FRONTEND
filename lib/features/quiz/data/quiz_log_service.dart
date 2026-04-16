@@ -16,10 +16,10 @@ class QuizLogService {
   final Dio dio;
   final Ref ref;
 
-  QuizLogService({
-    required this.dio,
-    required this.ref,
-  });
+  static const int _maxRetries = 2;
+  static const Duration _retryDelay = Duration(seconds: 2);
+
+  QuizLogService({required this.dio, required this.ref});
 
   /// Log quiz events (start, submit, lifecycle, etc.)
   Future<void> logEvent({
@@ -29,15 +29,12 @@ class QuizLogService {
     int? durationInSeconds,
     bool suspiciousFlag = false,
   }) async {
-    // Ambil student secara dinamis setiap kali dipanggil
     final student = ref.read(studentProvider);
     final studentId = student?.id;
 
     if (studentId == null) {
       AppLogger.warning(
-        'Cannot log quiz event: student ID is null',
-        'QuizLogService',
-      );
+          'Cannot log quiz event: student ID is null', 'QuizLogService');
       return;
     }
 
@@ -51,58 +48,58 @@ class QuizLogService {
     };
 
     AppLogger.debug(
-      'Attempting to log quiz event: $eventType',
-      'QuizLogService',
-    );
+        'Attempting to log quiz event: $eventType', 'QuizLogService');
 
-    try {
-      final response = await dio.post(
-        'student/quiz/log',
-        data: payload,
-      );
+    await _postWithRetry('student/quiz/log', payload, eventType);
+  }
 
-      AppLogger.debug(
-        'Quiz event logged successfully',
-        'QuizLogService',
-      );
+  /// Internal: POST with retry on network/server errors (not 4xx client errors)
+  Future<void> _postWithRetry(
+      String path, Map<String, dynamic> payload, String label) async {
+    int attempt = 0;
 
-      AppLogger.debug(
-        'Response: ${response.data}',
-        'QuizLogService',
-      );
-    } on DioException catch (e) {
-      AppLogger.error(
-        'Failed to log quiz event: ${e.message}',
-        'QuizLogService',
-      );
+    while (attempt <= _maxRetries) {
+      try {
+        await dio.post(path, data: payload);
+        AppLogger.debug('Quiz event "$label" logged (attempt ${attempt + 1})',
+            'QuizLogService');
+        return;
+      } on DioException catch (e) {
+        final status = e.response?.statusCode;
 
-      AppLogger.error(
-        'Status code: ${e.response?.statusCode}',
-        'QuizLogService',
-      );
+        // Do not retry on client errors (4xx) — they won't change
+        if (status != null && status >= 400 && status < 500) {
+          AppLogger.error(
+              'Quiz log "$label" rejected [$status]: ${e.response?.data}',
+              'QuizLogService');
+          return;
+        }
 
-      AppLogger.error(
-        'Response data: ${e.response?.data}',
-        'QuizLogService',
-      );
-    } catch (e) {
-      AppLogger.error(
-        'Unexpected error while logging quiz event: $e',
-        'QuizLogService',
-      );
+        attempt++;
+        if (attempt > _maxRetries) {
+          AppLogger.error(
+              'Quiz log "$label" failed after $_maxRetries retries: ${e.message}',
+              'QuizLogService');
+          return;
+        }
+
+        AppLogger.warning(
+            'Quiz log "$label" attempt $attempt failed, retrying...',
+            'QuizLogService');
+        await Future.delayed(_retryDelay * attempt);
+      } catch (e) {
+        AppLogger.error(
+            'Unexpected error logging "$label": $e', 'QuizLogService');
+        return;
+      }
     }
   }
 
-  /// Log quiz start
   Future<void> logStart(String exerciseId) async {
     await logEvent(
-      eventType: 'START',
-      exerciseId: exerciseId,
-      timestamp: DateTime.now(),
-    );
+        eventType: 'START', exerciseId: exerciseId, timestamp: DateTime.now());
   }
 
-  /// Log quiz submit
   Future<void> logSubmit(String exerciseId, int durationInSeconds) async {
     await logEvent(
       eventType: 'SUBMIT',
@@ -112,7 +109,6 @@ class QuizLogService {
     );
   }
 
-  /// Log auto-submit (time expired)
   Future<void> logAutoSubmit(String exerciseId, int durationInSeconds) async {
     await logEvent(
       eventType: 'AUTO_SUBMIT',
@@ -122,11 +118,7 @@ class QuizLogService {
     );
   }
 
-  /// Log suspicious activity
-  Future<void> logSuspicious(
-    String exerciseId,
-    String reason,
-  ) async {
+  Future<void> logSuspicious(String exerciseId, String reason) async {
     await logEvent(
       eventType: 'SUSPICIOUS_$reason',
       exerciseId: exerciseId,

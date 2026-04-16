@@ -4,12 +4,14 @@ import '../../../navigation_service.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/services/analytics_service.dart';
 import '../data/quiz_repository.dart';
+import '../data/quiz_log_service.dart';
 import 'models/question_model.dart';
 
 class QuizNotifier extends ChangeNotifier {
   final IQuizRepository repository;
+  final QuizLogService? logService;
 
-  QuizNotifier({required this.repository});
+  QuizNotifier({required this.repository, this.logService});
 
   static const int totalQuizSeconds = 2 * 60;
 
@@ -113,6 +115,9 @@ class QuizNotifier extends ChangeNotifier {
       if (_questions.isNotEmpty) {
         startQuizLock(exerciseId);
         _startGlobalTimer();
+
+        // Log START event
+        logService?.logStart(exerciseId);
 
         // Track quiz start in Analytics
         await AnalyticsService.logQuizStart(
@@ -285,11 +290,27 @@ class QuizNotifier extends ChangeNotifier {
     }
 
     _submitted = true;
+    endQuizLock(); // unlock dulu sebelum notify agar PopScope langsung update
     notifyListeners();
-    endQuizLock();
+
+    // Hitung durasi pengerjaan
+    final duration = totalQuizSeconds - _remainingSeconds;
+
+    // Log SUBMIT / AUTO_SUBMIT event dengan durasi
+    if (auto) {
+      logService?.logAutoSubmit(_exerciseId, duration);
+    } else {
+      logService?.logSubmit(_exerciseId, duration);
+    }
+
+    // Jika auto-submit (waktu habis saat app di background),
+    // navigasi ke home — pakai navigateToHomeWhenReady agar
+    // bisa dieksekusi saat app kembali ke foreground
+    if (auto) {
+      NavigationService.instance.navigateToHomeWhenReady();
+    }
 
     // Track quiz completion in Analytics
-    final duration = totalQuizSeconds - _remainingSeconds;
     await AnalyticsService.logQuizComplete(
       quizId: _exerciseId,
       quizName: _exerciseTypeName ?? 'Unknown',

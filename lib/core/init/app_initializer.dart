@@ -10,7 +10,12 @@ final appInitializerProvider = FutureProvider<void>((ref) async {
     AppLogger.info('Starting app initialization', 'AppInitializer');
 
     // Init Dio + Token
-    await configureDio();
+    // On 401, auto-logout and redirect to login
+    await configureDio(
+      onUnauthorized: () {
+        ref.read(authNotifierProvider.notifier).doLogout();
+      },
+    );
 
     //Locale Indonesia
     await initializeDateFormatting('id_ID', null);

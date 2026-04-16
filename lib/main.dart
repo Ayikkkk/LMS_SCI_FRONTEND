@@ -90,20 +90,14 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  /// ===========================================
-  /// DETEKSI HOME BUTTON / APP KE BACKGROUND
-  /// ===========================================
+  // App lifecycle observer — hanya untuk keperluan non-quiz (analytics, dll)
+  // Quiz lifecycle ditangani sepenuhnya oleh QuizScreen._QuizScreenState
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    final nav = NavigationService.instance;
-
-    if (!nav.isQuizLocked) return;
-    if (nav.currentExerciseId == null) return;
-
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
-      Future.delayed(const Duration(milliseconds: 300), () {
-        nav.forceBackToQuiz();
+    if (state == AppLifecycleState.resumed) {
+      // Flush any pending navigation (e.g. auto-submit while in background)
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        NavigationService.instance.flushPending();
       });
     }
   }

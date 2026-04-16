@@ -17,27 +17,34 @@ class AuthRedirector extends ConsumerWidget {
     });
 
     ref.listen<AuthStatus>(authNotifierProvider, (prev, next) {
+      // Hanya proses jika status benar-benar berubah
+      if (prev == next) return;
+
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        NavigationService.instance.runOrQueue((nav) async {
-          // 1 CEK ONBOARDING
-          final hasSeenOnboarding =
-              await ref.read(onboardingStatusProvider.future);
+        final navigator = NavigationService.instance.navigatorKey.currentState;
+        if (navigator == null) return;
 
-          if (!hasSeenOnboarding) {
-            nav.pushNamedAndRemoveUntil(
-              '/onboarding',
-              (route) => false,
-            );
-            return;
-          }
+        // Cek onboarding dulu
+        final hasSeenOnboarding =
+            await ref.read(onboardingStatusProvider.future);
 
-          // 2️ BARU CEK AUTH
-          if (next == AuthStatus.authenticated) {
-            nav.pushNamedAndRemoveUntil('/home', (route) => false);
-          } else if (next == AuthStatus.unauthenticated) {
-            nav.pushNamedAndRemoveUntil('/login', (route) => false);
-          }
-        });
+        if (!hasSeenOnboarding) {
+          navigator.pushNamedAndRemoveUntil(
+            '/onboarding',
+            (route) => false,
+          );
+          return;
+        }
+
+        if (next == AuthStatus.authenticated) {
+          navigator.pushNamedAndRemoveUntil('/home', (route) => false);
+        } else if (next == AuthStatus.unauthenticated) {
+          // Reset quiz lock state saat logout agar tidak ada sisa state
+          NavigationService.instance.isQuizLocked = false;
+          NavigationService.instance.currentExerciseId = null;
+
+          navigator.pushNamedAndRemoveUntil('/login', (route) => false);
+        }
       });
     });
 

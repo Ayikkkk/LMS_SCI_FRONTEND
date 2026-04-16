@@ -15,9 +15,13 @@ class CourseRepository {
   CourseRepository(this._dio);
 
   ///  Ambil daftar materi siswa
-  Future<List<CourseMaterialModel>> fetchMaterials() async {
+  Future<List<CourseMaterialModel>> fetchMaterials(
+      {int page = 1, int perPage = 15}) async {
     try {
-      final response = await _dio.get(ApiEndpoints.materials);
+      final response = await _dio.get(
+        ApiEndpoints.materials,
+        queryParameters: {'page': page, 'per_page': perPage},
+      );
       final List<dynamic> data = response.data['materials'] ?? [];
       return data
           .map((e) => CourseMaterialModel.fromJson(e as Map<String, dynamic>))
@@ -34,9 +38,13 @@ class CourseRepository {
   }
 
   ///  Ambil daftar tugas siswa
-  Future<List<AssignmentModel>> fetchAssignments() async {
+  Future<List<AssignmentModel>> fetchAssignments(
+      {int page = 1, int perPage = 15}) async {
     try {
-      final response = await _dio.get(ApiEndpoints.assignments);
+      final response = await _dio.get(
+        ApiEndpoints.assignments,
+        queryParameters: {'page': page, 'per_page': perPage},
+      );
       final List<dynamic> data = response.data['assignments'] ?? [];
       return data
           .map((e) => AssignmentModel.fromJson(e as Map<String, dynamic>))

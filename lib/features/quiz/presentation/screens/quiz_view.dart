@@ -32,11 +32,37 @@ class QuizView extends ConsumerWidget {
         appBar: AppBar(
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              final navigator = Navigator.of(context);
+              if (navigator.canPop()) {
+                navigator.pop();
+              } else {
+                navigator.pushNamedAndRemoveUntil('/home', (route) => false);
+              }
+            },
           ),
           title: const Text("Hasil Quiz"),
         ),
-        body: _buildResult(context, notifier),
+        body: Column(
+          children: [
+            Expanded(child: _buildResult(context, notifier)),
+            // Tombol home selalu tampil — penting saat stack kosong (auto-submit)
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.of(context)
+                      .pushNamedAndRemoveUntil('/home', (route) => false),
+                  icon: const Icon(Icons.home),
+                  label: const Text('Kembali ke Beranda'),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 48),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       );
     }
 

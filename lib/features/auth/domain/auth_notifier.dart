@@ -5,6 +5,7 @@ import '../../laporan_harian/presentation/providers/laporan_provider.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/services/crashlytics_service.dart';
 import '../../../../core/services/analytics_service.dart';
+import '../../../../core/utils/logger.dart';
 import '../data/models/student_model.dart';
 
 enum AuthStatus { unknown, authenticated, unauthenticated }
@@ -101,20 +102,22 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
   /// LOGOUT
   /// ==========================
   Future<void> doLogout() async {
-    await _repo.logout();
+    // Set state unauthenticated PERTAMA agar semua widget stop watching
+    state = AuthStatus.unauthenticated;
 
-    // Track logout event in Analytics
-    await AnalyticsService.logLogout();
-    await AnalyticsService.clearUserData();
+    // Hapus Authorization header segera agar request in-flight tidak retry
+    dio.options.headers.remove('Authorization');
 
-    // Clear Crashlytics user identifier
-    await CrashlyticsService.clearUserIdentifier();
-
-    // reset semua provider terkait user
+    // Invalidate provider agar berhenti firing request
     ref.invalidate(profileDataProvider);
     ref.invalidate(laporanCheckProvider);
 
-    state = AuthStatus.unauthenticated;
+    // Baru lakukan cleanup async
+    await _repo.logout();
+
+    await AnalyticsService.logLogout();
+    await AnalyticsService.clearUserData();
+    await CrashlyticsService.clearUserIdentifier();
   }
 }
 
@@ -129,12 +132,18 @@ final authNotifierProvider =
 });
 
 /// PROVIDER GLOBAL DATA SISWA LOGIN
-/// This is the single source of truth for student data across the app
+/// Single source of truth for student data across the app.
+/// Returns null while loading or if profile fetch fails.
 final studentProvider = Provider<StudentModel?>((ref) {
   final profileAsync = ref.watch(profileDataProvider);
 
-  return profileAsync.maybeWhen(
+  return profileAsync.when(
     data: (profile) => profile,
-    orElse: () => null,
+    loading: () => null,
+    error: (e, _) {
+      AppLogger.warning(
+          'studentProvider: profile fetch failed — $e', 'AuthNotifier');
+      return null;
+    },
   );
 });

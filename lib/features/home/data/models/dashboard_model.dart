@@ -35,6 +35,7 @@ class DashboardModel {
 
 class Stats {
   final int totalTasks;
+  final int totalMaterials;
   final int totalExercises;
   final double averageTaskScore;
   final double averageExerciseScore;
@@ -42,6 +43,7 @@ class Stats {
 
   Stats({
     required this.totalTasks,
+    required this.totalMaterials,
     required this.totalExercises,
     required this.averageTaskScore,
     required this.averageExerciseScore,
@@ -54,6 +56,7 @@ class Stats {
 
     return Stats(
       totalTasks: json['total_tasks'] ?? 0,
+      totalMaterials: json['total_materials'] ?? 0,
       totalExercises: json['total_exercises'] ?? 0,
       averageTaskScore: parseDouble(json['average_task_score']),
       averageExerciseScore: parseDouble(json['average_exercise_score']),
