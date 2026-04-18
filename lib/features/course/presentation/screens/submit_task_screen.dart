@@ -4,6 +4,24 @@ import 'package:file_picker/file_picker.dart';
 
 import '../../data/repository/task_repository.dart';
 
+// Ekstensi yang diizinkan
+const _allowedExtensions = [
+  'pdf',
+  'doc',
+  'docx',
+  'zip',
+  'jpg',
+  'jpeg',
+  'png',
+  'mp4',
+  'mov',
+  'avi',
+  'mkv',
+];
+
+// Batas ukuran file: 10MB
+const _maxFileSizeMB = 10;
+
 class SubmitTaskScreen extends ConsumerStatefulWidget {
   final int assignmentId;
   final String assignmentTitle;
@@ -45,17 +63,34 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
 
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['pdf', 'doc', 'docx', 'zip', 'jpg', 'jpeg', 'png'],
-      withData: true,
+      allowedExtensions: _allowedExtensions,
+      withData: false, // PENTING: jangan load ke memory, pakai path saja
     );
 
-    if (result != null && result.files.isNotEmpty) {
-      setState(() {
-        _pickedFile = result.files.first;
-      });
-    } else {
+    if (result == null || result.files.isEmpty) {
       _showSnackbar('Tidak ada file yang dipilih.', Colors.orange);
+      return;
     }
+
+    final file = result.files.first;
+
+    // Validasi path tersedia (mobile)
+    if (file.path == null) {
+      _showSnackbar('File tidak dapat dibaca. Coba file lain.', Colors.red);
+      return;
+    }
+
+    // Validasi ukuran — file.size tersedia tanpa load data
+    final sizeMB = file.size / 1024 / 1024;
+    if (sizeMB > _maxFileSizeMB) {
+      _showSnackbar(
+        'File terlalu besar (${sizeMB.toStringAsFixed(1)} MB). Maksimal ${_maxFileSizeMB} MB.',
+        Colors.red,
+      );
+      return;
+    }
+
+    setState(() => _pickedFile = file);
   }
 
   // =============================================================
@@ -98,8 +133,7 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
       return;
     }
 
-    if (result.toLowerCase().contains('sudah') ||
-        result.contains('409')) {
+    if (result.toLowerCase().contains('sudah') || result.contains('409')) {
       setState(() => _alreadySubmitted = true);
       _showSnackbar('Kamu sudah mengirim tugas ini sebelumnya.', Colors.orange);
       return;
@@ -128,6 +162,36 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
   void dispose() {
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  // =============================================================
+  // FILE TYPE HELPERS
+  // =============================================================
+
+  bool _isVideoFile(String ext) =>
+      ['mp4', 'mov', 'avi', 'mkv'].contains(ext.toLowerCase());
+
+  IconData _fileIcon(String ext) {
+    switch (ext.toLowerCase()) {
+      case 'pdf':
+        return Icons.picture_as_pdf;
+      case 'doc':
+      case 'docx':
+        return Icons.description;
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+        return Icons.image;
+      case 'mp4':
+      case 'mov':
+      case 'avi':
+      case 'mkv':
+        return Icons.videocam;
+      case 'zip':
+        return Icons.folder_zip;
+      default:
+        return Icons.attach_file;
+    }
   }
 
   // =============================================================
@@ -179,13 +243,18 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
                   padding: const EdgeInsets.all(15),
                   child: Row(
                     children: [
-                      const Icon(Icons.attach_file,
-                          color: Colors.deepPurple, size: 30),
+                      Icon(
+                        _pickedFile == null
+                            ? Icons.attach_file
+                            : _fileIcon(_pickedFile!.extension ?? ''),
+                        color: Colors.deepPurple,
+                        size: 30,
+                      ),
                       const SizedBox(width: 15),
                       Expanded(
                         child: _pickedFile == null
                             ? const Text(
-                                'Pilih File Tugas (.pdf, .doc, .jpg, dll.)',
+                                'Pilih File Tugas\n(.pdf, .doc, .jpg, .mp4, .mov, dll.)',
                                 style: TextStyle(color: Colors.grey),
                               )
                             : Column(
@@ -204,6 +273,15 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
                                       fontSize: 12,
                                     ),
                                   ),
+                                  if (_isVideoFile(
+                                      _pickedFile!.extension ?? ''))
+                                    const Text(
+                                      '🎬 File video',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.deepPurple,
+                                      ),
+                                    ),
                                 ],
                               ),
                       ),
@@ -214,13 +292,33 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
                 ),
               ),
             ),
+
+            // Info ukuran maksimal
+            Padding(
+              padding: const EdgeInsets.only(top: 6, left: 4),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline,
+                      size: 14, color: Colors.grey.shade500),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      'Maksimal ${_maxFileSizeMB} MB'
+                      ' (PDF, DOC, JPG, PNG, MP4, MOV, dll.)',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 30),
 
             // Submit Button
             ElevatedButton(
-              onPressed: (_isLoading || _alreadySubmitted)
-                  ? null
-                  : _submitTask,
+              onPressed: (_isLoading || _alreadySubmitted) ? null : _submitTask,
               style: ElevatedButton.styleFrom(
                 backgroundColor: _alreadySubmitted
                     ? Colors.grey
@@ -241,9 +339,7 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
                       ),
                     )
                   : Text(
-                      _alreadySubmitted
-                          ? 'Tugas Sudah Dikirim'
-                          : 'Kirim Tugas',
+                      _alreadySubmitted ? 'Tugas Sudah Dikirim' : 'Kirim Tugas',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,

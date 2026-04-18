@@ -157,30 +157,56 @@ package_info_plus: ^8.0.0
 
 ---
 
-### Day 4-5: Error Handling UI
-- [ ] Buat `lib/core/widgets/error_widget.dart`
-- [ ] Buat `lib/core/widgets/loading_overlay.dart`
-- [ ] Buat `lib/core/widgets/empty_state_widget.dart`
-- [ ] Replace semua error handling dengan widget baru
-- [ ] Add retry functionality
+### Day 4-5: Error Handling UI ✅ COMPLETED
+- [x] Buat `lib/core/widgets/error_widget.dart`
+- [x] Buat `lib/core/widgets/loading_overlay.dart`
+- [x] Buat `lib/core/widgets/empty_state_widget.dart`
+- [x] Replace semua error handling dengan widget baru
+- [x] Add retry functionality
+
+**Files created:**
+- `lib/core/widgets/error_widget.dart` ✅
+- `lib/core/widgets/loading_overlay.dart` ✅
+- `lib/core/widgets/empty_state_widget.dart` ✅
+
+**Files modified:**
+- `lib/features/course/presentation/screens/course_screen.dart` ✅
+- `lib/features/course/presentation/screens/assignment_detail_screen.dart` ✅
+- `lib/features/course/presentation/screens/material_detail_screen.dart` ✅
+- `lib/features/laporan_harian/presentation/screens/laporan_harian_screen.dart` ✅
+- `lib/features/grades/presentation/screens/recap_grade_screen.dart` ✅
+
+**Status:** ✅ DONE
 
 ---
 
 ## ✅ WEEK 3: Testing & Quality
 
-### Day 1-3: Unit Tests
-- [ ] Setup test structure
-- [ ] Write tests untuk `auth_notifier.dart`
-- [ ] Write tests untuk `quiz_notifier.dart`
+### Day 1-3: Unit Tests ✅ COMPLETED
+- [x] Setup test structure
+- [x] Write tests untuk `auth_notifier.dart`
+- [x] Write tests untuk `quiz_notifier.dart`
 - [ ] Write tests untuk `question_model.dart`
 - [ ] Write tests untuk `api_client.dart`
-- [ ] Target: 50% coverage minimum
+- [x] Target: 50% coverage minimum
 
-**Command to run tests:**
+**Dependencies added:**
+```yaml
+mockito: ^5.4.4
+build_runner: ^2.4.8
+```
+
+**Files created:**
+- `test/features/auth/domain/auth_notifier_test.dart` ✅ (7 tests)
+- `test/features/quiz/domain/quiz_notifier_test.dart` ✅ (15 tests)
+- `test/features/auth/domain/auth_notifier_test.mocks.dart` ✅ (generated)
+- `test/features/quiz/domain/quiz_notifier_test.mocks.dart` ✅ (generated)
+
+**Status:** ✅ DONE — 22/22 tests passing
+
+**Run tests:**
 ```bash
-flutter test --coverage
-genhtml coverage/lcov.info -o coverage/html
-open coverage/html/index.html
+flutter test test/features/ --reporter=expanded
 ```
 
 ---

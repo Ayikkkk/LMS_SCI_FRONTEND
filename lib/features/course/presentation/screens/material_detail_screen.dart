@@ -2,9 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../../core/widgets/attachment_file_widget.dart';
+import '../../../../core/widgets/error_widget.dart';
+import '../../../../core/widgets/video_embed_widget.dart';
 import '../../../auth/domain/auth_notifier.dart';
 import '../../data/models/course_material_model.dart';
 import '../../domain/providers/comment_provider.dart';
@@ -53,7 +54,11 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen> {
       ),
       error: (e, _) => Scaffold(
         appBar: AppBar(title: const Text('Detail Materi')),
-        body: Center(child: Text('Error: $e')),
+        body: AppErrorWidget(
+          message: 'Gagal memuat detail materi',
+          onRetry: () =>
+              ref.invalidate(materialDetailProvider(widget.materialId)),
+        ),
       ),
       data: (CourseMaterialModel item) => Scaffold(
         appBar: AppBar(
@@ -76,7 +81,7 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen> {
                     if (item.embed?.isNotEmpty == true) ...[
                       _SectionLabel('Video'),
                       const SizedBox(height: 8),
-                      _VideoEmbedWidget(embedCode: item.embed!),
+                      VideoEmbedWidget(embedCode: item.embed!),
                       const SizedBox(height: 16),
                     ],
 
@@ -260,44 +265,6 @@ class _LinkButton extends StatelessWidget {
           }
         }
       },
-    );
-  }
-}
-
-class _VideoEmbedWidget extends StatefulWidget {
-  final String embedCode;
-  const _VideoEmbedWidget({required this.embedCode});
-
-  @override
-  State<_VideoEmbedWidget> createState() => _VideoEmbedWidgetState();
-}
-
-class _VideoEmbedWidgetState extends State<_VideoEmbedWidget> {
-  late final WebViewController _controller;
-  String? _url;
-
-  @override
-  void initState() {
-    super.initState();
-    final regex = RegExp('src=["\']([^"\']+)["\']');
-    _url = regex.firstMatch(widget.embedCode)?.group(1);
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted);
-    if (_url != null) _controller.loadRequest(Uri.parse(_url!));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_url == null) {
-      return const Text('Embed tidak valid',
-          style: TextStyle(color: Colors.red));
-    }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
-      child: AspectRatio(
-        aspectRatio: 16 / 9,
-        child: WebViewWidget(controller: _controller),
-      ),
     );
   }
 }

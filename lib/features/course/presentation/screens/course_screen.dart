@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/widgets/error_widget.dart';
+import '../../../../core/widgets/empty_state_widget.dart';
 import '../../domain/providers/course_providers.dart';
 import '../../data/models/assignment_model.dart';
 import '../../data/models/course_material_model.dart';
@@ -127,12 +129,18 @@ class _MateriListView extends ConsumerWidget {
 
     return asyncMaterials.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) =>
-          Center(child: Text('Gagal memuat materi\n${e.toString()}')),
+      error: (e, _) => AppErrorWidget(
+        message: 'Gagal memuat materi',
+        onRetry: () => ref.invalidate(courseMaterialsProvider),
+      ),
       data: (materials) {
         if (materials.isEmpty) {
-          return const Center(
-            child: Text('Tidak ada materi tersedia'),
+          return EmptyStateWidget(
+            title: 'Belum ada materi',
+            subtitle: 'Materi akan muncul di sini saat guru menambahkannya',
+            icon: Icons.folder_open_rounded,
+            actionLabel: 'Refresh',
+            onAction: () => ref.invalidate(courseMaterialsProvider),
           );
         }
 
@@ -196,12 +204,18 @@ class _TugasListView extends ConsumerWidget {
 
     return asyncAssignments.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) =>
-          Center(child: Text('Gagal memuat tugas\n${e.toString()}')),
+      error: (e, _) => AppErrorWidget(
+        message: 'Gagal memuat tugas',
+        onRetry: () => ref.invalidate(courseAssignmentsProvider),
+      ),
       data: (tugasList) {
         if (tugasList.isEmpty) {
-          return const Center(
-            child: Text('Tidak ada tugas'),
+          return EmptyStateWidget(
+            title: 'Belum ada tugas',
+            subtitle: 'Tugas akan muncul di sini saat guru menambahkannya',
+            icon: Icons.assignment_outlined,
+            actionLabel: 'Refresh',
+            onAction: () => ref.invalidate(courseAssignmentsProvider),
           );
         }
 

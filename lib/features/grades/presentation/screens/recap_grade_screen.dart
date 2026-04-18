@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/providers/grade_provider.dart';
 import '../widgets/subject_section.dart';
 import '../../../../core/utils/download_exporter.dart';
+import '../../../../core/widgets/error_widget.dart';
+import '../../../../core/widgets/empty_state_widget.dart';
 import 'package:open_filex/open_filex.dart';
 
 class RecapGradeScreen extends ConsumerStatefulWidget {
@@ -26,8 +28,9 @@ class _RecapGradeScreenState extends ConsumerState<RecapGradeScreen> {
 
   Future<void> _downloadPdf() async {
     final notifier = ref.read(gradeProvider.notifier);
+    final messenger = ScaffoldMessenger.of(context);
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    messenger.showSnackBar(
       const SnackBar(content: Text('Mengunduh rekap nilai...')),
     );
 
@@ -36,7 +39,7 @@ class _RecapGradeScreenState extends ConsumerState<RecapGradeScreen> {
     if (!mounted) return;
 
     if (file == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(content: Text('Gagal mengunduh PDF')),
       );
     }
@@ -70,27 +73,9 @@ class _RecapGradeScreenState extends ConsumerState<RecapGradeScreen> {
           // ERROR
           // =====================
           if (state.error != null) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      state.error!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      onPressed: () {
-                        ref.read(gradeProvider.notifier).loadRecap();
-                      },
-                      child: const Text('Coba Lagi'),
-                    ),
-                  ],
-                ),
-              ),
+            return AppErrorWidget(
+              message: state.error!,
+              onRetry: () => ref.read(gradeProvider.notifier).loadRecap(),
             );
           }
 
@@ -100,7 +85,14 @@ class _RecapGradeScreenState extends ConsumerState<RecapGradeScreen> {
           // NO DATA
           // =====================
           if (recap == null || recap.subjects.isEmpty) {
-            return const Center(child: Text('Belum ada data nilai'));
+            return EmptyStateWidget(
+              title: 'Belum ada data nilai',
+              subtitle:
+                  'Nilai akan muncul setelah kamu mengerjakan tugas atau kuis',
+              icon: Icons.assessment_outlined,
+              actionLabel: 'Refresh',
+              onAction: () => ref.read(gradeProvider.notifier).loadRecap(),
+            );
           }
 
           // =====================
@@ -171,8 +163,7 @@ class _RecapGradeScreenState extends ConsumerState<RecapGradeScreen> {
                               Expanded(
                                 child: OutlinedButton.icon(
                                   icon: const Icon(Icons.folder_copy),
-                                  label:
-                                      const Text('Salin ke Download'),
+                                  label: const Text('Salin ke Download'),
                                   onPressed: () async {
                                     final success =
                                         await DownloadExporter.copyToDownload(

@@ -7,6 +7,8 @@ import 'package:http_parser/http_parser.dart';
 
 import '../providers/laporan_provider.dart';
 import '../../data/laporan_repository.dart';
+import '../../../../core/widgets/error_widget.dart';
+import '../../../../core/widgets/empty_state_widget.dart';
 
 class LaporanHarianScreen extends ConsumerStatefulWidget {
   const LaporanHarianScreen({super.key});
@@ -75,16 +77,15 @@ class _LaporanHarianScreenState extends ConsumerState<LaporanHarianScreen> {
     try {
       await repo.submitReport(report: listReport, img: imgFile);
 
-      // refresh check agar besok tidak bisa kirim lagi
       ref.invalidate(laporanCheckProvider);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Laporan berhasil dikirim")),
-        );
-        Navigator.pop(context);
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Laporan berhasil dikirim")),
+      );
+      Navigator.pop(context);
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Gagal mengirim laporan: $e")),
       );
@@ -99,15 +100,17 @@ class _LaporanHarianScreenState extends ConsumerState<LaporanHarianScreen> {
       appBar: AppBar(title: const Text("Laporan Harian")),
       body: cek.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text("Error: $e")),
+        error: (e, _) => AppErrorWidget(
+          message: 'Gagal memuat status laporan',
+          onRetry: () => ref.invalidate(laporanCheckProvider),
+        ),
         data: (sudahIsi) {
           if (sudahIsi) {
-            return const Center(
-              child: Text(
-                "Kamu sudah mengisi laporan hari ini.\nSilakan isi lagi besok.",
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16),
-              ),
+            return EmptyStateWidget(
+              title: 'Laporan sudah terisi',
+              subtitle:
+                  'Kamu sudah mengisi laporan hari ini.\nSilakan isi lagi besok.',
+              icon: Icons.check_circle_outline_rounded,
             );
           }
 
