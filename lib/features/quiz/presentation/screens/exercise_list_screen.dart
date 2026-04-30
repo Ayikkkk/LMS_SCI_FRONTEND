@@ -69,19 +69,74 @@ class _ExerciseListScreenState extends ConsumerState<ExerciseListScreen> {
   }
 
   Widget _buildTile(Map<String, dynamic> ex) {
+    final isDone = ex['is_done'] == true;
+    final isPending = ex['is_pending_review'] == true;
+    final score = ex['score'];
+
+    // Status badge
+    Widget? badge;
+    if (isPending) {
+      badge = _StatusBadge(
+        label: 'Menunggu Nilai',
+        color: Colors.orange,
+        icon: Icons.pending_outlined,
+      );
+    } else if (isDone && score != null) {
+      badge = _StatusBadge(
+        label: 'Nilai: $score',
+        color: Colors.green,
+        icon: Icons.check_circle_outline,
+      );
+    } else if (isDone) {
+      badge = _StatusBadge(
+        label: 'Sudah Dikerjakan',
+        color: Colors.green,
+        icon: Icons.check_circle_outline,
+      );
+    }
+
     return ListTile(
-      title: Text(ex["title"] ?? "Ulangan"),
-      subtitle: Text(
-        "Tipe: ${ex["exercise_type"]?["name"] ?? widget.typeName}",
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      leading: CircleAvatar(
+        backgroundColor: isDone
+            ? Colors.green.shade50
+            : Theme.of(context).colorScheme.primaryContainer,
+        child: Icon(
+          isDone ? Icons.check : Icons.quiz_outlined,
+          color: isDone ? Colors.green : Theme.of(context).colorScheme.primary,
+          size: 20,
+        ),
       ),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: () {
-        Navigator.push(
+      title: Text(
+        ex['title'] ?? 'Ulangan',
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Tipe: ${ex["exercise_type"]?["name"] ?? widget.typeName}',
+            style: const TextStyle(fontSize: 12),
+          ),
+          if (badge != null) ...[
+            const SizedBox(height: 4),
+            badge,
+          ],
+        ],
+      ),
+      trailing: Icon(
+        Icons.chevron_right,
+        color: isDone ? Colors.green : null,
+      ),
+      onTap: () async {
+        await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => QuizRemoteScreen(exerciseId: ex["id"].toString()),
+            builder: (_) => QuizRemoteScreen(exerciseId: ex['id'].toString()),
           ),
         );
+        // Refresh setelah kembali dari quiz
+        _fetchExercises();
       },
     );
   }
@@ -114,6 +169,37 @@ class _ExerciseListScreenState extends ConsumerState<ExerciseListScreen> {
                   itemBuilder: (_, i) =>
                       _buildTile(_exercises[i] as Map<String, dynamic>),
                 ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  final String label;
+  final Color color;
+  final IconData icon;
+
+  const _StatusBadge({
+    required this.label,
+    required this.color,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: color),
+        const SizedBox(width: 3),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -165,7 +165,7 @@ class _AssignmentDetailScreenState
                       ],
 
                       if (assignment.attachment?.isNotEmpty == true) ...[
-                        _SectionLabel('Lampiran Guru'),
+                        _SectionLabel('Lampiran'),
                         const SizedBox(height: 8),
                         AttachmentFileWidget(
                           postId: assignment.id,
@@ -326,8 +326,10 @@ class _InfoCard extends StatelessWidget {
           _InfoRow(
             icon: Icons.calendar_today_outlined,
             label: 'Tenggat',
-            value: DateFormat('EEE, dd MMM yyyy • HH:mm', 'id_ID')
-                .format(assignment.dueDate),
+            value: assignment.dueDate != null
+                ? DateFormat('EEE, dd MMM yyyy • HH:mm', 'id_ID')
+                    .format(assignment.dueDate!)
+                : 'Tanpa batas waktu',
             valueColor: assignment.isLate ? Colors.redAccent : null,
           ),
           const Divider(height: 20),

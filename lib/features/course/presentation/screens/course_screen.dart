@@ -241,7 +241,9 @@ class _TugasListView extends ConsumerWidget {
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                   subtitle: Text(
-                    'Deadline: ${dateFormat.format(item.dueDate)}',
+                    item.dueDate != null
+                        ? 'Deadline: ${dateFormat.format(item.dueDate!)}'
+                        : 'Tanpa batas waktu',
                     style: const TextStyle(fontSize: 12),
                   ),
                   trailing: Text(

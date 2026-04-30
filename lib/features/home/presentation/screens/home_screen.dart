@@ -128,15 +128,15 @@ class _DashboardContent extends ConsumerWidget {
       data: (data) {
         final now = DateTime.now();
 
-        // Tugas belum dikerjakan & BELUM lewat deadline
-        final pending = data.pendingTasks.where((task) {
-          return task.dueDate.isAfter(now);
-        }).toList();
+        // Semua tugas belum dikerjakan (termasuk yang tidak punya deadline)
+        // Backend sudah filter: hanya yang belum dikerjakan dan due_date >= hari ini atau null
+        final pending = data.pendingTasks;
 
-        // Urgent tasks (< 24 jam)
+        // Urgent tasks: punya due_date dan < 24 jam lagi
         final urgentTasks = pending.where((task) {
-          final diff = task.dueDate.difference(now);
-          return diff.inHours < 24;
+          if (task.dueDate == null) return false;
+          final diff = task.dueDate!.difference(now);
+          return !diff.isNegative && diff.inHours < 24;
         }).toList();
 
         final todayMeetings =
@@ -366,39 +366,59 @@ class _AssignmentsPreview extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (tasks.isEmpty) return const SizedBox.shrink();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Kalau tidak ada tugas pending
+    if (tasks.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SectionTitle('Tugas Belum Dikerjakan'),
+          const SizedBox(height: 8),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(Icons.check_circle_outline_rounded,
+                      color: Colors.green.shade400, size: 28),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Semua tugas sudah dikerjakan 🎉',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     final preview = tasks.take(3).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle("Tugas Belum Dikerjakan (${tasks.length})"),
+        SectionTitle('Tugas Belum Dikerjakan (${tasks.length})'),
         const SizedBox(height: 8),
         ...preview.map((task) {
-          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final isUrgent = task.isUrgent;
+          final cardColor = isUrgent
+              ? (isDark ? null : Colors.red.shade50)
+              : (isDark ? null : Colors.orange.shade50);
+          final iconColor =
+              isUrgent ? Colors.red.shade600 : Colors.orange.shade700;
+          final deadlineColor =
+              isUrgent ? Colors.red.shade600 : Colors.orange.shade700;
+
           return Card(
             margin: const EdgeInsets.only(bottom: 10),
-            color: isDark ? null : Colors.orange.shade50,
-            child: ListTile(
-              leading: Icon(Icons.assignment_rounded,
-                  color: Colors.orange.shade700, size: 28),
-              title: Text(
-                task.title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-              subtitle: Text(
-                "⏰ ${task.dueDate.day}/${task.dueDate.month}/${task.dueDate.year}",
-                style: const TextStyle(
-                  fontSize: 12,
-                ),
-              ),
-              trailing: const Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 16,
-              ),
+            color: cardColor,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
               onTap: () {
                 Navigator.pushNamed(
                   context,
@@ -406,9 +426,94 @@ class _AssignmentsPreview extends ConsumerWidget {
                   arguments: task.id,
                 );
               },
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    // Icon
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: iconColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(Icons.assignment_rounded,
+                          color: iconColor, size: 24),
+                    ),
+                    const SizedBox(width: 12),
+
+                    // Info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            task.title,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          if (task.subjectName != null)
+                            Text(
+                              task.subjectName!,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
+                              ),
+                            ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(Icons.access_time_rounded,
+                                  size: 12, color: deadlineColor),
+                              const SizedBox(width: 3),
+                              Text(
+                                task.deadlineLabel,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: deadlineColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                task.dueDate != null
+                                    ? '(${task.dueDate!.day}/${task.dueDate!.month}/${task.dueDate!.year})'
+                                    : '',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark
+                                      ? Colors.grey.shade400
+                                      : Colors.grey.shade500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Arrow
+                    Icon(Icons.arrow_forward_ios_rounded,
+                        size: 14,
+                        color: isDark
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade500),
+                  ],
+                ),
+              ),
             ),
           );
         }),
+
+        // Lihat semua
         Align(
           alignment: Alignment.centerRight,
           child: TextButton.icon(
@@ -416,8 +521,10 @@ class _AssignmentsPreview extends ConsumerWidget {
               ref.read(courseTabProvider.notifier).state = 1;
               onNavigate(1);
             },
-            icon: const Icon(Icons.list_alt_rounded),
-            label: const Text("Lihat Semua"),
+            icon: const Icon(Icons.list_alt_rounded, size: 16),
+            label: Text(tasks.length > 3
+                ? 'Lihat Semua (${tasks.length})'
+                : 'Lihat Semua Tugas'),
           ),
         ),
       ],

@@ -6,7 +6,7 @@ class AssignmentModel {
   final String subjectName;
   final String title;
   final String? description;
-  final DateTime dueDate;
+  final DateTime? dueDate; // nullable — tugas mungkin tidak punya deadline
 
   /// Status
   final bool isSubmitted;
@@ -27,7 +27,7 @@ class AssignmentModel {
     required this.subjectName,
     required this.title,
     this.description,
-    required this.dueDate,
+    this.dueDate,
     required this.isSubmitted,
     required this.status,
     required this.statusColor,
@@ -41,12 +41,14 @@ class AssignmentModel {
   factory AssignmentModel.fromJson(Map<String, dynamic> json) {
     final DateTime now = DateTime.now();
 
-    /// Parsing due date
-    DateTime dueDate;
+    /// Parsing due date — nullable
+    DateTime? dueDate;
     try {
-      dueDate = DateTime.parse(json['due_date'].toString());
+      if (json['due_date'] != null) {
+        dueDate = DateTime.parse(json['due_date'].toString()).toLocal();
+      }
     } catch (_) {
-      dueDate = now.add(const Duration(days: 7));
+      dueDate = null;
     }
 
     /// Status pengumpulan
@@ -73,7 +75,8 @@ class AssignmentModel {
     final String? embed = json['embed'];
 
     /// Status & warna
-    final bool isLate = !isSubmitted && dueDate.isBefore(now);
+    final bool isLate =
+        !isSubmitted && dueDate != null && dueDate.isBefore(now);
 
     String status;
     Color color;
@@ -107,5 +110,6 @@ class AssignmentModel {
     );
   }
 
-  bool get isLate => !isSubmitted && dueDate.isBefore(DateTime.now());
+  bool get isLate =>
+      !isSubmitted && dueDate != null && dueDate!.isBefore(DateTime.now());
 }

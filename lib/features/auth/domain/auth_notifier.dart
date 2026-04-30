@@ -2,6 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/repository/auth_repository.dart';
 import '../../profile/presentation/providers/profile_provider.dart';
 import '../../laporan_harian/presentation/providers/laporan_provider.dart';
+import '../../home/presentation/providers/home_provider.dart';
+import '../../course/domain/providers/course_providers.dart';
+import '../../grades/domain/providers/grade_provider.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/services/crashlytics_service.dart';
 import '../../../../core/services/analytics_service.dart';
@@ -15,6 +18,18 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
   final Ref ref;
 
   AuthNotifier(this.ref, this._repo) : super(AuthStatus.unknown);
+
+  /// Invalidate semua provider yang menyimpan data per-user.
+  /// Dipanggil saat login (ganti akun) dan logout.
+  void _invalidateAllUserProviders() {
+    ref.invalidate(profileDataProvider);
+    ref.invalidate(laporanCheckProvider);
+    ref.invalidate(dashboardDataProvider);
+    ref.invalidate(dashboardAssignmentsProvider);
+    ref.invalidate(courseMaterialsProvider);
+    ref.invalidate(courseAssignmentsProvider);
+    ref.invalidate(gradeProvider);
+  }
 
   /// ==========================
   /// CEK STATUS LOGIN
@@ -43,9 +58,8 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
           dio.options.headers['Authorization'] = "Bearer $token";
         }
 
-        // refresh provider terkait user
-        ref.invalidate(profileDataProvider);
-        ref.invalidate(laporanCheckProvider);
+        // Invalidate semua data user lama sebelum load data user baru
+        _invalidateAllUserProviders();
 
         state = AuthStatus.authenticated;
 
@@ -108,9 +122,8 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
     // Hapus Authorization header segera agar request in-flight tidak retry
     dio.options.headers.remove('Authorization');
 
-    // Invalidate provider agar berhenti firing request
-    ref.invalidate(profileDataProvider);
-    ref.invalidate(laporanCheckProvider);
+    // Invalidate semua data user
+    _invalidateAllUserProviders();
 
     // Baru lakukan cleanup async
     await _repo.logout();
