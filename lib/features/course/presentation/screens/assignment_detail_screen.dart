@@ -27,8 +27,8 @@ class AssignmentDetailScreen extends ConsumerStatefulWidget {
       _AssignmentDetailScreenState();
 }
 
-class _AssignmentDetailScreenState
-    extends ConsumerState<AssignmentDetailScreen> {
+class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
+    with WidgetsBindingObserver {
   int? replyToCommentId;
   int? editingCommentId;
   int? editingReplyId;
@@ -43,14 +43,10 @@ class _AssignmentDetailScreenState
   @override
   void initState() {
     super.initState();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      final asyncAssignment =
-          ref.read(assignmentDetailProvider(widget.assignmentId));
-      asyncAssignment.whenData((assignment) {
-        if (assignment.isSubmitted && _parsePoint(assignment.point) == null) {
-          ref.invalidate(assignmentDetailProvider(widget.assignmentId));
-        }
-      });
+    WidgetsBinding.instance.addObserver(this);
+    _refreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      if (mounted)
+        ref.invalidate(assignmentDetailProvider(widget.assignmentId));
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(commentProvider.notifier).loadComments(widget.assignmentId);
@@ -60,7 +56,16 @@ class _AssignmentDetailScreenState
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  // Refresh saat app kembali ke foreground
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      ref.invalidate(assignmentDetailProvider(widget.assignmentId));
+    }
   }
 
   void _refreshAssignment() {

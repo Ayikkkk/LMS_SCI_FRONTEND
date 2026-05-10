@@ -67,8 +67,7 @@ class _AttachmentFileWidgetState extends State<AttachmentFileWidget> {
   Future<void> _copyToDownload(BuildContext context) async {
     if (downloadedFile == null) return;
 
-    final success =
-        await DownloadExporter.copyToDownload(downloadedFile!);
+    final success = await DownloadExporter.copyToDownload(downloadedFile!);
 
     if (!mounted) return;
 
@@ -88,12 +87,6 @@ class _AttachmentFileWidgetState extends State<AttachmentFileWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Lampiran:',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-
         // ==========================
         // DOWNLOAD BUTTON
         // ==========================

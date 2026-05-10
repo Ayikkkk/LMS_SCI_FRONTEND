@@ -217,10 +217,10 @@ class QuizNotifier extends ChangeNotifier {
   void next() {
     if (_currentIndex < _questions.length - 1) {
       _currentIndex++;
-    } else {
-      submit();
+      notifyListeners();
     }
-    notifyListeners();
+    // Submit tidak dipanggil dari sini — UI (quiz_view) yang handle submit
+    // agar tidak terjadi double submit
   }
 
   void previous() {

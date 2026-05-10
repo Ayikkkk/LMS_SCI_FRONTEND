@@ -19,6 +19,10 @@ class QuizLogService {
   static const int _maxRetries = 2;
   static const Duration _retryDelay = Duration(seconds: 2);
 
+  // Track exercise IDs yang sudah di-log SUBMIT/AUTO_SUBMIT
+  // agar tidak terjadi double log
+  final Set<String> _submittedExercises = {};
+
   QuizLogService({required this.dio, required this.ref});
 
   /// Log quiz events (start, submit, lifecycle, etc.)
@@ -101,6 +105,16 @@ class QuizLogService {
   }
 
   Future<void> logSubmit(String exerciseId, int durationInSeconds) async {
+    // Cegah double log SUBMIT untuk exercise yang sama
+    final key = 'SUBMIT_$exerciseId';
+    if (_submittedExercises.contains(key)) {
+      AppLogger.warning(
+          'SUBMIT already logged for exercise $exerciseId, skipping',
+          'QuizLogService');
+      return;
+    }
+    _submittedExercises.add(key);
+
     await logEvent(
       eventType: 'SUBMIT',
       exerciseId: exerciseId,
@@ -110,6 +124,16 @@ class QuizLogService {
   }
 
   Future<void> logAutoSubmit(String exerciseId, int durationInSeconds) async {
+    // Cegah double log AUTO_SUBMIT untuk exercise yang sama
+    final key = 'SUBMIT_$exerciseId';
+    if (_submittedExercises.contains(key)) {
+      AppLogger.warning(
+          'AUTO_SUBMIT already logged for exercise $exerciseId, skipping',
+          'QuizLogService');
+      return;
+    }
+    _submittedExercises.add(key);
+
     await logEvent(
       eventType: 'AUTO_SUBMIT',
       exerciseId: exerciseId,

@@ -1,4 +1,5 @@
-// lib/features/course/presentation/screens/material_detail_screen.dart
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -22,18 +23,40 @@ class MaterialDetailScreen extends ConsumerStatefulWidget {
       _MaterialDetailScreenState();
 }
 
-class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen> {
+class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen>
+    with WidgetsBindingObserver {
   int? replyToCommentId;
   int? editingCommentId;
   int? editingReplyId;
   String? editingInitialText;
+  Timer? _refreshTimer;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(commentProvider.notifier).loadComments(widget.materialId);
     });
+    // Auto-refresh setiap 60 detik
+    _refreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      if (mounted) ref.invalidate(materialDetailProvider(widget.materialId));
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // Refresh saat app kembali ke foreground
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      ref.invalidate(materialDetailProvider(widget.materialId));
+    }
   }
 
   void _cancelAction() => setState(() {
