@@ -20,6 +20,10 @@ class AuthRedirector extends ConsumerWidget {
       // Hanya proses jika status benar-benar berubah
       if (prev == next) return;
 
+      // Jangan navigate jika masih di splash screen (unknown → authenticated/unauthenticated)
+      // Splash screen mengontrol navigasi awal sendiri
+      if (prev == AuthStatus.unknown) return;
+
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         final navigator = NavigationService.instance.navigatorKey.currentState;
         if (navigator == null) return;

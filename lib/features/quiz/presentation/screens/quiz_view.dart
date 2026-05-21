@@ -81,7 +81,30 @@ class QuizView extends ConsumerWidget {
         title: const Text("Quiz Berlangsung"),
         automaticallyImplyLeading: false, // cegah back default
       ),
-      body: _buildQuestion(context, notifier, ref),
+      body: Column(
+        children: [
+          // Banner pending submit — tampil jika submit sebelumnya gagal karena network
+          if (notifier.hasPendingSubmit)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              color: Colors.orange.shade100,
+              child: const Row(
+                children: [
+                  Icon(Icons.cloud_off, size: 16, color: Colors.orange),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Jawaban tersimpan lokal. Akan dikirim ulang saat koneksi pulih.',
+                      style: TextStyle(fontSize: 12, color: Colors.orange),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Expanded(child: _buildQuestion(context, notifier, ref)),
+        ],
+      ),
     );
   }
 
@@ -95,7 +118,9 @@ class QuizView extends ConsumerWidget {
     final answered = notifier.selectedAnswers.containsKey(question.id);
 
     //  Jika waktu habis tapi hasil belum tampil (auto-submit sedang jalan)
-    if (notifier.remainingSeconds <= 0 && !notifier.submitted) {
+    if (notifier.totalQuizSeconds != QuizNotifier.noTimeLimit &&
+        notifier.remainingSeconds <= 0 &&
+        !notifier.submitted) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -118,22 +143,33 @@ class QuizView extends ConsumerWidget {
         // TIMER
         Container(
           padding: const EdgeInsets.all(14),
-          color: Colors.red.shade50,
+          color: notifier.totalQuizSeconds == QuizNotifier.noTimeLimit
+              ? Colors.blue.shade50
+              : Colors.red.shade50,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text("Sisa Waktu",
                   style: TextStyle(fontWeight: FontWeight.w600)),
-              Text(
-                "${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                  color: notifier.remainingSeconds <= 10
-                      ? Colors.red
-                      : Colors.black87,
-                ),
-              ),
+              notifier.totalQuizSeconds == QuizNotifier.noTimeLimit
+                  ? const Text(
+                      "Tidak ada batas",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.blue,
+                      ),
+                    )
+                  : Text(
+                      "${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        color: notifier.remainingSeconds <= 60
+                            ? Colors.red
+                            : Colors.black87,
+                      ),
+                    ),
             ],
           ),
         ),

@@ -74,8 +74,15 @@ class _QuizRemoteScreenState extends ConsumerState<QuizRemoteScreen> {
   Widget build(BuildContext context) {
     final notifier = ref.watch(quizNotifierProvider);
 
-    return WillPopScope(
-      onWillPop: _onWillPop,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final allowed = await _onWillPop();
+        if (allowed && context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
       child: Scaffold(
         appBar: AppBar(
           title: const Text("Quiz"),

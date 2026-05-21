@@ -123,9 +123,13 @@ class RemoteQuizRepository implements IQuizRepository {
       questions.add(question);
     }
 
+    // time_limit dari backend dalam menit, null = tidak ada batas (pakai default)
+    final timeLimitMinutes = data['time_limit'] as int?;
+
     return {
       'questions': questions,
       'exercise_type_name': exerciseTypeName,
+      'time_limit_minutes': timeLimitMinutes,
     };
   }
 

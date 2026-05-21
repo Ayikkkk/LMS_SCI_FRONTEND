@@ -20,6 +20,7 @@ class ProfileDetailScreen extends ConsumerStatefulWidget {
 class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameCtrl;
+  late final TextEditingController _usernameCtrl;
   late final TextEditingController _emailCtrl;
   late final TextEditingController _phoneCtrl;
 
@@ -28,8 +29,6 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
 
   File? _pickedImage;
   CancelToken? _cancelToken;
-
-  double _uploadProgress = 0.0;
 
   final ImagePicker _picker = ImagePicker();
 
@@ -40,6 +39,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     super.initState();
     _cancelToken = CancelToken();
     _nameCtrl = TextEditingController(text: widget.student.name);
+    _usernameCtrl = TextEditingController(text: widget.student.username);
     _emailCtrl = TextEditingController(text: widget.student.email ?? '');
     _phoneCtrl = TextEditingController(text: widget.student.phone ?? '');
     _remotePhotoUrl = widget.student.photo;
@@ -48,6 +48,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
   @override
   void dispose() {
     _nameCtrl.dispose();
+    _usernameCtrl.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
     if (_cancelToken != null && !_cancelToken!.isCancelled) {
@@ -125,14 +126,22 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     final Map<String, dynamic> map = {};
 
     final nameVal = _nameCtrl.text.trim();
+    final usernameVal = _usernameCtrl.text.trim();
     final emailVal = _emailCtrl.text.trim();
     final phoneVal = _phoneCtrl.text.trim();
 
-    if (nameVal.isNotEmpty && nameVal != original.name) map['name'] = nameVal;
-    if (emailVal.isNotEmpty && emailVal != (original.email ?? ''))
+    if (nameVal.isNotEmpty && nameVal != original.name) {
+      map['name'] = nameVal;
+    }
+    if (usernameVal.isNotEmpty && usernameVal != original.username) {
+      map['username'] = usernameVal;
+    }
+    if (emailVal.isNotEmpty && emailVal != (original.email ?? '')) {
       map['email'] = emailVal;
-    if (phoneVal.isNotEmpty && phoneVal != (original.phone ?? ''))
+    }
+    if (phoneVal.isNotEmpty && phoneVal != (original.phone ?? '')) {
       map['phone'] = phoneVal;
+    }
 
     final form = FormData.fromMap(map);
 
@@ -155,7 +164,6 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     setState(() {
       _saving = true;
       _error = null;
-      _uploadProgress = 0.0;
     });
 
     final repo = ref.read(profileRepositoryProvider);
@@ -176,27 +184,26 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
 
       final resp = await repo.updateProfile(
         formData,
-        onSendProgress: (sent, total) {
-          if (total > 0 && mounted) {
-            setState(() => _uploadProgress = sent / total);
-          }
-        },
+        onSendProgress: null,
       );
 
       if (!mounted) return;
 
-      final updated =
-          resp is Map && resp.containsKey('data') ? resp['data'] : resp;
+      // resp selalu Map — ambil 'data' jika ada, fallback ke resp langsung
+      final updated = resp.containsKey('data')
+          ? resp['data'] as Map<String, dynamic>?
+          : resp;
 
       ref.invalidate(profileDataProvider);
 
-      if (updated is Map<String, dynamic>) {
+      if (updated != null) {
         setState(() {
           if (updated['photo'] != null &&
               (updated['photo'] as String).isNotEmpty) {
             _remotePhotoUrl = updated['photo'] as String;
           }
           _nameCtrl.text = updated['name'] ?? _nameCtrl.text;
+          _usernameCtrl.text = updated['username'] ?? _usernameCtrl.text;
           _emailCtrl.text = updated['email'] ?? _emailCtrl.text;
           _phoneCtrl.text = updated['phone'] ?? _phoneCtrl.text;
           _pickedImage = null;
@@ -207,13 +214,26 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
         const SnackBar(content: Text("Profil berhasil diperbarui")),
       );
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) {
+        // Tampilkan pesan error dari backend jika ada
+        String errorMsg = e.toString();
+        if (e is DioException && e.response?.data != null) {
+          final data = e.response!.data;
+          if (data is Map && data['message'] != null) {
+            errorMsg = data['message'].toString();
+          } else if (data is Map && data['errors'] != null) {
+            final errors = data['errors'] as Map;
+            errorMsg = errors.values.first is List
+                ? (errors.values.first as List).first.toString()
+                : errors.values.first.toString();
+          }
+        }
+        setState(() => _error = errorMsg);
+      }
     } finally {
-      if (mounted)
-        setState(() {
-          _saving = false;
-          _uploadProgress = 0.0;
-        });
+      if (mounted) {
+        setState(() => _saving = false);
+      }
     }
   }
 
@@ -441,21 +461,53 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                   children: [
                     TextFormField(
                       controller: _nameCtrl,
-                      decoration: const InputDecoration(labelText: "Nama"),
+                      decoration: const InputDecoration(
+                        labelText: "Nama",
+                        prefixIcon: Icon(Icons.person_outline),
+                      ),
                       validator: (v) => (v == null || v.trim().isEmpty)
                           ? "Nama diperlukan"
                           : null,
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
+                      controller: _usernameCtrl,
+                      decoration: const InputDecoration(
+                        labelText: "Username",
+                        prefixIcon: Icon(Icons.alternate_email),
+                        helperText: "Hanya huruf, angka, - dan _",
+                      ),
+                      keyboardType: TextInputType.visiblePassword,
+                      autocorrect: false,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return "Username diperlukan";
+                        }
+                        if (!RegExp(r'^[a-zA-Z0-9_\-]+$').hasMatch(v.trim())) {
+                          return "Hanya huruf, angka, - dan _";
+                        }
+                        if (v.trim().length < 3) {
+                          return "Minimal 3 karakter";
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
                       controller: _emailCtrl,
-                      decoration: const InputDecoration(labelText: "Email"),
+                      decoration: const InputDecoration(
+                        labelText: "Email",
+                        prefixIcon: Icon(Icons.email_outlined),
+                      ),
                       keyboardType: TextInputType.emailAddress,
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _phoneCtrl,
-                      decoration: const InputDecoration(labelText: "Telepon"),
+                      decoration: const InputDecoration(
+                        labelText: "Telepon",
+                        prefixIcon: Icon(Icons.phone_outlined),
+                      ),
                       keyboardType: TextInputType.phone,
                     ),
                     const SizedBox(height: 12),

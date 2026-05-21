@@ -10,7 +10,9 @@ class RecapSubjectModel {
   });
 
   factory RecapSubjectModel.fromJson(Map<String, dynamic> json) {
-    final headers = List<String>.from(json['headers'] ?? []);
+    final headers = List<String>.from(
+      (json['headers'] as List<dynamic>? ?? []).map((e) => e?.toString() ?? ''),
+    );
 
     final scores = <String, dynamic>{};
     final rawScores = json['scores'] as Map<String, dynamic>? ?? {};
@@ -20,7 +22,7 @@ class RecapSubjectModel {
     }
 
     return RecapSubjectModel(
-      mapel: json['mapel'] as String,
+      mapel: json['mapel']?.toString() ?? '-',
       headers: headers,
       scores: scores,
     );

@@ -2,6 +2,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -44,12 +45,16 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _refreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
-      if (mounted)
-        ref.invalidate(assignmentDetailProvider(widget.assignmentId));
-    });
+    // Refresh saat pertama kali masuk halaman
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(assignmentDetailProvider(widget.assignmentId));
       ref.read(commentProvider.notifier).loadComments(widget.assignmentId);
+    });
+    // Auto-refresh setiap 30 detik (lebih responsif dari 60 detik)
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) {
+        ref.invalidate(assignmentDetailProvider(widget.assignmentId));
+      }
     });
   }
 
@@ -133,99 +138,140 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
           body: Column(
             children: [
               Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // ── Header ──────────────────────────────
-                      _HeaderSection(assignment: assignment),
-                      const SizedBox(height: 16),
-
-                      // ── Info card (tenggat, status, nilai) ──
-                      _InfoCard(assignment: assignment, score: score),
-                      const SizedBox(height: 16),
-
-                      // ── Konten tugas ────────────────────────
-                      if (assignment.description?.isNotEmpty == true) ...[
-                        _SectionLabel('Deskripsi'),
-                        const SizedBox(height: 6),
-                        Text(assignment.description!,
-                            style: const TextStyle(height: 1.5)),
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    ref.invalidate(
+                        assignmentDetailProvider(widget.assignmentId));
+                    ref
+                        .read(commentProvider.notifier)
+                        .loadComments(widget.assignmentId);
+                    // Tunggu data baru selesai di-fetch
+                    await ref.read(
+                        assignmentDetailProvider(widget.assignmentId).future);
+                  },
+                  child: SingleChildScrollView(
+                    // physics wajib agar RefreshIndicator bisa trigger
+                    // meski konten pendek
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // ── Header ──────────────────────────────
+                        _HeaderSection(assignment: assignment),
                         const SizedBox(height: 16),
-                      ],
 
-                      if (assignment.embed?.isNotEmpty == true) ...[
-                        _SectionLabel('Video'),
+                        // ── Info card (tenggat, status, nilai) ──
+                        _InfoCard(assignment: assignment, score: score),
+                        const SizedBox(height: 16),
+
+                        // ── Konten tugas ────────────────────────
+                        if (assignment.description?.isNotEmpty == true) ...[
+                          _SectionLabel('Deskripsi'),
+                          const SizedBox(height: 6),
+                          Html(
+                            data: assignment.description!,
+                            style: {
+                              'body': Style(
+                                margin: Margins.zero,
+                                padding: HtmlPaddings.zero,
+                                fontSize: FontSize(15),
+                                lineHeight: LineHeight(1.6),
+                              ),
+                              'h3': Style(
+                                fontSize: FontSize(16),
+                                fontWeight: FontWeight.bold,
+                                margin: Margins.only(top: 12, bottom: 4),
+                              ),
+                              'p': Style(
+                                margin: Margins.only(bottom: 8),
+                              ),
+                              'ul': Style(
+                                margin: Margins.only(left: 16, bottom: 8),
+                              ),
+                              'ol': Style(
+                                margin: Margins.only(left: 16, bottom: 8),
+                              ),
+                              'li': Style(
+                                margin: Margins.only(bottom: 4),
+                              ),
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+
+                        if (assignment.embed?.isNotEmpty == true) ...[
+                          _SectionLabel('Video'),
+                          const SizedBox(height: 8),
+                          VideoEmbedWidget(embedCode: assignment.embed!),
+                          const SizedBox(height: 16),
+                        ],
+
+                        if (assignment.link?.isNotEmpty == true) ...[
+                          _SectionLabel('Tautan'),
+                          const SizedBox(height: 8),
+                          _LinkButton(url: assignment.link!),
+                          const SizedBox(height: 16),
+                        ],
+
+                        if (assignment.attachment?.isNotEmpty == true) ...[
+                          _SectionLabel('Lampiran'),
+                          const SizedBox(height: 8),
+                          AttachmentFileWidget(
+                            postId: assignment.id,
+                            fileName: assignment.attachment!.split('/').last,
+                            fileType: assignment.attachment!.split('.').last,
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+
+                        // ── Status pengumpulan ───────────────────
+                        if (assignment.isSubmitted)
+                          _StatusBanner(
+                            text: score != null
+                                ? 'Tugas sudah dinilai ✔️'
+                                : 'Menunggu penilaian guru ⏳',
+                            color: score != null ? Colors.green : Colors.orange,
+                          )
+                        else if (assignment.isLate)
+                          const _StatusBanner(
+                            text: 'Batas waktu sudah terlewat ❌',
+                            color: Colors.redAccent,
+                          ),
+
+                        const SizedBox(height: 24),
+
+                        // ── Komentar ─────────────────────────────
+                        _SectionLabel('Komentar'),
                         const SizedBox(height: 8),
-                        VideoEmbedWidget(embedCode: assignment.embed!),
-                        const SizedBox(height: 16),
+                        student == null
+                            ? const Center(child: CircularProgressIndicator())
+                            : CommentListWidget(
+                                postId: assignment.id,
+                                currentUser: student,
+                                onReplySelected: (id) => setState(() {
+                                  replyToCommentId = id;
+                                  editingCommentId = null;
+                                  editingReplyId = null;
+                                  editingInitialText = null;
+                                }),
+                                onEditSelected: (id, msg) => setState(() {
+                                  editingCommentId = id;
+                                  editingInitialText = msg;
+                                  replyToCommentId = null;
+                                  editingReplyId = null;
+                                }),
+                                onEditReplySelected: (rId, msg, pId) =>
+                                    setState(() {
+                                  editingReplyId = rId;
+                                  replyToCommentId = pId;
+                                  editingInitialText = msg;
+                                  editingCommentId = null;
+                                }),
+                              ),
+                        const SizedBox(height: 80),
                       ],
-
-                      if (assignment.link?.isNotEmpty == true) ...[
-                        _SectionLabel('Tautan'),
-                        const SizedBox(height: 8),
-                        _LinkButton(url: assignment.link!),
-                        const SizedBox(height: 16),
-                      ],
-
-                      if (assignment.attachment?.isNotEmpty == true) ...[
-                        _SectionLabel('Lampiran'),
-                        const SizedBox(height: 8),
-                        AttachmentFileWidget(
-                          postId: assignment.id,
-                          fileName: assignment.attachment!.split('/').last,
-                          fileType: assignment.attachment!.split('.').last,
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-
-                      // ── Status pengumpulan ───────────────────
-                      if (assignment.isSubmitted)
-                        _StatusBanner(
-                          text: score != null
-                              ? 'Tugas sudah dinilai ✔️'
-                              : 'Menunggu penilaian guru ⏳',
-                          color: score != null ? Colors.green : Colors.orange,
-                        )
-                      else if (assignment.isLate)
-                        const _StatusBanner(
-                          text: 'Batas waktu sudah terlewat ❌',
-                          color: Colors.redAccent,
-                        ),
-
-                      const SizedBox(height: 24),
-
-                      // ── Komentar ─────────────────────────────
-                      _SectionLabel('Komentar'),
-                      const SizedBox(height: 8),
-                      student == null
-                          ? const Center(child: CircularProgressIndicator())
-                          : CommentListWidget(
-                              postId: assignment.id,
-                              currentUser: student,
-                              onReplySelected: (id) => setState(() {
-                                replyToCommentId = id;
-                                editingCommentId = null;
-                                editingReplyId = null;
-                                editingInitialText = null;
-                              }),
-                              onEditSelected: (id, msg) => setState(() {
-                                editingCommentId = id;
-                                editingInitialText = msg;
-                                replyToCommentId = null;
-                                editingReplyId = null;
-                              }),
-                              onEditReplySelected: (rId, msg, pId) =>
-                                  setState(() {
-                                editingReplyId = rId;
-                                replyToCommentId = pId;
-                                editingInitialText = msg;
-                                editingCommentId = null;
-                              }),
-                            ),
-                      const SizedBox(height: 80),
-                    ],
+                    ),
                   ),
                 ),
               ),

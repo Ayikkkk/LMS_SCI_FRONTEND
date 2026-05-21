@@ -1,11 +1,9 @@
 // lib/features/quiz/data/quiz_repository.dart
 
-import '../domain/models/question_model.dart';
-
 /// Interface repository quiz (REAL, tanpa mock)
 abstract class IQuizRepository {
   /// Ambil soal quiz
-  /// Returns: Map dengan 'questions' dan 'exercise_type_name'
+  /// Returns: Map dengan 'questions', 'exercise_type_name', dan 'time_limit_minutes' (nullable int, dalam menit)
   Future<Map<String, dynamic>> fetchQuiz({
     required String exerciseId,
   });

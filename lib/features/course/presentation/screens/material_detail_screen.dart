@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -129,8 +130,34 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen>
                     if (item.description?.isNotEmpty == true) ...[
                       _SectionLabel('Deskripsi'),
                       const SizedBox(height: 6),
-                      Text(item.description!,
-                          style: const TextStyle(height: 1.5)),
+                      Html(
+                        data: item.description!,
+                        style: {
+                          'body': Style(
+                            margin: Margins.zero,
+                            padding: HtmlPaddings.zero,
+                            fontSize: FontSize(15),
+                            lineHeight: LineHeight(1.6),
+                          ),
+                          'h3': Style(
+                            fontSize: FontSize(16),
+                            fontWeight: FontWeight.bold,
+                            margin: Margins.only(top: 12, bottom: 4),
+                          ),
+                          'p': Style(
+                            margin: Margins.only(bottom: 8),
+                          ),
+                          'ul': Style(
+                            margin: Margins.only(left: 16, bottom: 8),
+                          ),
+                          'ol': Style(
+                            margin: Margins.only(left: 16, bottom: 8),
+                          ),
+                          'li': Style(
+                            margin: Margins.only(bottom: 4),
+                          ),
+                        },
+                      ),
                       const SizedBox(height: 16),
                     ],
 

@@ -236,21 +236,44 @@ class _TugasListView extends ConsumerWidget {
                     backgroundColor: item.statusColor,
                     child: const Icon(Icons.assignment, color: Colors.white),
                   ),
-                  title: Text(
-                    item.title,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  title: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Nama mapel kecil di atas judul
+                      Text(
+                        item.subjectName,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        item.title,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
-                  subtitle: Text(
-                    item.dueDate != null
-                        ? 'Deadline: ${dateFormat.format(item.dueDate!)}'
-                        : 'Tanpa batas waktu',
-                    style: const TextStyle(fontSize: 12),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      item.dueDate != null
+                          ? 'Deadline: ${dateFormat.format(item.dueDate!)}'
+                          : 'Tanpa batas waktu',
+                      style: const TextStyle(fontSize: 12),
+                    ),
                   ),
                   trailing: Text(
                     item.status,
                     style: TextStyle(
                       color: item.statusColor,
                       fontWeight: FontWeight.bold,
+                      fontSize: 12,
                     ),
                   ),
                   onTap: () {
@@ -262,7 +285,6 @@ class _TugasListView extends ConsumerWidget {
                         ),
                       ),
                     ).then((_) {
-                      // Auto refresh after returning from detail screen
                       ref.invalidate(courseAssignmentsProvider);
                     });
                   },

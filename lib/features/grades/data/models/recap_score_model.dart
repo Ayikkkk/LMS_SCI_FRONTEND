@@ -11,9 +11,13 @@ class RecapScoreModel {
   });
 
   factory RecapScoreModel.fromJson(Map<String, dynamic> json) {
+    final studentData = json['student'] as Map<String, dynamic>? ?? {};
+    final rowsData = json['rows'] as List<dynamic>? ?? [];
+
     return RecapScoreModel(
-      student: StudentRecapModel.fromJson(json['student']),
-      subjects: (json['rows'] as List<dynamic>)
+      student: StudentRecapModel.fromJson(studentData),
+      subjects: rowsData
+          .whereType<Map<String, dynamic>>()
           .map((e) => RecapSubjectModel.fromJson(e))
           .toList(),
     );

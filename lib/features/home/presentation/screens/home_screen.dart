@@ -182,9 +182,12 @@ class _ProfileHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final name = student.name;
+    final className = student.className ?? '-';
+    final photoUrl = student.photo;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDark
@@ -197,19 +200,7 @@ class _ProfileHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.school,
-              size: 36,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(width: 16),
+          // ── Teks kiri ──────────────────────────────────────────
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -223,17 +214,100 @@ class _ProfileHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  student.name,
+                  name,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 18,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.class_outlined,
+                        size: 13, color: Colors.white70),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Kelas $className',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
+
+          const SizedBox(width: 16),
+
+          // ── Foto profil lingkaran kanan ─────────────────────────
+          _Avatar(photoUrl: photoUrl, name: name),
         ],
+      ),
+    );
+  }
+}
+
+class _Avatar extends StatelessWidget {
+  final String? photoUrl;
+  final String name;
+  const _Avatar({required this.photoUrl, required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    const double size = 56;
+
+    if (photoUrl != null && photoUrl!.isNotEmpty) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 2.5),
+        ),
+        child: ClipOval(
+          child: Image.network(
+            photoUrl!,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _InitialAvatar(name: name),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 2.5),
+      ),
+      child: _InitialAvatar(name: name),
+    );
+  }
+}
+
+class _InitialAvatar extends StatelessWidget {
+  final String name;
+  const _InitialAvatar({required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    return CircleAvatar(
+      backgroundColor: Colors.white.withValues(alpha: 0.25),
+      child: Text(
+        name.isNotEmpty ? name[0].toUpperCase() : '?',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -655,12 +729,12 @@ class _MeetingsList extends StatelessWidget {
 // QUICK MENU
 // ==============================================================
 
-class _QuickMenu extends StatelessWidget {
+class _QuickMenu extends ConsumerWidget {
   final void Function(int index) onNavigate;
   const _QuickMenu({required this.onNavigate});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GridView.count(
@@ -671,18 +745,16 @@ class _QuickMenu extends StatelessWidget {
       mainAxisSpacing: 12,
       childAspectRatio: 1.0,
       children: [
-        _item(
-            'Materi',
-            Icons.menu_book_rounded,
-            [Colors.blue.shade400, Colors.blue.shade600],
-            () => onNavigate(1),
-            isDark),
-        _item(
-            'Tugas',
-            Icons.edit_note_rounded,
-            [Colors.orange.shade400, Colors.orange.shade600],
-            () => onNavigate(1),
-            isDark),
+        _item('Materi', Icons.menu_book_rounded,
+            [Colors.blue.shade400, Colors.blue.shade600], () {
+          ref.read(courseTabProvider.notifier).state = 0; // tab Materi
+          onNavigate(1);
+        }, isDark),
+        _item('Tugas', Icons.edit_note_rounded,
+            [Colors.orange.shade400, Colors.orange.shade600], () {
+          ref.read(courseTabProvider.notifier).state = 1; // tab Tugas
+          onNavigate(1);
+        }, isDark),
         _item(
             'Online',
             Icons.video_camera_front_rounded,

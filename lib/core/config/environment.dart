@@ -29,15 +29,15 @@ class EnvironmentConfig {
         // Read from --dart-define=DEV_API_URL=http://192.168.x.x:8000/api/
         const devUrl = String.fromEnvironment(
           'DEV_API_URL',
-          defaultValue: 'http://192.168.101.74:8000/api/',
+          defaultValue: 'http://192.168.101.80:8000/api/',
         );
         return devUrl;
 
       case Environment.staging:
-        return 'https://staging-api.yourdomain.com/api/';
+        return 'https://lmsscibackend-production.up.railway.app/api/';
 
       case Environment.production:
-        return 'https://api.yourdomain.com/api/';
+        return 'https://lmsscibackend-production.up.railway.app/api/';
     }
   }
 
@@ -47,15 +47,15 @@ class EnvironmentConfig {
       case Environment.development:
         const devHost = String.fromEnvironment(
           'DEV_API_HOST',
-          defaultValue: 'http://192.168.101.74:8000',
+          defaultValue: 'http://192.168.101.80:8000',
         );
         return devHost;
 
       case Environment.staging:
-        return 'https://staging-api.yourdomain.com';
+        return 'https://lmsscibackend-production.up.railway.app';
 
       case Environment.production:
-        return 'https://api.yourdomain.com';
+        return 'https://lmsscibackend-production.up.railway.app';
     }
   }
 

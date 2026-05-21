@@ -9,20 +9,7 @@ final appInitializerProvider = FutureProvider<void>((ref) async {
   try {
     AppLogger.info('Starting app initialization', 'AppInitializer');
 
-    // Init Dio + Token
-    // On 401, auto-logout and redirect to login
-    await configureDio(
-      onUnauthorized: () {
-        ref.read(authNotifierProvider.notifier).doLogout();
-      },
-    );
-
-    //Locale Indonesia
-    await initializeDateFormatting('id_ID', null);
-
-    // CEK SESSION LOGIN
-    final authNotifier = ref.read(authNotifierProvider.notifier);
-    await authNotifier.checkAuthStatus();
+    await _initialize(ref);
 
     AppLogger.success('App initialization completed', 'AppInitializer');
   } catch (e, s) {
@@ -30,3 +17,19 @@ final appInitializerProvider = FutureProvider<void>((ref) async {
     rethrow;
   }
 });
+
+Future<void> _initialize(Ref ref) async {
+  // Init Dio + Token
+  await configureDio(
+    onUnauthorized: () {
+      ref.read(authNotifierProvider.notifier).doLogout();
+    },
+  );
+
+  // Locale Indonesia
+  await initializeDateFormatting('id_ID', null);
+
+  // Cek session login
+  final authNotifier = ref.read(authNotifierProvider.notifier);
+  await authNotifier.checkAuthStatus();
+}

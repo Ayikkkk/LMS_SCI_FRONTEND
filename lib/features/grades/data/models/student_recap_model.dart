@@ -11,9 +11,9 @@ class StudentRecapModel {
 
   factory StudentRecapModel.fromJson(Map<String, dynamic> json) {
     return StudentRecapModel(
-      nis: json['nis'] as String,
-      name: json['name'] as String,
-      kelas: json['kelas'] as String,
+      nis: json['nis']?.toString() ?? '-',
+      name: json['name']?.toString() ?? '-',
+      kelas: json['kelas']?.toString() ?? '-',
     );
   }
 }

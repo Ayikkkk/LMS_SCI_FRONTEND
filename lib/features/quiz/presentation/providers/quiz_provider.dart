@@ -6,6 +6,7 @@ import '../../domain/quiz_notifier.dart';
 import '../../data/quiz_repository.dart' show IQuizRepository;
 import '../../data/remote_quiz_repository.dart';
 import '../../data/quiz_log_service.dart';
+import '../../data/quiz_cache_service.dart';
 
 final quizRepositoryProvider = Provider<IQuizRepository>((ref) {
   return ref.read(remoteQuizRepositoryProvider);
@@ -15,5 +16,7 @@ final quizRepositoryProvider = Provider<IQuizRepository>((ref) {
 final quizNotifierProvider = ChangeNotifierProvider<QuizNotifier>((ref) {
   final repo = ref.read(quizRepositoryProvider);
   final logSvc = ref.read(quizLogServiceProvider);
-  return QuizNotifier(repository: repo, logService: logSvc);
+  final cacheSvc = ref.read(quizCacheServiceProvider);
+  return QuizNotifier(
+      repository: repo, logService: logSvc, cacheService: cacheSvc);
 });

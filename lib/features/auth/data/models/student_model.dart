@@ -31,6 +31,14 @@ class StudentModel {
     this.guru,
   });
 
+  /// Paksa https:// pada URL foto.
+  /// Railway dan hosting modern selalu HTTPS dari sisi user,
+  /// tapi backend kadang return http:// karena reverse proxy.
+  static String? _sanitizePhotoUrl(String? url) {
+    if (url == null || url.isEmpty) return null;
+    return url.replaceFirst('http://', 'https://');
+  }
+
   factory StudentModel.fromJson(Map<String, dynamic> json) {
     // unwrap possible { "data": { ... } } wrapper
     final Map<String, dynamic> data = (json['data'] is Map)
@@ -43,8 +51,7 @@ class StudentModel {
     String? parsedClassName;
     if (data['className'] != null) {
       parsedClassName = data['className']?.toString();
-    } else if (data['classroom'] is Map &&
-        data['classroom']['name'] != null) {
+    } else if (data['classroom'] is Map && data['classroom']['name'] != null) {
       parsedClassName = data['classroom']['name']?.toString();
     } else if (data['class_name'] != null) {
       parsedClassName = data['class_name']?.toString();
@@ -87,7 +94,8 @@ class StudentModel {
       name: data['name']?.toString() ?? '-',
       username: data['username']?.toString() ?? '-',
       email: data['email']?.toString(),
-      photo: data['photo']?.toString() ?? data['photoUrl']?.toString(),
+      photo: _sanitizePhotoUrl(
+          data['photo']?.toString() ?? data['photoUrl']?.toString()),
       phone: data['phone']?.toString() ?? data['telephone']?.toString(),
       nis: data['nis']?.toString(),
       absenNumber: parsedAbsen,

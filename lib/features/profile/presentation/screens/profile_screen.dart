@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../presentation/providers/profile_provider.dart';
 import '../../../auth/domain/auth_notifier.dart';
@@ -117,7 +118,15 @@ class ProfileScreen extends ConsumerWidget {
                 _menuItem(
                   "Pengaduan",
                   Icons.support_agent_outlined,
-                  onTap: () {},
+                  onTap: () async {
+                    final uri = Uri.parse(
+                      'https://tascimediaonline-production.up.railway.app/layanan-pelanggan-pelapor',
+                    );
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri,
+                          mode: LaunchMode.externalApplication);
+                    }
+                  },
                 ),
 
                 _versionItem(ref),

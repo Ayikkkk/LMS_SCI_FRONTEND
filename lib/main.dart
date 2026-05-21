@@ -10,7 +10,6 @@ import 'core/config/environment.dart';
 import 'core/services/crashlytics_service.dart';
 import 'core/services/analytics_service.dart';
 import 'core/services/version_service.dart';
-import 'core/init/app_initializer.dart';
 import 'core/theme/theme_notifier.dart';
 import 'scaffold_messenger_key.dart';
 import 'navigation_service.dart';
@@ -104,13 +103,12 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final init = ref.watch(appInitializerProvider);
     final themeMode = ref.watch(themeNotifierProvider);
 
     return AuthRedirector(
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: EnvironmentConfig.getAppName('LMS Student'),
+        title: EnvironmentConfig.getAppName('SCI Media Online'),
         themeMode: themeMode,
         theme: ThemeData(
           brightness: Brightness.light,
@@ -145,11 +143,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
         ),
         scaffoldMessengerKey: scaffoldMessengerKey,
         navigatorKey: NavigationService.instance.navigatorKey,
-        home: init.when(
-          loading: () => const SplashScreen(),
-          error: (e, _) => _InitErrorView(error: e.toString()),
-          data: (_) => const _RootPlaceholder(),
-        ),
+        home: const SplashScreen(),
         routes: {
           '/login': (_) => const LoginScreen(),
           '/home': (_) => const HomeScreen(),
@@ -167,37 +161,5 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   }
 }
 
-// ======================
-// ROOT PLACEHOLDER
-// ======================
-class _RootPlaceholder extends StatelessWidget {
-  const _RootPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
-    );
-  }
-}
-
-// ======================
-// SPLASH & ERROR VIEW
-// ======================
-class _InitErrorView extends StatelessWidget {
-  final String error;
-  const _InitErrorView({required this.error});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Text(
-          'Init Error: $error',
-          style: const TextStyle(color: Colors.red),
-          textAlign: TextAlign.center,
-        ),
-      ),
-    );
-  }
-}
+// Tidak ada class tambahan — SplashScreen mengontrol navigasi awal,
+// AuthRedirector mengontrol navigasi setelah login/logout.

@@ -22,8 +22,8 @@ class ProfileRepository {
     return response.data;
   }
 
-  /// Update profile.
-  /// IMPORTANT: Use POST with `_method=PUT` in FormData so PHP/Laravel receives file.
+  /// Update profile via POST ke /profile/update (multipart/form-data).
+  /// Laravel tidak bisa parse multipart dari PUT — pakai POST dengan endpoint terpisah.
   Future<Map<String, dynamic>> updateProfile(
     FormData formData, {
     void Function(int sentBytes, int totalBytes)? onSendProgress,
@@ -31,23 +31,15 @@ class ProfileRepository {
     final token = await _authRepo.getToken();
     if (token == null) throw Exception("Token tidak ditemukan");
 
-    // Ensure method override so Laravel can treat it as PUT but still parse files
-    // If caller already added _method, do not duplicate
-    final hasMethodOverride =
-        formData.fields.any((entry) => entry.key == '_method');
-    if (!hasMethodOverride) {
-      formData.fields.add(MapEntry('_method', 'PUT'));
-    }
+    // Pastikan tidak ada _method override
+    formData.fields.removeWhere((entry) => entry.key == '_method');
 
     final response = await _dio.post(
-      '/student/profile', // POST with _method=PUT
+      '/student/profile/update',
       data: formData,
       options: Options(
         headers: {
           "Authorization": "Bearer $token",
-          // Content-Type will be set by Dio for FormData automatically,
-          // but explicit is OK as well.
-          "Content-Type": "multipart/form-data",
         },
       ),
       onSendProgress: onSendProgress,
