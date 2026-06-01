@@ -1,8 +1,8 @@
-import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/recap_score_model.dart';
 import '../../data/repository/grade_repository.dart';
+import '../../../../core/constants/error_messages.dart';
 import '../../../../core/network/api_client.dart';
 
 /// ============================
@@ -20,26 +20,26 @@ class GradeState {
   final bool isLoading;
   final String? error;
   final RecapScoreModel? recap;
-  final File? downloadedPdf;
+  final String? downloadedPdfPath; // path file untuk OpenFilex
 
   const GradeState({
     this.isLoading = false,
     this.error,
     this.recap,
-    this.downloadedPdf,
+    this.downloadedPdfPath,
   });
 
   GradeState copyWith({
     bool? isLoading,
     String? error,
     RecapScoreModel? recap,
-    File? downloadedPdf,
+    String? downloadedPdfPath,
   }) {
     return GradeState(
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
       recap: recap ?? this.recap,
-      downloadedPdf: downloadedPdf ?? this.downloadedPdf,
+      downloadedPdfPath: downloadedPdfPath ?? this.downloadedPdfPath,
     );
   }
 }
@@ -67,7 +67,7 @@ class GradeNotifier extends StateNotifier<GradeState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: ErrorMessages.fromException(e),
       );
     }
   }
@@ -75,26 +75,26 @@ class GradeNotifier extends StateNotifier<GradeState> {
   /// ============================
   /// Download PDF Rekap
   /// ============================
-  Future<File?> downloadPdf() async {
-    if (state.isLoading) return null;
+  Future<bool> downloadPdf() async {
+    if (state.isLoading) return false;
 
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final file = await _repository.downloadRecapPdf();
+      final path = await _repository.downloadRecapPdf();
 
       state = state.copyWith(
         isLoading: false,
-        downloadedPdf: file,
+        downloadedPdfPath: path,
       );
 
-      return file;
+      return path != null;
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: ErrorMessages.fromException(e),
       );
-      return null;
+      return false;
     }
   }
 }
@@ -102,8 +102,7 @@ class GradeNotifier extends StateNotifier<GradeState> {
 /// ============================
 /// Public Provider
 /// ============================
-final gradeProvider =
-    StateNotifierProvider<GradeNotifier, GradeState>((ref) {
+final gradeProvider = StateNotifierProvider<GradeNotifier, GradeState>((ref) {
   final repository = ref.read(gradeRepositoryProvider);
   return GradeNotifier(repository);
 });

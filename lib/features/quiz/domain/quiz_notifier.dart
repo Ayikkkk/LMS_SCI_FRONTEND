@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../navigation_service.dart';
+import '../../../core/constants/error_messages.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/services/analytics_service.dart';
 import '../data/quiz_repository.dart';
@@ -176,7 +177,7 @@ class QuizNotifier extends ChangeNotifier {
         );
       }
     } catch (e) {
-      _error = e.toString();
+      _error = ErrorMessages.fromException(e);
       AppLogger.error('loadQuiz failed', e, null, 'QuizNotifier');
     }
 

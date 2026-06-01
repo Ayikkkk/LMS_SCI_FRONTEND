@@ -9,12 +9,16 @@ class AttachmentFileWidget extends StatefulWidget {
   final int postId;
   final String fileName;
   final String fileType;
+  final String? downloadUrl;
+  final String? label;
 
   const AttachmentFileWidget({
     super.key,
     required this.postId,
     required this.fileName,
     required this.fileType,
+    this.downloadUrl,
+    this.label,
   });
 
   @override
@@ -39,7 +43,7 @@ class _AttachmentFileWidgetState extends State<AttachmentFileWidget> {
 
     final file = await FileDownloader.download(
       dio: dio,
-      url: '/student/posts/${widget.postId}/download',
+      url: widget.downloadUrl ?? '/student/posts/${widget.postId}/download',
       fileName: widget.fileName,
     );
 
@@ -99,7 +103,7 @@ class _AttachmentFileWidgetState extends State<AttachmentFileWidget> {
                 )
               : const Icon(Icons.download),
           label: Text(
-            'Unduh File (${widget.fileType.toUpperCase()})',
+            widget.label ?? 'Unduh File (${widget.fileType.toUpperCase()})',
           ),
           onPressed: isDownloading ? null : () => _download(context),
         ),

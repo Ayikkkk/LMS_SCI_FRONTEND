@@ -33,6 +33,9 @@ class _QuizScreenState extends ConsumerState<QuizScreen>
   bool _isInBackground = false;
   Timer? _backgroundTimer;
 
+  // Status koneksi internet
+  bool _isOffline = false;
+
   // Debounce: cegah log duplikat dalam window 2 detik
   final Map<String, DateTime> _lastLogTime = {};
   static const Duration _dedupWindow = Duration(seconds: 2);
@@ -60,10 +63,59 @@ class _QuizScreenState extends ConsumerState<QuizScreen>
 
       if (result == ConnectivityResult.none) {
         _logEvent(eventType: 'DISCONNECTED');
+
+        // Update state dan tampilkan peringatan
+        if (mounted) {
+          setState(() => _isOffline = true);
+          _showOfflineWarning();
+        }
       } else {
         _logEvent(eventType: 'RECONNECTED');
+
+        // Koneksi kembali — sembunyikan banner
+        if (mounted) {
+          setState(() => _isOffline = false);
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Koneksi internet kembali'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
       }
     });
+  }
+
+  void _showOfflineWarning() {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.wifi_off, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Koneksi Terputus!',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Text(
+          'Internet Anda terputus saat mengerjakan kuis.\n\n'
+          'Anda masih bisa melanjutkan mengerjakan soal, '
+          'tetapi jawaban tidak akan tersimpan sampai koneksi kembali.\n\n'
+          'Aktivitas ini telah dicatat.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Mengerti, Lanjutkan'),
+          ),
+        ],
+      ),
+    );
   }
 
   // ===============================
@@ -221,22 +273,50 @@ class _QuizScreenState extends ConsumerState<QuizScreen>
       canPop: canPop,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) {
-          // Pop berhasil — pastikan kembali ke home jika stack kosong
           if (context.mounted) {
             final navigator = Navigator.of(context);
             if (!navigator.canPop()) {
-              // Stack kosong akibat forceBackToQuiz — navigasi ke home
               navigator.pushNamedAndRemoveUntil('/home', (route) => false);
             }
           }
           return;
         }
 
-        // Quiz masih berlangsung dan terkunci — blokir + tampilkan warning
         await _showWarningPopup();
         _logEvent(eventType: 'BACK_BUTTON_BLOCKED');
       },
-      child: QuizView(exerciseId: widget.exerciseId),
+      child: Column(
+        children: [
+          // Banner offline — tampil selama koneksi putus
+          if (_isOffline)
+            Material(
+              color: Colors.red.shade700,
+              child: const SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      Icon(Icons.wifi_off, color: Colors.white, size: 18),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Tidak ada koneksi internet — jawaban belum tersimpan',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          Expanded(child: QuizView(exerciseId: widget.exerciseId)),
+        ],
+      ),
     );
   }
 }

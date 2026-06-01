@@ -34,10 +34,10 @@ class EnvironmentConfig {
         return devUrl;
 
       case Environment.staging:
-        return 'https://lmsscibackend-production.up.railway.app/api/';
+        return 'http://151.243.222.93:30083/api/';
 
       case Environment.production:
-        return 'https://lmsscibackend-production.up.railway.app/api/';
+        return 'http://151.243.222.93:30083/api/';
     }
   }
 
@@ -52,10 +52,10 @@ class EnvironmentConfig {
         return devHost;
 
       case Environment.staging:
-        return 'https://lmsscibackend-production.up.railway.app';
+        return 'http://151.243.222.93:30083';
 
       case Environment.production:
-        return 'https://lmsscibackend-production.up.railway.app';
+        return 'http://151.243.222.93:30083';
     }
   }
 

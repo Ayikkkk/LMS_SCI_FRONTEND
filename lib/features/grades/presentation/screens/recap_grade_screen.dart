@@ -1,11 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/providers/grade_provider.dart';
 import '../widgets/subject_section.dart';
-import '../../../../core/utils/download_exporter.dart';
 import '../../../../core/widgets/error_widget.dart';
 import '../../../../core/widgets/empty_state_widget.dart';
 import 'package:open_filex/open_filex.dart';
@@ -31,18 +28,25 @@ class _RecapGradeScreenState extends ConsumerState<RecapGradeScreen> {
     final messenger = ScaffoldMessenger.of(context);
 
     messenger.showSnackBar(
-      const SnackBar(content: Text('Mengunduh rekap nilai...')),
+      const SnackBar(
+          content: Text('Mengunduh rekap nilai ke folder Download/LMS Student...')),
     );
 
-    final File? file = await notifier.downloadPdf();
+    final success = await notifier.downloadPdf();
 
     if (!mounted) return;
 
-    if (file == null) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Gagal mengunduh PDF')),
-      );
-    }
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? 'PDF berhasil diunduh ke folder Download/LMS Student'
+              : 'Gagal mengunduh PDF',
+        ),
+        backgroundColor: success ? Colors.green : Colors.red,
+      ),
+    );
   }
 
   @override
@@ -133,7 +137,7 @@ class _RecapGradeScreenState extends ConsumerState<RecapGradeScreen> {
                 // =====================
                 // ACTIONS PDF
                 // =====================
-                if (state.downloadedPdf != null) ...[
+                if (state.downloadedPdfPath != null) ...[
                   Card(
                     margin: const EdgeInsets.only(bottom: 16),
                     child: Padding(
@@ -141,50 +145,30 @@ class _RecapGradeScreenState extends ConsumerState<RecapGradeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Rekap Nilai (PDF)',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
+                          const Row(
                             children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  icon: const Icon(Icons.picture_as_pdf),
-                                  label: const Text('Buka PDF'),
-                                  onPressed: () {
-                                    OpenFilex.open(
-                                      state.downloadedPdf!.path,
-                                    );
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  icon: const Icon(Icons.folder_copy),
-                                  label: const Text('Salin ke Download'),
-                                  onPressed: () async {
-                                    final success =
-                                        await DownloadExporter.copyToDownload(
-                                      state.downloadedPdf!,
-                                    );
-
-                                    if (!mounted) return;
-
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          success
-                                              ? 'PDF berhasil disalin ke Download'
-                                              : 'Gagal menyalin PDF',
-                                        ),
-                                      ),
-                                    );
-                                  },
+                              Icon(Icons.check_circle,
+                                  color: Colors.green, size: 18),
+                              SizedBox(width: 6),
+                              Text(
+                                'PDF tersimpan di folder Download',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green,
                                 ),
                               ),
                             ],
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              icon: const Icon(Icons.picture_as_pdf),
+                              label: const Text('Buka PDF'),
+                              onPressed: () {
+                                OpenFilex.open(state.downloadedPdfPath!);
+                              },
+                            ),
                           ),
                         ],
                       ),

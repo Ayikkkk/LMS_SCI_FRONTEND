@@ -43,8 +43,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   Future<void> _startAndNavigate() async {
     // Tunggu keduanya: init app selesai DAN minimum 2.5 detik
     await Future.wait([
-      // Trigger dan tunggu appInitializerProvider
-      ref.read(appInitializerProvider.future),
+      // Trigger dan tunggu appInitializerProvider — tidak akan throw karena sudah di-handle
+      ref.read(appInitializerProvider.future).catchError((_) {}),
       // Minimum splash duration
       Future.delayed(const Duration(milliseconds: 2500)),
     ]);
@@ -85,17 +85,50 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       body: SafeArea(
         child: Column(
           children: [
-            // ── Logo di tengah — lebih besar ────────────────────────
+            // ── Logo dan teks di tengah ────────────────────────
             Expanded(
               child: Center(
                 child: FadeTransition(
                   opacity: _fadeAnim,
                   child: ScaleTransition(
                     scale: _scaleAnim,
-                    child: Image.asset(
-                      'assets/images/Logo sci.png',
-                      width: 240,
-                      fit: BoxFit.contain,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: Image.asset(
+                            'assets/images/Logosci2.jpg',
+                            width: 140,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        const Text(
+                          'SCIMEDIA-ONLINE',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 20),
+                          child: Text(
+                            'Pembelajaran SD/MI Berbasis Teknologi',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

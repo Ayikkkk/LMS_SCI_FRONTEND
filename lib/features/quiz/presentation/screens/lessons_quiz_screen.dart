@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 
 import '../../../../core/network/api_client.dart';
+import '../../../../core/constants/error_messages.dart';
+import '../../../../core/widgets/error_widget.dart';
 import '../../../../core/utils/logger.dart';
 import 'exercise_list_screen.dart';
 
@@ -69,7 +71,7 @@ class _LessonsQuizScreenState extends ConsumerState<LessonsQuizScreen> {
 
       if (mounted) {
         setState(() {
-          _error = dioErr.message;
+          _error = ErrorMessages.fromDioException(dioErr);
         });
       }
       AppLogger.error(
@@ -81,7 +83,7 @@ class _LessonsQuizScreenState extends ConsumerState<LessonsQuizScreen> {
     } catch (e, st) {
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          _error = ErrorMessages.fromException(e);
         });
       }
       AppLogger.error('LessonsQuizScreen', e, st, 'LessonsQuizScreen');
@@ -209,16 +211,9 @@ class _LessonsQuizScreenState extends ConsumerState<LessonsQuizScreen> {
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: [
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 40),
-                          child: Text("Error: $_error"),
-                        ),
-                      )
-                    ],
+                ? AppErrorWidget(
+                    message: _error!,
+                    onRetry: _fetchLessons,
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.all(12),

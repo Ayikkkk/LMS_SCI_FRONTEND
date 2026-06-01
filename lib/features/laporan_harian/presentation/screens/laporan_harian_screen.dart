@@ -7,6 +7,7 @@ import 'package:http_parser/http_parser.dart';
 
 import '../providers/laporan_provider.dart';
 import '../../data/laporan_repository.dart';
+import '../../../../core/constants/error_messages.dart';
 import '../../../../core/widgets/error_widget.dart';
 import '../../../../core/widgets/empty_state_widget.dart';
 
@@ -87,7 +88,7 @@ class _LaporanHarianScreenState extends ConsumerState<LaporanHarianScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Gagal mengirim laporan: $e")),
+        SnackBar(content: Text(ErrorMessages.fromException(e))),
       );
     }
   }
@@ -101,7 +102,7 @@ class _LaporanHarianScreenState extends ConsumerState<LaporanHarianScreen> {
       body: cek.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => AppErrorWidget(
-          message: 'Gagal memuat status laporan',
+          message: ErrorMessages.fromException(e),
           onRetry: () => ref.invalidate(laporanCheckProvider),
         ),
         data: (sudahIsi) {

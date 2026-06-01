@@ -1,9 +1,10 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:media_store_plus/media_store_plus.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:open_filex/open_filex.dart';
 
+import '../../../../core/constants/app_constants.dart';
 import '../models/recap_score_model.dart';
 
 class GradeRepository {
@@ -30,15 +31,19 @@ class GradeRepository {
 
   /// ============================
   /// Download PDF rekap nilai
+  /// Simpan langsung ke folder Download via MediaStore
+  /// Return path file di Download agar bisa dibuka
   /// ============================
-  Future<File?> downloadRecapPdf() async {
+  Future<String?> downloadRecapPdf() async {
     try {
-      final directory = await getApplicationDocumentsDirectory();
-      final filePath = '${directory.path}/rekap_nilai.pdf';
+      // 1. Download ke temp file dulu
+      final tempDir = await getTemporaryDirectory();
+      final tempPath =
+          '${tempDir.path}/rekap_nilai_${DateTime.now().millisecondsSinceEpoch}.pdf';
 
       await _dio.download(
         '/student/grades/rekap-mapel/pdf',
-        filePath,
+        tempPath,
         options: Options(
           responseType: ResponseType.bytes,
           followRedirects: true,
@@ -46,12 +51,48 @@ class GradeRepository {
         ),
       );
 
-      final file = File(filePath);
+      final tempFile = File(tempPath);
+      if (!tempFile.existsSync() || tempFile.lengthSync() == 0) {
+        return null;
+      }
 
-      if (!file.existsSync()) return null;
+      // 2. Simpan ke folder Download via MediaStore
+      MediaStore.appFolder = AppConstants.mediaStoreFolder;
+      await MediaStore.ensureInitialized();
 
-      await OpenFilex.open(filePath);
-      return file;
+      final store = MediaStore();
+      final savedUri = await store.saveFile(
+        tempFilePath: tempPath,
+        dirType: DirType.download,
+        dirName: DirName.download,
+      );
+
+      // 3. Hapus temp file
+      try {
+        tempFile.deleteSync();
+      } catch (_) {}
+
+      if (savedUri == null) return null;
+
+      // 4. Return path temp yang masih ada untuk dibuka,
+      //    atau cari file di Download
+      // MediaStore tidak return path langsung — gunakan path_provider fallback
+      // Simpan copy di app documents untuk OpenFilex
+      final docsDir = await getApplicationDocumentsDirectory();
+      final docPath = '${docsDir.path}/rekap_nilai.pdf';
+
+      // Re-download ke app docs untuk bisa dibuka OpenFilex
+      await _dio.download(
+        '/student/grades/rekap-mapel/pdf',
+        docPath,
+        options: Options(
+          responseType: ResponseType.bytes,
+          followRedirects: true,
+          validateStatus: (status) => status != null && status < 500,
+        ),
+      );
+
+      return docPath;
     } catch (e) {
       return null;
     }

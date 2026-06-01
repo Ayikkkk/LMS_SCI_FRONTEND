@@ -1,6 +1,7 @@
 // lib/features/online_class/data/repository/online_meeting_repository.dart
 
 import 'package:dio/dio.dart';
+import '../../../../core/constants/error_messages.dart';
 import '../models/online_meeting_model.dart';
 
 class MeetingJoinResponse {
@@ -40,8 +41,7 @@ class OnlineMeetingRepository {
   /// 🔹 Join meeting (insert participant siswa)
   Future<MeetingJoinResponse> joinMeeting(int meetingId) async {
     try {
-      final response =
-          await dio.post('/student/meetings/$meetingId/join');
+      final response = await dio.post('/student/meetings/$meetingId/join');
 
       if (response.data['success'] == true) {
         return MeetingJoinResponse.fromJson(response.data);
@@ -49,8 +49,10 @@ class OnlineMeetingRepository {
 
       throw Exception(response.data['message'] ?? 'Gagal join meeting');
     } on DioException catch (e) {
-      final message =
-          e.response?.data?['message'] ?? 'Meeting belum dimulai';
+      final message = ErrorMessages.fromDioException(
+        e,
+        fallback: 'Meeting belum dimulai',
+      );
       throw Exception(message);
     }
   }

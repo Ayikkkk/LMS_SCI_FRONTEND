@@ -6,15 +6,21 @@ import '../../features/auth/domain/auth_notifier.dart';
 import '../utils/logger.dart';
 
 final appInitializerProvider = FutureProvider<void>((ref) async {
+  AppLogger.info('Starting app initialization', 'AppInitializer');
+
   try {
-    AppLogger.info('Starting app initialization', 'AppInitializer');
-
     await _initialize(ref);
-
     AppLogger.success('App initialization completed', 'AppInitializer');
   } catch (e, s) {
-    AppLogger.error('App initialization failed', e, s, 'AppInitializer');
-    rethrow;
+    // Jangan rethrow — jika init gagal, anggap unauthenticated
+    // agar splash bisa navigate ke login
+    AppLogger.error('App initialization failed, fallback to unauthenticated', e,
+        s, 'AppInitializer');
+    // Pastikan auth state di-set ke unauthenticated
+    try {
+      ref.read(authNotifierProvider.notifier).state =
+          AuthStatus.unauthenticated;
+    } catch (_) {}
   }
 });
 

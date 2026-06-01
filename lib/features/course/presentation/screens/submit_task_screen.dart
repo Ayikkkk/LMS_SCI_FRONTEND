@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 
 import '../../data/repository/task_repository.dart';
+import '../../../../core/widgets/attachment_file_widget.dart';
+import '../../../../core/constants/api_endpoints.dart';
 
 // Ekstensi yang diizinkan
 const _allowedExtensions = [
@@ -26,12 +28,18 @@ class SubmitTaskScreen extends ConsumerStatefulWidget {
   final int assignmentId;
   final String assignmentTitle;
   final bool isSubmitted;
+  final bool isEditing;
+  final String? initialDescription;
+  final String? currentAttachmentName;
 
   const SubmitTaskScreen({
     super.key,
     required this.assignmentId,
     required this.assignmentTitle,
     required this.isSubmitted,
+    this.isEditing = false,
+    this.initialDescription,
+    this.currentAttachmentName,
   });
 
   @override
@@ -48,7 +56,8 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
   @override
   void initState() {
     super.initState();
-    _alreadySubmitted = widget.isSubmitted;
+    _alreadySubmitted = widget.isSubmitted && !widget.isEditing;
+    _descriptionController.text = widget.initialDescription ?? '';
   }
 
   // =============================================================
@@ -103,12 +112,13 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
       return;
     }
 
-    if (_pickedFile == null) {
+    if (_pickedFile == null && !widget.isEditing) {
       _showSnackbar('Mohon pilih file tugas terlebih dahulu.', Colors.orange);
       return;
     }
 
-    if (_descriptionController.text.trim().isEmpty) {
+    // Saat submit baru, deskripsi wajib diisi
+    if (!widget.isEditing && _descriptionController.text.trim().isEmpty) {
       _showSnackbar('Deskripsi tidak boleh kosong.', Colors.orange);
       return;
     }
@@ -117,16 +127,29 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
 
     final repo = ref.read(taskRepositoryProvider);
 
-    final result = await repo.submitTask(
-      assignmentId: widget.assignmentId,
-      description: _descriptionController.text.trim(),
-      file: _pickedFile!,
-    );
+    final result = widget.isEditing
+        ? await repo.updateTask(
+            assignmentId: widget.assignmentId,
+            description: _descriptionController.text.trim().isNotEmpty
+                ? _descriptionController.text.trim()
+                : (widget.initialDescription ?? ''),
+            file: _pickedFile,
+          )
+        : await repo.submitTask(
+            assignmentId: widget.assignmentId,
+            description: _descriptionController.text.trim(),
+            file: _pickedFile!,
+          );
 
     setState(() => _isLoading = false);
 
     if (result == null) {
-      _showSnackbar('✅ Tugas berhasil dikirim!', Colors.green);
+      _showSnackbar(
+        widget.isEditing
+            ? 'Jawaban tugas berhasil diperbarui!'
+            : 'Tugas berhasil dikirim!',
+        Colors.green,
+      );
       setState(() => _alreadySubmitted = true);
 
       if (mounted) Navigator.of(context).pop(true);
@@ -144,6 +167,93 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
 
   // =============================================================
   // UI HELPERS
+  // =============================================================
+
+  // =============================================================
+  // BUILD CURRENT SUBMISSION SECTION
+  // =============================================================
+
+  Widget _buildCurrentSubmissionSection(BuildContext context) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+      ),
+      color: Theme.of(context).brightness == Brightness.dark
+          ? Colors.grey[850]
+          : Colors.blue.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.history_rounded, color: Colors.blue),
+                const SizedBox(width: 8),
+                Text(
+                  'Jawaban Sebelumnya',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.blue,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Deskripsi sebelumnya
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey[800]
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey[700]!
+                      : Colors.grey[300]!,
+                ),
+              ),
+              child: Text(
+                widget.initialDescription?.isNotEmpty == true
+                    ? widget.initialDescription!
+                    : '-',
+                style: const TextStyle(fontSize: 13, height: 1.4),
+              ),
+            ),
+            // File sebelumnya
+            if (widget.currentAttachmentName != null &&
+                widget.currentAttachmentName!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              AttachmentFileWidget(
+                postId: widget.assignmentId,
+                fileName: widget.currentAttachmentName!,
+                fileType: widget.currentAttachmentName!.split('.').last,
+                downloadUrl: ApiEndpoints.taskSubmissionDownload(
+                  widget.assignmentId,
+                ),
+                label:
+                    'Unduh File Jawaban (${widget.currentAttachmentName!.split('.').last.toUpperCase()})',
+              ),
+            ],
+            const SizedBox(height: 12),
+            Text(
+              '✏️ Edit jawaban Anda di bawah',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.primary,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // =============================================================
+  // SHOW SNACKBAR
   // =============================================================
 
   void _showSnackbar(String message, Color color) {
@@ -203,7 +313,9 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Kirim Tugas: ${widget.assignmentTitle}',
+          widget.isEditing
+              ? 'Edit Tugas: ${widget.assignmentTitle}'
+              : 'Kirim Tugas: ${widget.assignmentTitle}',
           style: const TextStyle(fontSize: 18),
         ),
         backgroundColor: Theme.of(context).primaryColor,
@@ -214,6 +326,13 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // ─ Tampilkan jawaban sebelumnya jika editing ──────────
+            if (widget.isEditing && widget.isSubmitted)
+              _buildCurrentSubmissionSection(context),
+
+            if (widget.isEditing && widget.isSubmitted)
+              const SizedBox(height: 24),
+
             // Deskripsi
             TextFormField(
               controller: _descriptionController,
@@ -253,9 +372,11 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
                       const SizedBox(width: 15),
                       Expanded(
                         child: _pickedFile == null
-                            ? const Text(
-                                'Pilih File Tugas\n(.pdf, .doc, .jpg, .mp4, .mov, dll.)',
-                                style: TextStyle(color: Colors.grey),
+                            ? Text(
+                                widget.currentAttachmentName == null
+                                    ? 'Pilih File Tugas\n(.pdf, .doc, .jpg, .mp4, .mov, dll.)'
+                                    : 'File saat ini: ${widget.currentAttachmentName}\nPilih file baru jika ingin mengganti',
+                                style: const TextStyle(color: Colors.grey),
                               )
                             : Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -339,7 +460,11 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
                       ),
                     )
                   : Text(
-                      _alreadySubmitted ? 'Tugas Sudah Dikirim' : 'Kirim Tugas',
+                      _alreadySubmitted
+                          ? 'Tugas Sudah Dikirim'
+                          : (widget.isEditing
+                              ? 'Simpan Perubahan'
+                              : 'Kirim Tugas'),
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,

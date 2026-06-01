@@ -24,6 +24,8 @@ class ApiEndpoints {
   static String assignmentDetail(int id) => '/student/assignments/$id';
   static String assignmentStatus(int id) => '/student/assignment/$id/status';
   static String submitTask = '/student/submit-task';
+  static String updateTask(int id) => '/student/submit-task/$id/update';
+  static String taskSubmissionDownload(int id) => '/student/tasks/$id/download';
 
   // ============================
   // EXERCISE/QUIZ ENDPOINTS

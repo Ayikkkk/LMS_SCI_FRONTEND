@@ -141,46 +141,56 @@ class QuizView extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // TIMER
-        Container(
-          padding: const EdgeInsets.all(14),
-          color: notifier.totalQuizSeconds == QuizNotifier.noTimeLimit
-              ? Colors.blue.shade50
-              : Colors.red.shade50,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text("Sisa Waktu",
-                  style: TextStyle(fontWeight: FontWeight.w600)),
-              notifier.totalQuizSeconds == QuizNotifier.noTimeLimit
-                  ? const Text(
-                      "Tidak ada batas",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Colors.blue,
+        Builder(builder: (context) {
+          final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+          return Container(
+            padding: const EdgeInsets.all(14),
+            color: notifier.totalQuizSeconds == QuizNotifier.noTimeLimit
+                ? (isDarkMode ? Colors.blue.shade900 : Colors.blue.shade50)
+                : (isDarkMode ? Colors.red.shade900 : Colors.red.shade50),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text("Sisa Waktu",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: isDarkMode ? Colors.white : Colors.black87,
+                    )),
+                notifier.totalQuizSeconds == QuizNotifier.noTimeLimit
+                    ? Text(
+                        "Tidak ada batas",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: isDarkMode ? Colors.lightBlue : Colors.blue,
+                        ),
+                      )
+                    : Text(
+                        "${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                          color: notifier.remainingSeconds <= 60
+                              ? Colors.red
+                              : (isDarkMode ? Colors.white : Colors.black87),
+                        ),
                       ),
-                    )
-                  : Text(
-                      "${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                        color: notifier.remainingSeconds <= 60
-                            ? Colors.red
-                            : Colors.black87,
-                      ),
-                    ),
-            ],
-          ),
-        ),
+              ],
+            ),
+          );
+        }),
 
         // QUESTION TEXT
         Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
             "Soal ${notifier.currentIndex + 1} / ${notifier.questions.length}\n\n"
-            "${question.question}",
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            "${_cleanQuestionText(question.question)}",
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              height: 1.5,
+            ),
           ),
         ),
 
@@ -367,5 +377,15 @@ class QuizView extends ConsumerWidget {
       case QuestionType.essay:
         return EssayWidget(question: question, notifier: notifier);
     }
+  }
+
+  // ================= HELPER: Clean Question Text =================
+  String _cleanQuestionText(String text) {
+    // Replace literal "/n /n" or "/n" with actual newlines
+    String cleaned = text
+        .replaceAll('/n /n', '\n\n')
+        .replaceAll('/n', '\n')
+        .replaceAll('\\n', '\n');
+    return cleaned;
   }
 }

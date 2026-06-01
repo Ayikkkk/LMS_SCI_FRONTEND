@@ -50,12 +50,19 @@ class ReplyListWidget extends ConsumerWidget {
                 /// Avatar
                 CircleAvatar(
                   radius: 14,
-                  backgroundImage: reply.authorPhoto != null
-                      ? NetworkImage(reply.authorPhoto!)
-                      : null,
-                  child: reply.authorPhoto == null
-                      ? const Icon(Icons.person, size: 14)
-                      : null,
+                  backgroundColor: Colors.grey[300],
+                  child: reply.authorPhoto != null
+                      ? ClipOval(
+                          child: Image.network(
+                            reply.authorPhoto!,
+                            width: 28,
+                            height: 28,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                const Icon(Icons.person, size: 14),
+                          ),
+                        )
+                      : const Icon(Icons.person, size: 14),
                 ),
                 const SizedBox(width: 8),
 
@@ -143,8 +150,7 @@ class ReplyListWidget extends ConsumerWidget {
                                 );
 
                                 if (confirm == true) {
-                                  notifier.deleteReply(
-                                      reply.id, comment.id);
+                                  notifier.deleteReply(reply.id, comment.id);
                                 }
                               },
                               child: const Icon(Icons.delete,
@@ -166,8 +172,7 @@ class ReplyListWidget extends ConsumerWidget {
         if (replies.length > 1)
           InkWell(
             onTap: () =>
-                ref.read(commentProvider.notifier)
-                    .toggleReplies(comment.id),
+                ref.read(commentProvider.notifier).toggleReplies(comment.id),
             child: Padding(
               padding: const EdgeInsets.only(left: 40),
               child: Text(

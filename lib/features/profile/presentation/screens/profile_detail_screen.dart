@@ -7,6 +7,8 @@ import 'package:dio/dio.dart';
 
 import '../providers/profile_provider.dart';
 import '../../../auth/data/models/student_model.dart';
+import '../../../../core/constants/error_messages.dart';
+import '../../../../core/widgets/error_widget.dart';
 
 class ProfileDetailScreen extends ConsumerStatefulWidget {
   final StudentModel student;
@@ -215,20 +217,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
       );
     } catch (e) {
       if (mounted) {
-        // Tampilkan pesan error dari backend jika ada
-        String errorMsg = e.toString();
-        if (e is DioException && e.response?.data != null) {
-          final data = e.response!.data;
-          if (data is Map && data['message'] != null) {
-            errorMsg = data['message'].toString();
-          } else if (data is Map && data['errors'] != null) {
-            final errors = data['errors'] as Map;
-            errorMsg = errors.values.first is List
-                ? (errors.values.first as List).first.toString()
-                : errors.values.first.toString();
-          }
-        }
-        setState(() => _error = errorMsg);
+        setState(() => _error = ErrorMessages.fromException(e));
       }
     } finally {
       if (mounted) {
@@ -263,6 +252,8 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
 
     try {
       await repo.deletePhoto();
+      if (!mounted) return;
+
       ref.invalidate(profileDataProvider);
 
       setState(() {
@@ -340,7 +331,22 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     }
     if (_remotePhotoUrl != null && _remotePhotoUrl!.isNotEmpty) {
       return CircleAvatar(
-          radius: 48, backgroundImage: NetworkImage(_remotePhotoUrl!));
+        radius: 48,
+        backgroundColor: Colors.blue,
+        child: ClipOval(
+          child: Image.network(
+            _remotePhotoUrl!,
+            width: 96,
+            height: 96,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const Icon(
+              Icons.person,
+              size: 40,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      );
     }
     return const CircleAvatar(
       radius: 48,
@@ -522,7 +528,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                           ),
                     if (_error != null) ...[
                       const SizedBox(height: 8),
-                      Text(_error!, style: const TextStyle(color: Colors.red)),
+                      AppErrorWidget.inline(message: _error!),
                     ]
                   ],
                 ),

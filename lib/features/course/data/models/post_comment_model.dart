@@ -1,5 +1,5 @@
 import 'post_child_comment_model.dart';
-import '../../../../core/network/api_client.dart';
+import '../../../../core/utils/url_helper.dart';
 
 class PostComment {
   final int id;
@@ -32,22 +32,12 @@ class PostComment {
     final student = json['student'];
     final user = json['user'];
 
-    // 🔥 Ambil semua kemungkinan field foto
-    final rawPhoto = student?['photo'] ??
+    // Ambil semua kemungkinan field foto, prioritaskan author_photo dari backend
+    final rawPhoto = json['author_photo'] ??
+        student?['photo'] ??
         student?['photo_url'] ??
-        user?['photo'] ??
         user?['img'] ??
-        json['author_photo'];
-
-    String? resolvedPhoto;
-    if (rawPhoto != null) {
-      if (rawPhoto.startsWith('http')) {
-        resolvedPhoto = rawPhoto;
-      } else {
-        resolvedPhoto =
-            "$apiHost/storage/${rawPhoto.replaceAll(RegExp(r'^/+'), '')}";
-      }
-    }
+        user?['photo'];
 
     return PostComment(
       id: json['id'],
@@ -59,7 +49,7 @@ class PostComment {
           user?['name'] ??
           json['author_name'] ??
           "Tidak diketahui",
-      authorPhoto: resolvedPhoto,
+      authorPhoto: sanitizeMediaUrl(rawPhoto?.toString()),
       isUser: json['is_user'] == 1 || json['is_user'] == true,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'])
@@ -96,12 +86,12 @@ class PostComment {
       postId: postId,
       userId: userId,
       studentId: studentId,
-      message: message?? this.message,
+      message: message ?? this.message,
       authorName: authorName,
       authorPhoto: authorPhoto,
       isUser: isUser,
       createdAt: createdAt,
-      updatedAt: updatedAt?? this.updatedAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       replies: replies ?? this.replies,
     );
   }

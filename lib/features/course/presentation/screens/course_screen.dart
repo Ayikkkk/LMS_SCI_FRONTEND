@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/widgets/error_widget.dart';
 import '../../../../core/widgets/empty_state_widget.dart';
+import '../../../../core/constants/error_messages.dart';
 import '../../domain/providers/course_providers.dart';
 import '../../data/models/assignment_model.dart';
 import '../../data/models/course_material_model.dart';
@@ -130,7 +131,7 @@ class _MateriListView extends ConsumerWidget {
     return asyncMaterials.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => AppErrorWidget(
-        message: 'Gagal memuat materi',
+        message: ErrorMessages.fromException(e),
         onRetry: () => ref.invalidate(courseMaterialsProvider),
       ),
       data: (materials) {
@@ -205,7 +206,7 @@ class _TugasListView extends ConsumerWidget {
     return asyncAssignments.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => AppErrorWidget(
-        message: 'Gagal memuat tugas',
+        message: ErrorMessages.fromException(e),
         onRetry: () => ref.invalidate(courseAssignmentsProvider),
       ),
       data: (tugasList) {

@@ -17,6 +17,8 @@ import '../../../online_class/presentation/screens/online_class_screen.dart';
 import '../../../online_class/presentation/screens/jitsi_helper.dart';
 import '../../../laporan_harian/presentation/screens/laporan_harian_screen.dart';
 import '../../../../core/widgets/section_title.dart';
+import '../../../../core/widgets/error_widget.dart';
+import '../../../../core/constants/error_messages.dart';
 import '../../../course/domain/providers/course_tab_provider.dart';
 import '../../../grades/presentation/screens/recap_grade_screen.dart';
 
@@ -121,8 +123,8 @@ class _DashboardContent extends ConsumerWidget {
 
     return dashboardAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => _ErrorView(
-        message: e.toString(),
+      error: (e, _) => AppErrorWidget(
+        message: ErrorMessages.fromException(e),
         onRetry: () => ref.invalidate(dashboardDataProvider),
       ),
       data: (data) {
@@ -335,7 +337,7 @@ class _StatsGrid extends StatelessWidget {
             [Colors.blue.shade400, Colors.blue.shade600]),
         _stat('Total Materi', stats.totalMaterials, Icons.menu_book_rounded,
             [Colors.teal.shade400, Colors.teal.shade600]),
-        _stat('Total Quiz', stats.totalExercises, Icons.quiz_rounded,
+        _stat('Total Quiz Selesai', stats.totalExercises, Icons.quiz_rounded,
             [Colors.purple.shade400, Colors.purple.shade600]),
         _stat('Laporan Harian', stats.reportCount, Icons.event_note_rounded,
             [Colors.orange.shade400, Colors.orange.shade600]),
@@ -809,37 +811,6 @@ class _QuickMenu extends ConsumerWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ==============================================================
-// ERROR VIEW
-// ==============================================================
-
-class _ErrorView extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-
-  const _ErrorView({
-    required this.message,
-    required this.onRetry,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(message, textAlign: TextAlign.center),
-          const SizedBox(height: 12),
-          ElevatedButton(
-            onPressed: onRetry,
-            child: const Text('Coba Lagi'),
-          ),
-        ],
       ),
     );
   }

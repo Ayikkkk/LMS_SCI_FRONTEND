@@ -17,6 +17,7 @@ class MultipleChoiceWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       children: question.options.map((opt) {
@@ -35,7 +36,12 @@ class MultipleChoiceWidget extends StatelessWidget {
                 }
               },
             ),
-            title: Text(opt.text),
+            title: Text(
+              opt.text,
+              style: TextStyle(
+                color: isDarkMode ? Colors.white : Colors.black,
+              ),
+            ),
             tileColor: selected ? Colors.blue.shade50 : null,
             onTap: () => notifier.selectOption(question.id, opt.id),
           ),
@@ -58,16 +64,17 @@ class MultipleAnswerWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.all(12),
+        Padding(
+          padding: const EdgeInsets.all(12),
           child: Text(
             'Pilih semua jawaban yang benar',
             style: TextStyle(
               fontStyle: FontStyle.italic,
-              color: Colors.grey,
+              color: isDarkMode ? Colors.grey.shade300 : Colors.grey,
             ),
           ),
         ),
@@ -86,7 +93,12 @@ class MultipleAnswerWidget extends StatelessWidget {
                   onChanged: (value) {
                     notifier.toggleMultipleOption(question.id, opt.id);
                   },
-                  title: Text(opt.text),
+                  title: Text(
+                    opt.text,
+                    style: TextStyle(
+                      color: isDarkMode ? Colors.white : Colors.black,
+                    ),
+                  ),
                   tileColor: selected ? Colors.green.shade50 : null,
                   controlAffinity: ListTileControlAffinity.leading,
                 ),
@@ -144,6 +156,7 @@ class TrueFalseWidget extends StatelessWidget {
     Color color,
   ) {
     final selected = notifier.selectedAnswers[question.id] == value;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return SizedBox(
       width: 200,
@@ -163,7 +176,9 @@ class TrueFalseWidget extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: selected ? color : Colors.black87,
+                    color: selected
+                        ? color
+                        : (isDarkMode ? Colors.white70 : Colors.black87),
                   ),
                 ),
               ],
@@ -220,6 +235,7 @@ class YesNoWidget extends StatelessWidget {
     Color color,
   ) {
     final selected = notifier.selectedAnswers[question.id] == value;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return SizedBox(
       width: 200,
@@ -239,7 +255,9 @@ class YesNoWidget extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: selected ? color : Colors.black87,
+                    color: selected
+                        ? color
+                        : (isDarkMode ? Colors.white70 : Colors.black87),
                   ),
                 ),
               ],
@@ -285,6 +303,7 @@ class _ShortAnswerWidgetState extends State<ShortAnswerWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -306,7 +325,8 @@ class _ShortAnswerWidgetState extends State<ShortAnswerWidget> {
               hintText: 'Ketik jawaban di sini...',
               border: const OutlineInputBorder(),
               filled: true,
-              fillColor: Colors.grey.shade50,
+              fillColor:
+                  isDarkMode ? Colors.grey.shade800 : Colors.grey.shade50,
             ),
             onChanged: (value) {
               widget.notifier.setTextAnswer(widget.question.id, value);
@@ -352,6 +372,7 @@ class _EssayWidgetState extends State<EssayWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -376,7 +397,8 @@ class _EssayWidgetState extends State<EssayWidget> {
                 hintText: 'Ketik jawaban Anda di sini...',
                 border: const OutlineInputBorder(),
                 filled: true,
-                fillColor: Colors.grey.shade50,
+                fillColor:
+                    isDarkMode ? Colors.grey.shade800 : Colors.grey.shade50,
               ),
               onChanged: (value) {
                 widget.notifier.setTextAnswer(widget.question.id, value);

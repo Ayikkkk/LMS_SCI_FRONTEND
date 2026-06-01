@@ -1,6 +1,7 @@
 //lib/features/auth/presentation/change_password_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/constants/error_messages.dart';
 import '../domain/auth_notifier.dart';
 
 class ChangePasswordScreen extends ConsumerStatefulWidget {
@@ -11,8 +12,7 @@ class ChangePasswordScreen extends ConsumerStatefulWidget {
       _ChangePasswordScreenState();
 }
 
-class _ChangePasswordScreenState
-    extends ConsumerState<ChangePasswordScreen> {
+class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
   final _formKey = GlobalKey<FormState>();
 
   final _oldCtrl = TextEditingController();
@@ -46,7 +46,7 @@ class _ChangePasswordScreenState
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text(ErrorMessages.fromException(e))),
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -100,36 +100,26 @@ class _ChangePasswordScreenState
                     controller: _oldCtrl,
                     label: 'Kata sandi lama',
                     hide: _hideOld,
-                    toggle: () =>
-                        setState(() => _hideOld = !_hideOld),
+                    toggle: () => setState(() => _hideOld = !_hideOld),
                   ),
                   const SizedBox(height: 16),
-
                   _passwordField(
                     controller: _newCtrl,
                     label: 'Kata sandi baru',
                     hide: _hideNew,
-                    toggle: () =>
-                        setState(() => _hideNew = !_hideNew),
-                    helper:
-                        'Minimal 8 karakter ya ✨',
+                    toggle: () => setState(() => _hideNew = !_hideNew),
+                    helper: 'Minimal 8 karakter ya ✨',
                   ),
                   const SizedBox(height: 16),
-
                   _passwordField(
                     controller: _confirmCtrl,
                     label: 'Ulangi kata sandi baru',
                     hide: _hideConfirm,
-                    toggle: () =>
-                        setState(() => _hideConfirm = !_hideConfirm),
+                    toggle: () => setState(() => _hideConfirm = !_hideConfirm),
                     validator: (v) =>
-                        v != _newCtrl.text
-                            ? 'Kata sandi belum sama'
-                            : null,
+                        v != _newCtrl.text ? 'Kata sandi belum sama' : null,
                   ),
-
                   const SizedBox(height: 28),
-
                   SizedBox(
                     width: double.infinity,
                     height: 48,
@@ -137,8 +127,7 @@ class _ChangePasswordScreenState
                       onPressed: _loading ? null : _submit,
                       style: ElevatedButton.styleFrom(
                         shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       child: _loading
@@ -188,9 +177,7 @@ class _ChangePasswordScreenState
         ),
       ),
       validator: validator ??
-          (v) => v == null || v.isEmpty
-              ? 'Tidak boleh kosong'
-              : null,
+          (v) => v == null || v.isEmpty ? 'Tidak boleh kosong' : null,
     );
   }
 }

@@ -5,17 +5,17 @@ import '../../domain/providers/online_meeting_provider.dart';
 import 'jitsi_helper.dart';
 import '../../../../scaffold_messenger_key.dart';
 import '../../../../navigation_service.dart';
+import '../../../../core/constants/error_messages.dart';
+import '../../../../core/widgets/error_widget.dart';
 
 class OnlineClassScreen extends ConsumerStatefulWidget {
   const OnlineClassScreen({super.key});
 
   @override
-  ConsumerState<OnlineClassScreen> createState() =>
-      _OnlineClassScreenState();
+  ConsumerState<OnlineClassScreen> createState() => _OnlineClassScreenState();
 }
 
-class _OnlineClassScreenState
-    extends ConsumerState<OnlineClassScreen> {
+class _OnlineClassScreenState extends ConsumerState<OnlineClassScreen> {
   Timer? _timer;
 
   @override
@@ -50,11 +50,9 @@ class _OnlineClassScreenState
     }
 
     if (state.error != null) {
-      return Center(
-        child: Text(
-          state.error!,
-          style: const TextStyle(color: Colors.red),
-        ),
+      return AppErrorWidget(
+        message: state.error!,
+        onRetry: _refreshMeetings,
       );
     }
 
@@ -76,8 +74,7 @@ class _OnlineClassScreenState
             child: ListTile(
               title: Text(
                 meeting.title,
-                style:
-                    const TextStyle(fontWeight: FontWeight.bold),
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               subtitle: Text(
                 "Mulai: ${meeting.startTime != null ? meeting.startTime!.toLocal() : '-'}"
@@ -90,18 +87,14 @@ class _OnlineClassScreenState
                       ),
                       child: const Text("LIVE"),
                       onPressed: () async {
-                        final notifier = ref.read(
-                            onlineMeetingProvider.notifier);
+                        final notifier =
+                            ref.read(onlineMeetingProvider.notifier);
 
                         try {
-                          final result =
-                              await notifier.joinMeeting(meeting.id);
+                          final result = await notifier.joinMeeting(meeting.id);
 
                           // 🚨 NAVIGASI AMAN (TANPA CONTEXT)
-                          NavigationService
-                              .instance
-                              .navigatorKey
-                              .currentState
+                          NavigationService.instance.navigatorKey.currentState
                               ?.push(
                             MaterialPageRoute(
                               builder: (_) => JitsiMeetingPage(
@@ -111,10 +104,9 @@ class _OnlineClassScreenState
                             ),
                           );
                         } catch (e) {
-                          scaffoldMessengerKey.currentState
-                              ?.showSnackBar(
+                          scaffoldMessengerKey.currentState?.showSnackBar(
                             SnackBar(
-                              content: Text(e.toString()),
+                              content: Text(ErrorMessages.fromException(e)),
                             ),
                           );
                         }
@@ -147,12 +139,10 @@ class JitsiMeetingPage extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<JitsiMeetingPage> createState() =>
-      _JitsiMeetingPageState();
+  ConsumerState<JitsiMeetingPage> createState() => _JitsiMeetingPageState();
 }
 
-class _JitsiMeetingPageState
-    extends ConsumerState<JitsiMeetingPage> {
+class _JitsiMeetingPageState extends ConsumerState<JitsiMeetingPage> {
   bool _joined = false;
   bool _hasLeft = false;
 
@@ -176,15 +166,10 @@ class _JitsiMeetingPageState
     if (_hasLeft) return;
     _hasLeft = true;
 
-    final notifier =
-        ref.read(onlineMeetingProvider.notifier);
+    final notifier = ref.read(onlineMeetingProvider.notifier);
     await notifier.leaveMeeting(widget.meetingId);
 
-    NavigationService
-        .instance
-        .navigatorKey
-        .currentState
-        ?.maybePop();
+    NavigationService.instance.navigatorKey.currentState?.maybePop();
   }
 
   @override

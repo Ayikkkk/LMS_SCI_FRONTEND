@@ -9,12 +9,16 @@ class AssignmentModel {
   final DateTime? dueDate; // nullable — tugas mungkin tidak punya deadline
 
   /// Status
+  final int? taskId;
   final bool isSubmitted;
   final String status;
   final Color statusColor;
 
   /// File yang dikirim siswa
+  final String? studentDescription;
   final String? studentAttachment;
+  final DateTime? submittedAt;
+  final DateTime? submissionUpdatedAt;
 
   final String? link;
   final String? attachment;
@@ -28,10 +32,14 @@ class AssignmentModel {
     required this.title,
     this.description,
     this.dueDate,
+    this.taskId,
     required this.isSubmitted,
     required this.status,
     required this.statusColor,
+    this.studentDescription,
     this.studentAttachment,
+    this.submittedAt,
+    this.submissionUpdatedAt,
     required this.point,
     this.link,
     this.attachment,
@@ -69,6 +77,18 @@ class AssignmentModel {
       studentAttachment = json['student_attachment'];
     }
 
+    DateTime? submittedAt;
+    DateTime? submissionUpdatedAt;
+    try {
+      if (json['submitted_at'] != null) {
+        submittedAt = DateTime.parse(json['submitted_at'].toString()).toLocal();
+      }
+      if (json['submission_updated_at'] != null) {
+        submissionUpdatedAt =
+            DateTime.parse(json['submission_updated_at'].toString()).toLocal();
+      }
+    } catch (_) {}
+
     /// Tambahan
     final String? link = json['link'];
     final String? attachment = json['attachment'];
@@ -99,11 +119,17 @@ class AssignmentModel {
       title: json['title'] ?? '-',
       description: json['description'],
       dueDate: dueDate,
+      taskId: json['task_id'] is int
+          ? json['task_id'] as int
+          : int.tryParse('${json['task_id'] ?? ''}'),
       isSubmitted: isSubmitted,
       status: status,
       statusColor: color,
       point: pointDisplay,
+      studentDescription: json['student_description']?.toString(),
       studentAttachment: studentAttachment,
+      submittedAt: submittedAt,
+      submissionUpdatedAt: submissionUpdatedAt,
       link: link,
       attachment: attachment,
       embed: embed,
@@ -112,4 +138,7 @@ class AssignmentModel {
 
   bool get isLate =>
       !isSubmitted && dueDate != null && dueDate!.isBefore(DateTime.now());
+
+  bool get canEditSubmission =>
+      isSubmitted && (dueDate == null || dueDate!.isAfter(DateTime.now()));
 }

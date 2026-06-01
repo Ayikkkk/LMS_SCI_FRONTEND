@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/widgets/attachment_file_widget.dart';
+import '../../../../core/constants/error_messages.dart';
 import '../../../../core/widgets/error_widget.dart';
 import '../../../../core/widgets/video_embed_widget.dart';
 import '../../../auth/domain/auth_notifier.dart';
@@ -103,7 +104,7 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
       error: (e, _) => Scaffold(
         appBar: AppBar(title: const Text('Detail Tugas')),
         body: AppErrorWidget(
-          message: 'Gagal memuat detail tugas',
+          message: ErrorMessages.fromException(e),
           onRetry: () =>
               ref.invalidate(assignmentDetailProvider(widget.assignmentId)),
         ),
@@ -111,15 +112,17 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
       data: (assignment) {
         final score = _parsePoint(assignment.point);
         final canSubmit = !assignment.isSubmitted && !assignment.isLate;
+        final canEdit = assignment.canEditSubmission;
 
         return Scaffold(
           appBar: AppBar(
             title: const Text('Detail Tugas'),
             centerTitle: true,
           ),
-          // Tombol kumpulkan selalu terlihat di bawah
-          bottomNavigationBar: canSubmit
+          bottomNavigationBar: canSubmit || canEdit
               ? _SubmitBar(
+                  label: canEdit ? 'Edit Jawaban' : 'Kumpulkan Tugas',
+                  icon: canEdit ? Icons.edit_rounded : Icons.upload_rounded,
                   onTap: () async {
                     final result = await Navigator.push(
                       context,
@@ -128,6 +131,9 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
                           assignmentId: assignment.id,
                           assignmentTitle: assignment.title,
                           isSubmitted: assignment.isSubmitted,
+                          isEditing: canEdit,
+                          initialDescription: assignment.studentDescription,
+                          currentAttachmentName: assignment.studentAttachment,
                         ),
                       ),
                     );
@@ -226,14 +232,7 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
                         ],
 
                         // ── Status pengumpulan ───────────────────
-                        if (assignment.isSubmitted)
-                          _StatusBanner(
-                            text: score != null
-                                ? 'Tugas sudah dinilai ✔️'
-                                : 'Menunggu penilaian guru ⏳',
-                            color: score != null ? Colors.green : Colors.orange,
-                          )
-                        else if (assignment.isLate)
+                        if (!assignment.isSubmitted && assignment.isLate)
                           const _StatusBanner(
                             text: 'Batas waktu sudah terlewat ❌',
                             color: Colors.redAccent,
@@ -241,7 +240,73 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
 
                         const SizedBox(height: 24),
 
-                        // ── Komentar ─────────────────────────────
+                        // ── Status pengumpulan (simplified) ─────────────────────────────
+                        // Hanya tampil status, detail jawaban lihat di submit_task_screen
+                        if (assignment.isSubmitted) ...[
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? Colors.grey[850]
+                                  : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Colors.grey[700]!
+                                    : Colors.grey[300]!,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      score != null
+                                          ? Icons.check_circle
+                                          : Icons.schedule,
+                                      color: score != null
+                                          ? Colors.green
+                                          : Colors.orange,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        score != null
+                                            ? 'Jawaban Anda telah dinilai'
+                                            : 'Jawaban Anda menunggu penilaian guru',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: score != null
+                                              ? Colors.green
+                                              : Colors.orange,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (canEdit) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Klik "Edit Jawaban" untuk melihat dan mengubah jawaban Anda.',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+
                         _SectionLabel('Komentar'),
                         const SizedBox(height: 8),
                         student == null
@@ -529,7 +594,14 @@ class _LinkButton extends StatelessWidget {
 
 class _SubmitBar extends StatelessWidget {
   final VoidCallback onTap;
-  const _SubmitBar({required this.onTap});
+  final String label;
+  final IconData icon;
+
+  const _SubmitBar({
+    required this.onTap,
+    required this.label,
+    required this.icon,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -538,10 +610,10 @@ class _SubmitBar extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
         child: ElevatedButton.icon(
           onPressed: onTap,
-          icon: const Icon(Icons.upload_rounded),
-          label: const Text(
-            'Kumpulkan Tugas',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          icon: Icon(icon),
+          label: Text(
+            label,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           style: ElevatedButton.styleFrom(
             minimumSize: const Size(double.infinity, 52),

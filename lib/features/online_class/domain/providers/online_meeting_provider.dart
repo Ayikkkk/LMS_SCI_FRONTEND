@@ -3,6 +3,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/online_meeting_model.dart';
 import '../../data/repository/online_meeting_repository.dart';
+import '../../../../core/constants/error_messages.dart';
 import '../../../../core/network/api_client.dart';
 
 /// =======================
@@ -102,7 +103,7 @@ class OnlineMeetingNotifier extends StateNotifier<OnlineMeetingState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: ErrorMessages.fromException(e),
       );
     }
   }
@@ -119,7 +120,7 @@ class OnlineMeetingNotifier extends StateNotifier<OnlineMeetingState> {
 
       return result;
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: ErrorMessages.fromException(e));
       rethrow; // BIAR UI bisa show dialog/snackbar
     }
   }
@@ -130,7 +131,7 @@ class OnlineMeetingNotifier extends StateNotifier<OnlineMeetingState> {
       await repository.leaveMeeting(meetingId);
       await loadMeetings();
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: ErrorMessages.fromException(e));
     }
   }
 

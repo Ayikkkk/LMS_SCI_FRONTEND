@@ -1,5 +1,6 @@
 // lib/features/profile/data/profile_repository.dart
 import 'package:dio/dio.dart';
+import '../../../core/constants/error_messages.dart';
 import '../../auth/data/repository/auth_repository.dart';
 
 class ProfileRepository {
@@ -12,14 +13,20 @@ class ProfileRepository {
     final token = await _authRepo.getToken();
     if (token == null) throw Exception("Token tidak ditemukan");
 
-    final response = await _dio.get(
-      '/student/profile',
-      options: Options(headers: {
-        "Authorization": "Bearer $token",
-      }),
-    );
+    try {
+      final response = await _dio.get(
+        '/student/profile',
+        options: Options(headers: {
+          "Authorization": "Bearer $token",
+        }),
+      );
 
-    return response.data;
+      return response.data;
+    } on DioException catch (e) {
+      throw Exception(ErrorMessages.fromDioException(e));
+    } catch (_) {
+      throw Exception(ErrorMessages.unknownError);
+    }
   }
 
   /// Update profile via POST ke /profile/update (multipart/form-data).

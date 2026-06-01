@@ -1,4 +1,4 @@
-import '../../../../core/network/api_client.dart';
+import '../../../../core/utils/url_helper.dart';
 
 class PostChildComment {
   final int id;
@@ -29,23 +29,11 @@ class PostChildComment {
     final student = json['student'];
     final user = json['user'];
 
-    final rawPhoto = student?['photo'] ??
+    final rawPhoto = json['author_photo'] ??
+        student?['photo'] ??
         student?['photo_url'] ??
-        user?['photo'] ??
         user?['img'] ??
-        json['author_photo'];
-
-    String resolvedPhoto;
-    if (rawPhoto != null) {
-      if (rawPhoto.startsWith('http')) {
-        resolvedPhoto = rawPhoto;
-      } else {
-        resolvedPhoto =
-            "$apiHost/storage/${rawPhoto.replaceAll(RegExp(r'^/+'), '')}";
-      }
-    } else {
-      resolvedPhoto = "https://ui-avatars.com/api/?name=User";
-    }
+        user?['photo'];
 
     return PostChildComment(
       id: json['id'],
@@ -57,7 +45,7 @@ class PostChildComment {
           user?['name'] ??
           json['author_name'] ??
           "Tidak diketahui",
-      authorPhoto: resolvedPhoto,
+      authorPhoto: sanitizeMediaUrl(rawPhoto?.toString()) ?? '',
       isUser: json['is_user'] == true || json['is_user'] == 1,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'])

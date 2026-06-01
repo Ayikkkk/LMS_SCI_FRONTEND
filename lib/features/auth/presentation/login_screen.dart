@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/constants/error_messages.dart';
 import '../domain/auth_notifier.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -57,9 +58,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: Colors.red,
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-          ),
+          content: Text(ErrorMessages.fromException(e)),
         ),
       );
     }
@@ -98,7 +97,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 30),
-
                 Card(
                   elevation: 10,
                   shape: RoundedRectangleBorder(
@@ -194,7 +192,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 30),
               ],
             ),

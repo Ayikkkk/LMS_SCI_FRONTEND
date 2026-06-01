@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../../../core/constants/error_messages.dart';
 import '../../../../core/network/api_client.dart';
 
 class AuthRepository {
@@ -34,8 +35,10 @@ class AuthRepository {
 
       return false;
     } on DioException catch (e) {
-      final message =
-          e.response?.data?['message'] ?? 'Login gagal';
+      final message = ErrorMessages.fromDioException(
+        e,
+        fallback: 'Login gagal',
+      );
       throw Exception(message);
     }
   }
@@ -55,26 +58,42 @@ class AuthRepository {
         'new_password_confirmation': confirmPassword,
       });
     } on DioException catch (e) {
-      final message =
-          e.response?.data?['message'] ?? 'Gagal mengubah password';
+      final message = ErrorMessages.fromDioException(
+        e,
+        fallback: 'Gagal mengubah password',
+      );
       throw Exception(message);
     }
   }
 
   /// -----------------------
   /// GET TOKEN
+  /// Jika secure storage gagal decrypt (misal setelah reinstall/clear data),
+  /// hapus data korup dan return null agar user diminta login ulang.
   /// -----------------------
   Future<String?> getToken() async {
-    return await storage.read(key: 'auth_token');
+    try {
+      return await storage.read(key: 'auth_token');
+    } catch (_) {
+      // Data terenkripsi korup — hapus semua dan minta login ulang
+      try {
+        await storage.deleteAll();
+      } catch (_) {}
+      return null;
+    }
   }
 
   /// -----------------------
   /// GET STUDENT DATA
   /// -----------------------
   Future<Map<String, dynamic>?> getStudentData() async {
-    final raw = await storage.read(key: 'student_data');
-    if (raw == null) return null;
-    return jsonDecode(raw);
+    try {
+      final raw = await storage.read(key: 'student_data');
+      if (raw == null) return null;
+      return jsonDecode(raw);
+    } catch (_) {
+      return null;
+    }
   }
 
   /// -----------------------

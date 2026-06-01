@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/widgets/attachment_file_widget.dart';
+import '../../../../core/constants/error_messages.dart';
 import '../../../../core/widgets/error_widget.dart';
 import '../../../../core/widgets/video_embed_widget.dart';
 import '../../../auth/domain/auth_notifier.dart';
@@ -79,7 +80,7 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen>
       error: (e, _) => Scaffold(
         appBar: AppBar(title: const Text('Detail Materi')),
         body: AppErrorWidget(
-          message: 'Gagal memuat detail materi',
+          message: ErrorMessages.fromException(e),
           onRetry: () =>
               ref.invalidate(materialDetailProvider(widget.materialId)),
         ),

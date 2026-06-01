@@ -33,7 +33,7 @@ class CourseRepository {
         null,
         'CourseRepository',
       );
-      throw Exception(ErrorMessages.fetchMaterialsFailed);
+      throw Exception(ErrorMessages.fromDioException(e));
     }
   }
 
@@ -56,7 +56,7 @@ class CourseRepository {
         null,
         'CourseRepository',
       );
-      throw Exception(ErrorMessages.fetchAssignmentsFailed);
+      throw Exception(ErrorMessages.fromDioException(e));
     }
   }
 
@@ -73,7 +73,7 @@ class CourseRepository {
           data;
 
       if (materialJson == null) {
-        throw Exception('Data materi tidak ditemukan dalam respons');
+        throw Exception(ErrorMessages.unknownError);
       }
 
       return CourseMaterialModel.fromJson(materialJson as Map<String, dynamic>);
@@ -84,7 +84,7 @@ class CourseRepository {
         null,
         'CourseRepository',
       );
-      throw Exception(ErrorMessages.fetchMaterialDetailFailed);
+      throw Exception(ErrorMessages.fromDioException(e));
     }
   }
 
@@ -103,7 +103,7 @@ class CourseRepository {
         null,
         'CourseRepository',
       );
-      throw Exception(ErrorMessages.fetchAssignmentDetailFailed);
+      throw Exception(ErrorMessages.fromDioException(e));
     }
   }
 }

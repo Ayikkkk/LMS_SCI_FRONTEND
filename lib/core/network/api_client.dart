@@ -11,11 +11,11 @@ import '../utils/logger.dart';
 String get apiHost => EnvironmentConfig.apiHost;
 String get apiBaseUrl => EnvironmentConfig.apiBaseUrl;
 
+// Dio dibuat tanpa baseUrl dulu — akan di-set saat configureDio() dipanggil
 final Dio dio = Dio(
   BaseOptions(
-    baseUrl: apiBaseUrl,
-    connectTimeout: EnvironmentConfig.connectTimeout,
-    receiveTimeout: EnvironmentConfig.receiveTimeout,
+    connectTimeout: const Duration(seconds: 30),
+    receiveTimeout: const Duration(seconds: 30),
     headers: {
       'Accept': 'application/json',
     },
@@ -77,6 +77,11 @@ class AuthExpiredInterceptor extends Interceptor {
 
 //  Configure Dio with interceptors
 Future<void> configureDio({void Function()? onUnauthorized}) async {
+  // Set baseUrl dan timeout SETELAH EnvironmentConfig.initialize() dipanggil
+  dio.options.baseUrl = EnvironmentConfig.apiBaseUrl;
+  dio.options.connectTimeout = EnvironmentConfig.connectTimeout;
+  dio.options.receiveTimeout = EnvironmentConfig.receiveTimeout;
+
   dio.interceptors.clear();
   dio.interceptors.add(TokenInterceptor());
 

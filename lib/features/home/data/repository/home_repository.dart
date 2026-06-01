@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_client.dart';
+import '../../../../core/constants/error_messages.dart';
 import '../models/dashboard_model.dart';
 import '../../../course/data/models/assignment_model.dart';
 
@@ -36,11 +37,9 @@ class HomeRepository {
       // Delegasikan parsing ke DashboardModel
       return DashboardModel.fromJson(data);
     } on DioException catch (e) {
-      final message =
-          e.response?.data['message'] ?? e.message ?? 'Unknown error';
-      throw Exception('Dashboard API Error: $message');
+      throw Exception(ErrorMessages.fromDioException(e));
     } catch (e) {
-      throw Exception('Dashboard Parsing Error: $e');
+      throw Exception(ErrorMessages.unknownError);
     }
   }
 
@@ -58,11 +57,9 @@ class HomeRepository {
 
       return dataList;
     } on DioException catch (e) {
-      final message =
-          e.response?.data['message'] ?? e.message ?? 'Unknown error';
-      throw Exception('Assignments API Error: $message');
+      throw Exception(ErrorMessages.fromDioException(e));
     } catch (e) {
-      throw Exception('Assignments Parsing Error: $e');
+      throw Exception(ErrorMessages.unknownError);
     }
   }
 }

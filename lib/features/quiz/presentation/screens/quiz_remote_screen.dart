@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/quiz_notifier.dart';
 import '../providers/quiz_provider.dart';
 import '../../../../navigation_service.dart';
+import '../../../../core/widgets/error_widget.dart';
 import '../screens/quiz_screen.dart';
 
 class QuizRemoteScreen extends ConsumerStatefulWidget {
@@ -94,6 +95,15 @@ class _QuizRemoteScreenState extends ConsumerState<QuizRemoteScreen> {
   }
 
   Widget _buildPreview(BuildContext context, QuizNotifier notifier) {
+    if (notifier.error != null && !notifier.loading) {
+      return AppErrorWidget(
+        message: notifier.error!,
+        onRetry: () => ref.read(quizNotifierProvider).loadQuiz(
+              exerciseId: widget.exerciseId,
+            ),
+      );
+    }
+
     final alreadyDone = notifier.alreadyDone;
 
     return Center(
@@ -146,17 +156,10 @@ class _QuizRemoteScreenState extends ConsumerState<QuizRemoteScreen> {
                   ),
                   child: Text(
                     alreadyDone ? "Lihat Nilai" : "Mulai Quiz",
+                    style: const TextStyle(color: Colors.white),
                   ),
                 ),
               ),
-            if (notifier.error != null) ...[
-              const SizedBox(height: 16),
-              Text(
-                notifier.error!,
-                style: const TextStyle(color: Colors.red),
-                textAlign: TextAlign.center,
-              ),
-            ],
           ],
         ),
       ),

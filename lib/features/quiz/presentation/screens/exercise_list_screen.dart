@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 
 import '../../../../core/network/api_client.dart';
+import '../../../../core/constants/error_messages.dart';
+import '../../../../core/widgets/error_widget.dart';
 import '../../../../core/utils/logger.dart';
 import 'quiz_remote_screen.dart';
 
@@ -58,7 +60,7 @@ class _ExerciseListScreenState extends ConsumerState<ExerciseListScreen> {
       });
     } catch (e, st) {
       setState(() {
-        _error = e.toString();
+        _error = ErrorMessages.fromException(e);
       });
       AppLogger.error('Error fetch exercises', e, st, 'ExerciseListScreen');
     } finally {
@@ -76,7 +78,7 @@ class _ExerciseListScreenState extends ConsumerState<ExerciseListScreen> {
     // Status badge
     Widget? badge;
     if (isPending) {
-      badge = _StatusBadge(
+      badge = const _StatusBadge(
         label: 'Menunggu Nilai',
         color: Colors.orange,
         icon: Icons.pending_outlined,
@@ -88,7 +90,7 @@ class _ExerciseListScreenState extends ConsumerState<ExerciseListScreen> {
         icon: Icons.check_circle_outline,
       );
     } else if (isDone) {
-      badge = _StatusBadge(
+      badge = const _StatusBadge(
         label: 'Sudah Dikerjakan',
         color: Colors.green,
         icon: Icons.check_circle_outline,
@@ -150,18 +152,9 @@ class _ExerciseListScreenState extends ConsumerState<ExerciseListScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text("Error: $_error"),
-                      const SizedBox(height: 10),
-                      ElevatedButton(
-                        onPressed: _fetchExercises,
-                        child: const Text("Coba lagi"),
-                      ),
-                    ],
-                  ),
+              ? AppErrorWidget(
+                  message: _error!,
+                  onRetry: _fetchExercises,
                 )
               : ListView.separated(
                   itemCount: _exercises.length,

@@ -7,6 +7,8 @@ import '../../../auth/domain/auth_notifier.dart';
 import '../../../laporan_harian/presentation/screens/laporan_harian_screen.dart';
 import '../screens/profile_detail_screen.dart';
 import '../../../auth/presentation/change_password_screen.dart';
+import '../../../../core/constants/error_messages.dart';
+import '../../../../core/widgets/error_widget.dart';
 
 // THEME PROVIDER
 import '../../../../core/theme/theme_notifier.dart';
@@ -29,7 +31,10 @@ class ProfileScreen extends ConsumerWidget {
       color: Theme.of(context).scaffoldBackgroundColor,
       child: profileData.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text("Gagal memuat data profil: $e")),
+        error: (e, _) => AppErrorWidget(
+          message: ErrorMessages.fromException(e),
+          onRetry: () => ref.invalidate(profileDataProvider),
+        ),
         data: (student) {
           final guru = student.guru;
 
@@ -184,7 +189,19 @@ class ProfileScreen extends ConsumerWidget {
     if (photoUrl != null && photoUrl.isNotEmpty) {
       avatar = CircleAvatar(
         radius: 32,
-        backgroundImage: NetworkImage(photoUrl),
+        backgroundColor: Colors.blue,
+        child: ClipOval(
+          child: Image.network(
+            photoUrl,
+            width: 64,
+            height: 64,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Text(
+              name.isNotEmpty ? name[0].toUpperCase() : "?",
+              style: const TextStyle(color: Colors.white, fontSize: 20),
+            ),
+          ),
+        ),
       );
     } else {
       avatar = CircleAvatar(

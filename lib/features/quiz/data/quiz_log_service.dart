@@ -4,17 +4,21 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/services/device_info_service.dart';
 import '../../../core/utils/logger.dart';
 import '../../auth/domain/auth_notifier.dart';
 
 final quizLogServiceProvider = Provider<QuizLogService>((ref) {
   final dio = ref.read(apiClientProvider);
-  return QuizLogService(dio: dio, ref: ref);
+  final deviceInfoService = ref.read(deviceInfoServiceProvider);
+  return QuizLogService(
+      dio: dio, ref: ref, deviceInfoService: deviceInfoService);
 });
 
 class QuizLogService {
   final Dio dio;
   final Ref ref;
+  final DeviceInfoService deviceInfoService;
 
   static const int _maxRetries = 2;
   static const Duration _retryDelay = Duration(seconds: 2);
@@ -23,7 +27,14 @@ class QuizLogService {
   // agar tidak terjadi double log
   final Set<String> _submittedExercises = {};
 
-  QuizLogService({required this.dio, required this.ref});
+  // Cache device info agar tidak fetch ulang setiap event
+  String? _deviceInfo;
+
+  QuizLogService({
+    required this.dio,
+    required this.ref,
+    required this.deviceInfoService,
+  });
 
   /// Log quiz events (start, submit, lifecycle, etc.)
   Future<void> logEvent({
@@ -42,6 +53,9 @@ class QuizLogService {
       return;
     }
 
+    // Ambil device info — gunakan cache jika sudah ada
+    _deviceInfo ??= await deviceInfoService.getDeviceInfo();
+
     final payload = {
       'student_id': studentId,
       'exercise_id': exerciseId,
@@ -49,6 +63,7 @@ class QuizLogService {
       'duration_seconds': durationInSeconds,
       'suspicious_flag': suspiciousFlag ? 1 : 0,
       'timestamp': timestamp.toIso8601String(),
+      'device_info': _deviceInfo,
     };
 
     AppLogger.debug(

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
+import '../../../../core/constants/error_messages.dart';
+import '../../../../core/widgets/error_widget.dart';
 import '../../domain/providers/comment_provider.dart';
 import '../../../auth/data/models/student_model.dart';
 
@@ -33,7 +35,10 @@ class CommentListWidget extends ConsumerWidget {
 
     return commentState.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => const Center(child: Text("Gagal memuat komentar")),
+      error: (e, _) => AppErrorWidget.inline(
+        message: ErrorMessages.fromException(e),
+        onRetry: () => notifier.loadComments(postId),
+      ),
       data: (comments) => Column(
         children: comments.map((comment) {
           final isOwner = comment.studentId == currentUser.id;
@@ -52,12 +57,19 @@ class CommentListWidget extends ConsumerWidget {
               children: [
                 CircleAvatar(
                   radius: 18,
-                  backgroundImage: comment.authorPhoto != null
-                      ? NetworkImage(comment.authorPhoto!)
-                      : null,
-                  child: comment.authorPhoto == null
-                      ? const Icon(Icons.person)
-                      : null,
+                  backgroundColor: Colors.grey[300],
+                  child: comment.authorPhoto != null
+                      ? ClipOval(
+                          child: Image.network(
+                            comment.authorPhoto!,
+                            width: 36,
+                            height: 36,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                const Icon(Icons.person, size: 18),
+                          ),
+                        )
+                      : const Icon(Icons.person),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -206,12 +218,20 @@ class CommentListWidget extends ConsumerWidget {
                                 children: [
                                   CircleAvatar(
                                     radius: 14,
-                                    backgroundImage: reply.authorPhoto != null
-                                        ? NetworkImage(reply.authorPhoto!)
-                                        : null,
-                                    child: reply.authorPhoto == null
-                                        ? const Icon(Icons.person, size: 14)
-                                        : null,
+                                    backgroundColor: Colors.grey[300],
+                                    child: reply.authorPhoto.isNotEmpty
+                                        ? ClipOval(
+                                            child: Image.network(
+                                              reply.authorPhoto,
+                                              width: 28,
+                                              height: 28,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, __, ___) =>
+                                                  const Icon(Icons.person,
+                                                      size: 14),
+                                            ),
+                                          )
+                                        : const Icon(Icons.person, size: 14),
                                   ),
                                   const SizedBox(width: 8),
                                   Expanded(

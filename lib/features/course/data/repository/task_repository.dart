@@ -144,14 +144,81 @@ class TaskRepository {
         return null; // sukses
       }
 
-      return 'Server error (${response.statusCode})';
+      return ErrorMessages.unknownError;
     } on DioException catch (e) {
-      final msg = e.response?.data.toString() ?? e.message;
-      AppLogger.error(ErrorMessages.submitTaskFailed, msg, null, 'TaskRepository');
-      return '${ErrorMessages.submitTaskFailed}: $msg';
+      AppLogger.error(
+          ErrorMessages.submitTaskFailed, e, null, 'TaskRepository');
+      return ErrorMessages.fromDioException(
+        e,
+        fallback: ErrorMessages.submitTaskFailed,
+      );
     } catch (e) {
       AppLogger.error('Unknown error', e, null, 'TaskRepository');
-      return 'Error tidak diketahui: $e';
+      return ErrorMessages.unknownError;
+    }
+  }
+
+  Future<String?> updateTask({
+    required int assignmentId,
+    required String description,
+    PlatformFile? file,
+  }) async {
+    try {
+      final formData = FormData.fromMap({
+        'description': description,
+      });
+
+      if (file != null) {
+        final mime = _guessMimeTypeFromExtension(file.name);
+        final mediaType = _safeParseMimeType(mime);
+
+        if (file.bytes != null) {
+          formData.files.add(
+            MapEntry(
+              'attachment',
+              MultipartFile.fromBytes(
+                file.bytes!,
+                filename: file.name,
+                contentType: mediaType,
+              ),
+            ),
+          );
+        } else if (file.path != null) {
+          formData.files.add(
+            MapEntry(
+              'attachment',
+              await MultipartFile.fromFile(
+                file.path!,
+                filename: file.name,
+                contentType: mediaType,
+              ),
+            ),
+          );
+        } else {
+          return 'File tidak valid';
+        }
+      }
+
+      final response = await _dio.post(
+        ApiEndpoints.updateTask(assignmentId),
+        data: formData,
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        AppLogger.success('Task updated successfully', 'TaskRepository');
+        return null;
+      }
+
+      return ErrorMessages.unknownError;
+    } on DioException catch (e) {
+      AppLogger.error('Update task failed', e, null, 'TaskRepository');
+      return ErrorMessages.fromDioException(
+        e,
+        fallback: ErrorMessages.submitTaskFailed,
+      );
+    } catch (e) {
+      AppLogger.error('Unknown error', e, null, 'TaskRepository');
+      return ErrorMessages.unknownError;
     }
   }
 }

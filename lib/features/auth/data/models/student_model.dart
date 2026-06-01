@@ -1,4 +1,5 @@
 import 'guru_model.dart';
+import '../../../../core/utils/url_helper.dart';
 
 class StudentModel {
   final int id;
@@ -31,13 +32,8 @@ class StudentModel {
     this.guru,
   });
 
-  /// Paksa https:// pada URL foto.
-  /// Railway dan hosting modern selalu HTTPS dari sisi user,
-  /// tapi backend kadang return http:// karena reverse proxy.
-  static String? _sanitizePhotoUrl(String? url) {
-    if (url == null || url.isEmpty) return null;
-    return url.replaceFirst('http://', 'https://');
-  }
+  /// Sanitasi URL foto — delegasi ke helper terpusat.
+  static String? _sanitizePhotoUrl(String? url) => sanitizeMediaUrl(url);
 
   factory StudentModel.fromJson(Map<String, dynamic> json) {
     // unwrap possible { "data": { ... } } wrapper

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/constants/error_messages.dart';
 import '../../domain/providers/comment_provider.dart';
 
 class AddReplyField extends ConsumerStatefulWidget {
@@ -22,18 +23,20 @@ class _AddReplyFieldState extends ConsumerState<AddReplyField> {
     setState(() => _loading = true);
 
     try {
-      await ref.read(commentProvider.notifier)
+      await ref
+          .read(commentProvider.notifier)
           .addReply(widget.commentId, _controller.text.trim());
       _controller.clear();
-    } catch (_) {
+    } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Gagal mengirim balasan"),
+        SnackBar(
+          content: Text(ErrorMessages.fromException(e)),
           backgroundColor: Colors.red,
         ),
       );
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 

@@ -28,6 +28,10 @@ void main() async {
   // Initialize environment configuration
   EnvironmentConfig.initialize();
 
+  // Clear image cache to prevent stale https:// URLs from previous sessions
+  PaintingBinding.instance.imageCache.clear();
+  PaintingBinding.instance.imageCache.clearLiveImages();
+
   // Print configuration in debug mode
   if (EnvironmentConfig.enableDebugFeatures) {
     EnvironmentConfig.printConfig();

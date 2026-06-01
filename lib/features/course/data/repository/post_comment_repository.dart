@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_client.dart';
+import '../../../../core/constants/error_messages.dart';
 import '../models/post_comment_model.dart';
 import '../models/post_child_comment_model.dart';
 
@@ -22,8 +23,10 @@ class PostCommentRepository {
       final response = await dio.get("student/posts/$postId/comments");
       final List data = response.data['comments'] ?? [];
       return data.map((json) => PostComment.fromJson(json)).toList();
+    } on DioException catch (e) {
+      throw Exception(ErrorMessages.fromDioException(e));
     } catch (_) {
-      throw Exception("Gagal memuat komentar");
+      throw Exception(ErrorMessages.unknownError);
     }
   }
 
@@ -36,8 +39,10 @@ class PostCommentRepository {
       );
 
       return PostComment.fromJson(response.data['data']);
+    } on DioException catch (e) {
+      throw Exception(ErrorMessages.fromDioException(e));
     } catch (_) {
-      throw Exception("Gagal menambah komentar");
+      throw Exception(ErrorMessages.unknownError);
     }
   }
 
@@ -50,8 +55,10 @@ class PostCommentRepository {
       );
 
       return PostChildComment.fromJson(response.data['data']);
+    } on DioException catch (e) {
+      throw Exception(ErrorMessages.fromDioException(e));
     } catch (_) {
-      throw Exception("Gagal menambah balasan");
+      throw Exception(ErrorMessages.unknownError);
     }
   }
 

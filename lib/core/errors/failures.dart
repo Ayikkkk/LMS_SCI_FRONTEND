@@ -40,26 +40,8 @@ class ServerFailure extends Failure {
 
       case DioExceptionType.badResponse:
         final statusCode = e.response?.statusCode;
-        String message;
-
-        switch (statusCode) {
-          case 401:
-            message = ErrorMessages.unauthorized;
-            break;
-          case 404:
-            message = 'Data tidak ditemukan';
-            break;
-          case 500:
-          case 502:
-          case 503:
-            message = ErrorMessages.serverError;
-            break;
-          default:
-            message = e.response?.data['message'] ?? ErrorMessages.unknownError;
-        }
-
         return ServerFailure(
-          message: message,
+          message: ErrorMessages.fromDioException(e),
           statusCode: statusCode,
           error: e,
         );
@@ -76,7 +58,7 @@ class ServerFailure extends Failure {
 
       default:
         return ServerFailure(
-          message: e.message ?? ErrorMessages.unknownError,
+          message: ErrorMessages.fromDioException(e),
           error: e,
         );
     }
