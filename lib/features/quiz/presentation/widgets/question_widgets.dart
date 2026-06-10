@@ -1,8 +1,135 @@
 // lib/features/quiz/presentation/widgets/question_widgets.dart
 
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../../domain/models/question_model.dart';
 import '../../domain/quiz_notifier.dart';
+
+/// Render konten opsi — teks biasa atau HTML dengan gambar
+class _OptionContent extends StatelessWidget {
+  final OptionModel opt;
+
+  const _OptionContent({required this.opt});
+
+  static List<String> _extractImageUrls(String html) {
+    final regex = RegExp(r'<img[^>]+src="([^"]+)"', caseSensitive: false);
+    return regex
+        .allMatches(html)
+        .map((m) => m.group(1) ?? '')
+        .where((url) => url.isNotEmpty)
+        .toList();
+  }
+
+  static String _stripTags(String html) {
+    return html
+        .replaceAll(RegExp(r'<[^>]+>'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!opt.hasHtml) {
+      return Text(opt.text);
+    }
+
+    final html = opt.textHtml!;
+    final imageUrls = _extractImageUrls(html);
+    final text = _stripTags(html);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ...imageUrls.map((url) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: _OptionImage(url: url),
+            )),
+        if (text.isNotEmpty) Text(text),
+      ],
+    );
+  }
+}
+
+/// Gambar opsi dengan fallback
+class _OptionImage extends StatefulWidget {
+  final String url;
+  const _OptionImage({required this.url});
+
+  static final Map<String, Uint8List> _cache = {};
+
+  @override
+  State<_OptionImage> createState() => _OptionImageState();
+}
+
+class _OptionImageState extends State<_OptionImage> {
+  late Future<Uint8List?> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_OptionImage._cache.containsKey(widget.url)) {
+      _future = Future.value(_OptionImage._cache[widget.url]);
+    } else {
+      _future = _fetch();
+    }
+  }
+
+  Future<Uint8List?> _fetch() async {
+    try {
+      final client = HttpClient()
+        ..badCertificateCallback = (_, __, ___) => true;
+      client.connectionTimeout = const Duration(seconds: 8);
+      final req = await client.getUrl(Uri.parse(widget.url));
+      final res = await req.close().timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200) {
+        final bytes = <int>[];
+        await for (final chunk in res) {
+          bytes.addAll(chunk);
+        }
+        client.close();
+        final data = Uint8List.fromList(bytes);
+        _OptionImage._cache[widget.url] = data;
+        return data;
+      }
+      client.close();
+    } catch (_) {}
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cached = _OptionImage._cache[widget.url];
+    if (cached != null) {
+      return Image.memory(cached,
+          height: 80,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => const SizedBox.shrink());
+    }
+    return FutureBuilder<Uint8List?>(
+      future: _future,
+      builder: (_, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+              height: 40,
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)));
+        }
+        if (snap.data != null) {
+          return Image.memory(snap.data!,
+              height: 80,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const SizedBox.shrink());
+        }
+        // Fallback: coba Image.network langsung
+        return Image.network(widget.url,
+            height: 80,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink());
+      },
+    );
+  }
+}
 
 /// Multiple Choice Question (Single Selection)
 class MultipleChoiceWidget extends StatelessWidget {
@@ -17,7 +144,6 @@ class MultipleChoiceWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       children: question.options.map((opt) {
@@ -31,17 +157,10 @@ class MultipleChoiceWidget extends StatelessWidget {
               value: opt.id,
               groupValue: notifier.selectedAnswers[question.id] as String?,
               onChanged: (value) {
-                if (value != null) {
-                  notifier.selectOption(question.id, value);
-                }
+                if (value != null) notifier.selectOption(question.id, value);
               },
             ),
-            title: Text(
-              opt.text,
-              style: TextStyle(
-                color: isDarkMode ? Colors.white : Colors.black,
-              ),
-            ),
+            title: _OptionContent(opt: opt),
             tileColor: selected ? Colors.blue.shade50 : null,
             onTap: () => notifier.selectOption(question.id, opt.id),
           ),
@@ -93,12 +212,7 @@ class MultipleAnswerWidget extends StatelessWidget {
                   onChanged: (value) {
                     notifier.toggleMultipleOption(question.id, opt.id);
                   },
-                  title: Text(
-                    opt.text,
-                    style: TextStyle(
-                      color: isDarkMode ? Colors.white : Colors.black,
-                    ),
-                  ),
+                  title: _OptionContent(opt: opt),
                   tileColor: selected ? Colors.green.shade50 : null,
                   controlAffinity: ListTileControlAffinity.leading,
                 ),
@@ -373,37 +487,35 @@ class _EssayWidgetState extends State<EssayWidget> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    return Padding(
-      padding: const EdgeInsets.all(16),
+    // Tambahkan padding bawah sebesar tinggi keyboard agar textarea tidak tertutup
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
             'Tulis jawaban Anda dengan lengkap:',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
           ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: TextField(
-              controller: _controller,
-              maxLength: widget.question.maxLength ?? 1000,
-              maxLines: null,
-              expands: true,
-              textAlignVertical: TextAlignVertical.top,
-              decoration: InputDecoration(
-                hintText: 'Ketik jawaban Anda di sini...',
-                border: const OutlineInputBorder(),
-                filled: true,
-                fillColor:
-                    isDarkMode ? Colors.grey.shade800 : Colors.grey.shade50,
-              ),
-              onChanged: (value) {
-                widget.notifier.setTextAnswer(widget.question.id, value);
-              },
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controller,
+            maxLength: widget.question.maxLength ?? 1000,
+            maxLines: 8,
+            minLines: 5,
+            textAlignVertical: TextAlignVertical.top,
+            decoration: InputDecoration(
+              hintText: 'Ketik jawaban Anda di sini...',
+              border: const OutlineInputBorder(),
+              filled: true,
+              fillColor:
+                  isDarkMode ? Colors.grey.shade800 : Colors.grey.shade50,
             ),
+            onChanged: (value) {
+              widget.notifier.setTextAnswer(widget.question.id, value);
+            },
           ),
         ],
       ),

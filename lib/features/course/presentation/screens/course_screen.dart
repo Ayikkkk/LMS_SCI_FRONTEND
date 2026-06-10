@@ -166,10 +166,19 @@ class _MateriListView extends ConsumerWidget {
                     item.title,
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  subtitle: Text(
-                    item.subjectName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.subjectName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (item.classroomId != null) ...[
+                        const SizedBox(height: 3),
+                        _ClassBadge(),
+                      ],
+                    ],
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
@@ -241,15 +250,25 @@ class _TugasListView extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Nama mapel kecil di atas judul
-                      Text(
-                        item.subjectName,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.subjectName,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (item.classroomId != null) ...[
+                            const SizedBox(width: 4),
+                            const _ClassBadge(),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -295,6 +314,40 @@ class _TugasListView extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+// ==========================================================
+// CLASS BADGE — ditampilkan saat post hanya untuk kelas tertentu
+// ==========================================================
+class _ClassBadge extends StatelessWidget {
+  const _ClassBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.group_outlined, size: 10, color: Colors.blue.shade700),
+          const SizedBox(width: 3),
+          Text(
+            'Kelas Ini',
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.blue.shade700,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -124,6 +124,11 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen>
                         postId: item.id,
                         fileName: item.attachment!.split('/').last,
                         fileType: item.attachment!.split('.').last,
+                        // Download langsung dari domain guru jika path mengandung subfolder
+                        // (file diupload oleh guru, bukan dari backend siswa)
+                        downloadUrl: item.attachment!.contains('/')
+                            ? 'http://guru.tak-scimediaonline.my.id/storage/${Uri.encodeFull(item.attachment!)}'
+                            : null,
                       ),
                       const SizedBox(height: 16),
                     ],

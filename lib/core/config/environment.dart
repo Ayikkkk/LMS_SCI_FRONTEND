@@ -29,7 +29,7 @@ class EnvironmentConfig {
         // Read from --dart-define=DEV_API_URL=http://192.168.x.x:8000/api/
         const devUrl = String.fromEnvironment(
           'DEV_API_URL',
-          defaultValue: 'http://192.168.101.80:8000/api/',
+          defaultValue: 'http://192.168.1.107:8000/api/',
         );
         return devUrl;
 
@@ -47,7 +47,7 @@ class EnvironmentConfig {
       case Environment.development:
         const devHost = String.fromEnvironment(
           'DEV_API_HOST',
-          defaultValue: 'http://192.168.101.80:8000',
+          defaultValue: 'http://192.168.1.107:8000',
         );
         return devHost;
 

@@ -56,6 +56,7 @@ dev_dependencies:
   flutter_lints: ^3.0.0
   mockito: ^5.4.4
   build_runner: ^2.4.8
+  flutter_launcher_icons: ^0.14.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -111,3 +112,11 @@ flutter_native_splash:
   android_gravity: center
   ios_content_mode: center
 
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/images/Logosci2.jpg"
+  min_sdk_android: 21
+  adaptive_icon_background: "#1565C0"
+  adaptive_icon_foreground: "assets/images/Logosci2.jpg"

@@ -73,9 +73,64 @@ class _ExerciseListScreenState extends ConsumerState<ExerciseListScreen> {
   Widget _buildTile(Map<String, dynamic> ex) {
     final isDone = ex['is_done'] == true;
     final isPending = ex['is_pending_review'] == true;
+    final isLocked = ex['is_locked'] == true;
     final score = ex['score'];
 
-    // Status badge
+    // Kuis terkunci — tampilkan berbeda
+    if (isLocked) {
+      return ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        leading: CircleAvatar(
+          backgroundColor: Colors.grey.shade100,
+          child:
+              Icon(Icons.lock_outline, color: Colors.grey.shade500, size: 20),
+        ),
+        title: Text(
+          ex['title'] ?? 'Ulangan',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade500,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Tipe: ${ex["exercise_type"]?["name"] ?? widget.typeName}',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.lock_outline, size: 12, color: Colors.grey.shade400),
+                const SizedBox(width: 3),
+                Text(
+                  'Belum dibuka oleh guru',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade400,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        trailing: Icon(Icons.lock, color: Colors.grey.shade300, size: 18),
+        onTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('🔒 Kuis ini belum dibuka oleh guru'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        },
+      );
+    }
+
+    // Status badge untuk kuis terbuka
     Widget? badge;
     if (isPending) {
       badge = const _StatusBadge(
@@ -137,7 +192,6 @@ class _ExerciseListScreenState extends ConsumerState<ExerciseListScreen> {
             builder: (_) => QuizRemoteScreen(exerciseId: ex['id'].toString()),
           ),
         );
-        // Refresh setelah kembali dari quiz
         _fetchExercises();
       },
     );

@@ -125,7 +125,7 @@ class ProfileScreen extends ConsumerWidget {
                   Icons.support_agent_outlined,
                   onTap: () async {
                     final uri = Uri.parse(
-                      'https://tascimediaonline-production.up.railway.app/layanan-pelanggan-pelapor',
+                      'https://tak-scimediaonline.my.id/layanan-pelanggan-pelapor',
                     );
                     if (await canLaunchUrl(uri)) {
                       await launchUrl(uri,

@@ -15,38 +15,42 @@ enum QuestionType {
 
 class OptionModel {
   final String id;
-  final String text;
+  final String text; // teks bersih (strip_tags)
+  final String? textHtml; // HTML asli dengan gambar
 
-  OptionModel({required this.id, required this.text});
+  OptionModel({required this.id, required this.text, this.textHtml});
 
   factory OptionModel.fromJson(Map<String, dynamic> json) {
     return OptionModel(
       id: json['id']?.toString() ?? '',
       text: json['text']?.toString() ?? '',
+      textHtml: json['text_html']?.toString(),
     );
   }
 
+  /// Apakah opsi ini mengandung HTML (gambar, dll.)
+  bool get hasHtml => textHtml != null && textHtml!.contains('<');
+
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'text': text,
-    };
+    return {'id': id, 'text': text};
   }
 }
 
 class QuestionModel {
   final String id;
-  final String question;
+  final String question; // teks bersih (strip_tags)
+  final String? questionHtml; // HTML asli dengan gambar
   final QuestionType type;
   final List<OptionModel> options;
   final String? correctOptionId;
   final int? timeLimitSeconds;
-  final int? maxLength; // For text answers
+  final int? maxLength;
   final bool? isRequired;
 
   QuestionModel({
     required this.id,
     required this.question,
+    this.questionHtml,
     required this.type,
     required this.options,
     this.correctOptionId,
@@ -62,6 +66,7 @@ class QuestionModel {
     return QuestionModel(
       id: json['id']?.toString() ?? '',
       question: json['question']?.toString() ?? '',
+      questionHtml: json['question_html']?.toString(),
       type: type,
       options: _parseOptions(json, type),
       correctOptionId: json['correct_option_id']?.toString(),
@@ -179,14 +184,17 @@ class QuestionModel {
     // Backend sends 'options' field as array directly
     if (json['options'] != null && json['options'] is List) {
       final optionsList = json['options'] as List;
+      final optionsHtmlList = json['options_html'] as List? ?? [];
 
-      // Debug
       AppLogger.debug(
           'Parsing ${optionsList.length} options for question ${json['id']}',
           'QuestionModel');
 
       for (int i = 0; i < optionsList.length; i++) {
         final opt = optionsList[i];
+        final htmlText =
+            i < optionsHtmlList.length ? optionsHtmlList[i].toString() : null;
+
         if (opt is Map) {
           options.add(OptionModel.fromJson(opt as Map<String, dynamic>));
         } else {
@@ -194,10 +202,11 @@ class QuestionModel {
           final optionModel = OptionModel(
             id: String.fromCharCode(97 + i), // a, b, c, d, e
             text: opt.toString(),
+            textHtml: htmlText,
           );
           options.add(optionModel);
           AppLogger.debug(
-              'Created option ${optionModel.id}: ${optionModel.text}',
+              'Created option ${optionModel.id}: ${optionModel.text} (hasHtml: ${optionModel.hasHtml})',
               'QuestionModel');
         }
       }

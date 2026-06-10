@@ -78,7 +78,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   Widget build(BuildContext context) {
     final version = VersionService.currentVersion;
-    final build = VersionService.buildNumber;
 
     return Scaffold(
       backgroundColor: const Color(0xFF1565C0),
@@ -173,7 +172,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        'V. $version - B.N. $build',
+                        'v$version',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 13,

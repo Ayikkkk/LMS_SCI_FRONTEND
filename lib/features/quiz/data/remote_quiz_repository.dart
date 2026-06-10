@@ -49,8 +49,9 @@ class RemoteQuizRepository implements IQuizRepository {
 
       // Parse options with fallback for different formats
       List<dynamic> options = [];
+      List<String> optionsHtml = []; // HTML asli untuk gambar
 
-      // Try 'options' field first (new format)
+      // Try 'options' field first (teks bersih)
       if (it['options'] != null && it['options'] is List) {
         options = (it['options'] as List)
             .map((opt) => _stripHtmlTags(opt.toString()))
@@ -58,41 +59,35 @@ class RemoteQuizRepository implements IQuizRepository {
         AppLogger.debug('Parsed options from options field: $options',
             'RemoteQuizRepository');
       }
-      // Fallback: try 'exercise_choice' field (might be JSON string or comma-separated)
+      // Fallback: try 'exercise_choice' field
       else if (it['exercise_choice'] != null) {
         final exerciseChoice = it['exercise_choice'];
 
         if (exerciseChoice is List) {
-          // Already an array
           options = exerciseChoice
               .map((opt) => _stripHtmlTags(opt.toString()))
               .toList();
-          AppLogger.debug(
-              'Parsed options from exercise_choice (array): $options',
-              'RemoteQuizRepository');
         } else if (exerciseChoice is String && exerciseChoice.isNotEmpty) {
-          // Try to parse as JSON first
           try {
             final decoded = jsonDecode(exerciseChoice);
             if (decoded is List) {
               options =
                   decoded.map((opt) => _stripHtmlTags(opt.toString())).toList();
-              AppLogger.debug(
-                  'Parsed options from exercise_choice (JSON): $options',
-                  'RemoteQuizRepository');
             }
           } catch (e) {
-            // Not JSON, try comma-separated
             options = exerciseChoice
                 .split(',')
                 .map((opt) => _stripHtmlTags(opt.trim()))
                 .where((opt) => opt.isNotEmpty)
                 .toList();
-            AppLogger.debug(
-                'Parsed options from exercise_choice (CSV): $options',
-                'RemoteQuizRepository');
           }
         }
+      }
+
+      // Parse options_html (HTML asli dengan gambar)
+      if (it['options_html'] != null && it['options_html'] is List) {
+        optionsHtml =
+            (it['options_html'] as List).map((opt) => opt.toString()).toList();
       }
 
       if (options.isEmpty) {
@@ -105,8 +100,10 @@ class RemoteQuizRepository implements IQuizRepository {
       final question = QuestionModel.fromJson({
         'id': it['id'].toString(),
         'question': questionText,
-        'type': it['type']?.toString(), // Backend already maps this
-        'options': options, // Use options array from backend
+        'question_html': it['question_html']?.toString(),
+        'options_html': optionsHtml, // HTML opsi dengan gambar
+        'type': it['type']?.toString(),
+        'options': options,
         'multiple_correct': it['multiple_correct'] ?? false,
         'allow_multiple': it['allow_multiple'] ?? false,
         'is_multiple': it['is_multiple'] ?? false,

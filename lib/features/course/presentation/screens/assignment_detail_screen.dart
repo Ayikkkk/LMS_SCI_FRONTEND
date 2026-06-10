@@ -227,6 +227,9 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
                             postId: assignment.id,
                             fileName: assignment.attachment!.split('/').last,
                             fileType: assignment.attachment!.split('.').last,
+                            downloadUrl: assignment.attachment!.contains('/')
+                                ? 'http://guru.tak-scimediaonline.my.id/storage/${Uri.encodeFull(assignment.attachment!)}'
+                                : null,
                           ),
                           const SizedBox(height: 16),
                         ],

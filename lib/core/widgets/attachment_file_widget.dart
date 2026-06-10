@@ -1,11 +1,15 @@
 import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:media_store_plus/media_store_plus.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../network/api_client.dart';
-import '../utils/file_downloader.dart';
-import '../utils/download_exporter.dart';
+import '../constants/app_constants.dart';
+import '../utils/logger.dart';
 
-class AttachmentFileWidget extends StatefulWidget {
+class AttachmentFileWidget extends ConsumerStatefulWidget {
   final int postId;
   final String fileName;
   final String fileType;
@@ -22,104 +26,134 @@ class AttachmentFileWidget extends StatefulWidget {
   });
 
   @override
-  State<AttachmentFileWidget> createState() => _AttachmentFileWidgetState();
+  ConsumerState<AttachmentFileWidget> createState() =>
+      _AttachmentFileWidgetState();
 }
 
-class _AttachmentFileWidgetState extends State<AttachmentFileWidget> {
-  File? downloadedFile;
-  bool isDownloading = false;
+class _AttachmentFileWidgetState extends ConsumerState<AttachmentFileWidget> {
+  bool _isDownloading = false;
+  bool _isDone = false;
 
-  // ==========================
-  // DOWNLOAD FILE (TANPA OPEN)
-  // ==========================
-  Future<void> _download(BuildContext context) async {
-    if (isDownloading) return;
+  String get _effectiveUrl =>
+      widget.downloadUrl ?? '/student/posts/${widget.postId}/download';
 
-    setState(() => isDownloading = true);
+  Future<void> _download() async {
+    if (_isDownloading) return;
+    setState(() => _isDownloading = true);
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
       const SnackBar(content: Text('Mengunduh file...')),
     );
 
-    final file = await FileDownloader.download(
-      dio: dio,
-      url: widget.downloadUrl ?? '/student/posts/${widget.postId}/download',
-      fileName: widget.fileName,
-    );
+    try {
+      // Simpan ke temp dulu
+      final tempDir = await getTemporaryDirectory();
+      final tempPath =
+          '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}_${widget.fileName}';
 
-    if (!mounted) return;
+      // Pilih Dio instance — URL guru domain pakai Dio baru (tanpa auth header)
+      final isExternalUrl = _effectiveUrl.startsWith('http://') ||
+          _effectiveUrl.startsWith('https://');
+      final dioToUse = isExternalUrl
+          ? Dio(BaseOptions(
+              connectTimeout: const Duration(seconds: 30),
+              receiveTimeout: const Duration(seconds: 60),
+            ))
+          : ref.read(apiClientProvider);
 
-    setState(() {
-      isDownloading = false;
-      downloadedFile = file;
-    });
-
-    if (file == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gagal mengunduh file')),
+      final response = await dioToUse.download(
+        _effectiveUrl,
+        tempPath,
+        options: Options(
+          responseType: ResponseType.bytes,
+          followRedirects: true,
+          validateStatus: (status) => status != null && status < 600,
+          headers: isExternalUrl ? {'Accept': '*/*'} : null,
+        ),
       );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('File berhasil diunduh')),
+
+      if (response.statusCode != 200) {
+        String message = 'File tidak dapat diunduh (${response.statusCode})';
+        throw Exception(message);
+      }
+
+      final tempFile = File(tempPath);
+      if (!tempFile.existsSync() || tempFile.lengthSync() == 0) {
+        throw Exception('File kosong setelah download');
+      }
+
+      // Simpan ke folder Download via MediaStore
+      MediaStore.appFolder = AppConstants.mediaStoreFolder;
+      await MediaStore.ensureInitialized();
+
+      final store = MediaStore();
+      await store.saveFile(
+        tempFilePath: tempPath,
+        dirType: DirType.download,
+        dirName: DirName.download,
+      );
+
+      // Hapus temp file jika masih ada (MediaStore mungkin sudah memindahkannya)
+      try {
+        if (tempFile.existsSync()) {
+          tempFile.deleteSync();
+        }
+      } catch (_) {
+        // Abaikan error hapus temp — file sudah di Download
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _isDownloading = false;
+        _isDone = true;
+      });
+
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('✅ ${widget.fileName} tersimpan di folder Download/LMS Student'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      AppLogger.error(
+          'Download attachment failed', e, null, 'AttachmentFileWidget');
+
+      if (!mounted) return;
+      setState(() => _isDownloading = false);
+
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Gagal mengunduh file: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
 
-  // ==========================
-  // COPY TO DOWNLOAD
-  // ==========================
-  Future<void> _copyToDownload(BuildContext context) async {
-    if (downloadedFile == null) return;
-
-    final success = await DownloadExporter.copyToDownload(downloadedFile!);
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success
-              ? 'File disalin ke Folder Download/LMS Student'
-              : 'Gagal menyalin ke Folder Download',
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ==========================
-        // DOWNLOAD BUTTON
-        // ==========================
-        ElevatedButton.icon(
-          icon: isDownloading
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.download),
-          label: Text(
-            widget.label ?? 'Unduh File (${widget.fileType.toUpperCase()})',
-          ),
-          onPressed: isDownloading ? null : () => _download(context),
-        ),
-
-        // ==========================
-        // COPY TO DOWNLOAD BUTTON
-        // ==========================
-        if (downloadedFile != null) ...[
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            icon: const Icon(Icons.folder_copy),
-            label: const Text('Salin ke Folder Download'),
-            onPressed: () => _copyToDownload(context),
-          ),
-        ],
-      ],
+    return ElevatedButton.icon(
+      icon: _isDownloading
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: Colors.white),
+            )
+          : Icon(_isDone ? Icons.check_circle_outline : Icons.download),
+      label: Text(
+        _isDone
+            ? 'Tersimpan di Download/LMS Student'
+            : (widget.label ?? 'Unduh File (${widget.fileType.toUpperCase()})'),
+      ),
+      style: _isDone
+          ? ElevatedButton.styleFrom(backgroundColor: Colors.green)
+          : null,
+      onPressed: _isDownloading ? null : _download,
     );
   }
 }

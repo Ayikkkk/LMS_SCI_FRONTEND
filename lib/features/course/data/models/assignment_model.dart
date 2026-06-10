@@ -14,6 +14,9 @@ class AssignmentModel {
   final String status;
   final Color statusColor;
 
+  /// Classroom spesifik (null = semua kelas)
+  final int? classroomId;
+
   /// File yang dikirim siswa
   final String? studentDescription;
   final String? studentAttachment;
@@ -36,6 +39,7 @@ class AssignmentModel {
     required this.isSubmitted,
     required this.status,
     required this.statusColor,
+    this.classroomId,
     this.studentDescription,
     this.studentAttachment,
     this.submittedAt,
@@ -125,6 +129,7 @@ class AssignmentModel {
       isSubmitted: isSubmitted,
       status: status,
       statusColor: color,
+      classroomId: json['classroom_id'] as int?,
       point: pointDisplay,
       studentDescription: json['student_description']?.toString(),
       studentAttachment: studentAttachment,

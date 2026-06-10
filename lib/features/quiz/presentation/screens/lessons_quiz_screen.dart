@@ -116,28 +116,93 @@ class _LessonsQuizScreenState extends ConsumerState<LessonsQuizScreen> {
                 ),
                 const SizedBox(height: 10),
                 ...types.map((t) {
+                  final total = (t["count"] ?? 0) as int;
+                  final done = (t["done_count"] ?? 0) as int;
+                  final pending = (t["pending_count"] ?? total - done) as int;
+                  final isLocked = (t["is_locked"] ?? false) as bool;
+
                   return ListTile(
                     leading: Icon(
-                      Icons.quiz,
-                      color: Theme.of(context).colorScheme.primary,
+                      isLocked ? Icons.lock_outline : Icons.quiz,
+                      color: isLocked
+                          ? Colors.grey
+                          : Theme.of(context).colorScheme.primary,
                     ),
-                    title: Text(t["name"]),
-                    subtitle: Text("${t["count"]} latihan tersedia"),
-                    onTap: () {
-                      // gunakan sheetContext untuk pop agar jelas kita tutup bottom sheet
-                      Navigator.pop(sheetContext);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ExerciseListScreen(
-                            lessonId: lesson["id"].toString(),
-                            lessonName: lesson["name"],
-                            typeId: t["id"].toString(),
-                            typeName: t["name"],
-                          ),
+                    title: Text(
+                      t["name"],
+                      style: TextStyle(color: isLocked ? Colors.grey : null),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "$total latihan tersedia",
+                          style: TextStyle(
+                              color: isLocked ? Colors.grey.shade400 : null),
                         ),
-                      );
-                    },
+                        const SizedBox(height: 4),
+                        if (isLocked)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.lock_outline,
+                                  size: 12, color: Colors.grey.shade400),
+                              const SizedBox(width: 3),
+                              Text(
+                                'Belum dibuka oleh guru',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey.shade400,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          Row(
+                            children: [
+                              _StatusChip(
+                                label: "$done selesai",
+                                color: Colors.green,
+                                icon: Icons.check_circle_outline,
+                              ),
+                              const SizedBox(width: 6),
+                              _StatusChip(
+                                label: "$pending belum",
+                                color:
+                                    pending > 0 ? Colors.orange : Colors.grey,
+                                icon: Icons.pending_outlined,
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                    isThreeLine: true,
+                    onTap: isLocked
+                        ? () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content:
+                                    Text('🔒 Kuis ini belum dibuka oleh guru'),
+                                backgroundColor: Colors.orange,
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        : () {
+                            Navigator.pop(sheetContext);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ExerciseListScreen(
+                                  lessonId: lesson["id"].toString(),
+                                  lessonName: lesson["name"],
+                                  typeId: t["id"].toString(),
+                                  typeName: t["name"],
+                                ),
+                              ),
+                            );
+                          },
                   );
                 }),
                 if (types.isEmpty)
@@ -224,6 +289,46 @@ class _LessonsQuizScreenState extends ConsumerState<LessonsQuizScreen> {
                       return _buildLessonCard(lesson);
                     },
                   ),
+      ),
+    );
+  }
+}
+
+/// Chip kecil untuk status selesai / belum
+class _StatusChip extends StatelessWidget {
+  final String label;
+  final Color color;
+  final IconData icon;
+
+  const _StatusChip({
+    required this.label,
+    required this.color,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
