@@ -41,6 +41,12 @@ class _OnlineClassScreenState extends ConsumerState<OnlineClassScreen> {
     await ref.read(onlineMeetingProvider.notifier).loadMeetings();
   }
 
+  String _formatDateTime(DateTime dt) {
+    // dt sudah local dari model (toLocal() saat parsing)
+    final two = (int n) => n.toString().padLeft(2, '0');
+    return '${dt.day}/${two(dt.month)}/${dt.year} ${two(dt.hour)}:${two(dt.minute)}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(onlineMeetingProvider);
@@ -77,7 +83,7 @@ class _OnlineClassScreenState extends ConsumerState<OnlineClassScreen> {
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               subtitle: Text(
-                "Mulai: ${meeting.startTime != null ? meeting.startTime!.toLocal() : '-'}"
+                "Mulai: ${meeting.startTime != null ? _formatDateTime(meeting.startTime!) : '-'}"
                 "\nStatus: ${meeting.status.toUpperCase()}",
               ),
               trailing: isLive
