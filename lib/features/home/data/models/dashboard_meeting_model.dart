@@ -28,7 +28,8 @@ class DashboardMeetingModel {
       platform: 'Online',
       meetingCode: json['meeting_code'] ?? '',
 
-      // 🔥 KONVERSI SEKALI: UTC → LOCAL (WIB)
+      // Backend mengirim ISO 8601 dengan timezone WIB (+07:00)
+      // DateTime.parse menghasilkan UTC DateTime, .toLocal() convert ke local device (WIB)
       startTime: DateTime.parse(rawStart).toLocal(),
 
       endTime: json['end_time'] != null

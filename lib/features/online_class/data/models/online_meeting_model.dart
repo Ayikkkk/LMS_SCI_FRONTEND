@@ -27,7 +27,9 @@ class OnlineMeetingModel {
       final s = value.toString();
       if (s.isEmpty) return null;
       final parsed = DateTime.tryParse(s);
-      // Convert to local time if parsed successfully
+      // Backend mengirim ISO 8601 dengan offset +07:00
+      // Dart parse akan menghasilkan UTC DateTime, toLocal() convert ke local device
+      // Ini benar karena device siswa berada di WIB (UTC+7)
       return parsed?.toLocal();
     }
 
