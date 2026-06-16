@@ -24,6 +24,7 @@ class _OptionContent extends StatelessWidget {
   static String _stripTags(String html) {
     return html
         .replaceAll(RegExp(r'<[^>]+>'), ' ')
+        .replaceAll(r'\/', '/') // unescape backslash-slash dari JSON
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
   }
@@ -31,7 +32,10 @@ class _OptionContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!opt.hasHtml) {
-      return Text(opt.text);
+      // Tetap strip kalau teks bersih masih mengandung tag sisa
+      final displayText =
+          opt.text.contains('<') ? _stripTags(opt.text) : opt.text;
+      return Text(displayText);
     }
 
     final html = opt.textHtml!;
