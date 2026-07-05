@@ -698,8 +698,17 @@ class _SslBypassImage extends StatefulWidget {
   final String url;
   const _SslBypassImage({super.key, required this.url});
 
-  /// Cache statis — bytes gambar yang sudah di-fetch
+  /// Cache statis dengan batas maksimal 30 gambar — cegah memory leak saat banyak soal
   static final Map<String, Uint8List> _cache = {};
+  static const int _maxCacheSize = 30;
+
+  static void _addToCache(String url, Uint8List bytes) {
+    if (_cache.length >= _maxCacheSize) {
+      // Hapus entry pertama (oldest) saat cache penuh
+      _cache.remove(_cache.keys.first);
+    }
+    _cache[url] = bytes;
+  }
 
   @override
   State<_SslBypassImage> createState() => _SslBypassImageState();
@@ -742,7 +751,7 @@ class _SslBypassImageState extends State<_SslBypassImage> {
         }
         httpClient.close();
         if (bytes.isNotEmpty) {
-          _SslBypassImage._cache[url] = Uint8List.fromList(bytes);
+          _SslBypassImage._addToCache(url, Uint8List.fromList(bytes));
           return bytes;
         }
       }

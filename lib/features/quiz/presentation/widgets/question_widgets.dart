@@ -61,7 +61,16 @@ class _OptionImage extends StatefulWidget {
   final String url;
   const _OptionImage({required this.url});
 
+  /// Cache statis dengan batas 30 gambar
   static final Map<String, Uint8List> _cache = {};
+  static const int _maxCacheSize = 30;
+
+  static void _addToCache(String url, Uint8List bytes) {
+    if (_cache.length >= _maxCacheSize) {
+      _cache.remove(_cache.keys.first);
+    }
+    _cache[url] = bytes;
+  }
 
   @override
   State<_OptionImage> createState() => _OptionImageState();
@@ -94,7 +103,7 @@ class _OptionImageState extends State<_OptionImage> {
         }
         client.close();
         final data = Uint8List.fromList(bytes);
-        _OptionImage._cache[widget.url] = data;
+        _OptionImage._addToCache(widget.url, data);
         return data;
       }
       client.close();

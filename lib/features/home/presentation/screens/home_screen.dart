@@ -44,8 +44,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    // Naikkan dari 30 detik ke 120 detik — mengurangi beban server saat banyak user
+    // Dashboard stats sudah di-cache 5 menit di backend, jadi tidak perlu refresh terlalu sering
     _dashboardTimer = Timer.periodic(
-      const Duration(seconds: 30),
+      const Duration(seconds: 120),
       (_) {
         if (_selectedIndex == 0) {
           ref.invalidate(dashboardDataProvider);
