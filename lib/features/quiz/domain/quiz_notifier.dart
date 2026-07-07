@@ -69,6 +69,9 @@ class QuizNotifier extends ChangeNotifier {
   bool _hasPendingSubmit = false;
   bool get hasPendingSubmit => _hasPendingSubmit;
 
+  // Flag untuk mencegah notifyListeners() setelah dispose()
+  bool _disposed = false;
+
   // ============ QUIZ LOCK HANDLER ============
   void startQuizLock(String exerciseId) {
     NavigationService.instance.currentExerciseId = exerciseId;
@@ -202,6 +205,10 @@ class QuizNotifier extends ChangeNotifier {
     if (_totalQuizSeconds == noTimeLimit) return;
 
     _quizTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+      if (_disposed) {
+        timer.cancel();
+        return;
+      }
       _remainingSeconds--;
 
       if (_remainingSeconds <= 0) {
@@ -210,7 +217,7 @@ class QuizNotifier extends ChangeNotifier {
         endQuizLock();
       }
 
-      notifyListeners();
+      if (!_disposed) notifyListeners();
     });
   }
 
@@ -302,10 +309,20 @@ class QuizNotifier extends ChangeNotifier {
 
   // ================= SUBMIT =================
   Future<void> submit({bool auto = false, BuildContext? context}) async {
+    // ============================================================
+    // GUARD ATOMIK — set _submitted = true SEBELUM await pertama
+    // Ini mencegah race condition saat dua panggilan submit() masuk
+    // bersamaan (misal: user tap + timer auto-submit dalam 1 frame)
+    // ============================================================
     if (_submitted || alreadyDone) return;
+    _submitted = true; // ← set di sini, bukan di akhir fungsi
+    notifyListeners(); // rebuild UI segera, tombol submit langsung disable
 
     // ⚠️ Validasi hanya berlaku untuk submit manual
     if (!auto && !allAnswered) {
+      // Rollback jika validasi gagal
+      _submitted = false;
+      notifyListeners();
       AppLogger.warning(
         'Submit blocked: Not all questions answered',
         'QuizNotifier',
@@ -337,16 +354,18 @@ class QuizNotifier extends ChangeNotifier {
 
       await Future.delayed(const Duration(milliseconds: 500));
 
-      if (submitResult['is_pending_review'] == true) {
-        _isPendingReview = true;
-        _finalScore = null;
-        AppLogger.info('Pending review mode activated', 'QuizNotifier');
-      } else {
-        final result = await repository.getResult(exerciseId: _exerciseId);
-        AppLogger.debug('Get Result: $result', 'QuizNotifier');
-        _finalScore = result?['score'] ?? 0;
-        _isPendingReview = false;
-        AppLogger.success('Final score: $_finalScore', 'QuizNotifier');
+      if (!_disposed) {
+        if (submitResult['is_pending_review'] == true) {
+          _isPendingReview = true;
+          _finalScore = null;
+          AppLogger.info('Pending review mode activated', 'QuizNotifier');
+        } else {
+          final result = await repository.getResult(exerciseId: _exerciseId);
+          AppLogger.debug('Get Result: $result', 'QuizNotifier');
+          _finalScore = result?['score'] ?? 0;
+          _isPendingReview = false;
+          AppLogger.success('Final score: $_finalScore', 'QuizNotifier');
+        }
       }
 
       // ✅ Submit berhasil — hapus cache jawaban
@@ -360,15 +379,13 @@ class QuizNotifier extends ChangeNotifier {
       await cacheService?.markPendingSubmit(_exerciseId, answersSnapshot, auto);
       _hasPendingSubmit = true;
 
-      // Tetap tandai submitted agar tidak double-submit
-      // Score 0 sementara — guru bisa koreksi manual jika perlu
+      // _submitted sudah true, _finalScore = 0 sebagai fallback sementara
       _finalScore = 0;
       _isPendingReview = false;
     }
 
-    _submitted = true;
     endQuizLock();
-    notifyListeners();
+    if (!_disposed) notifyListeners();
 
     final effectiveTotal = _totalQuizSeconds == noTimeLimit
         ? _defaultQuizSeconds
@@ -456,6 +473,7 @@ class QuizNotifier extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _quizTimer?.cancel();
     super.dispose();
   }

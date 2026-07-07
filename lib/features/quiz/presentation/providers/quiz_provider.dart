@@ -12,8 +12,11 @@ final quizRepositoryProvider = Provider<IQuizRepository>((ref) {
   return ref.read(remoteQuizRepositoryProvider);
 });
 
-/// ChangeNotifier provider for QuizNotifier (autoDispose to free resources).
-final quizNotifierProvider = ChangeNotifierProvider<QuizNotifier>((ref) {
+/// ChangeNotifierProvider for QuizNotifier — autoDispose agar timer dan resource
+/// dibebaskan saat halaman kuis ditutup. Tanpa autoDispose, timer berjalan selamanya
+/// di background untuk setiap kuis yang pernah dibuka.
+final quizNotifierProvider =
+    ChangeNotifierProvider.autoDispose<QuizNotifier>((ref) {
   final repo = ref.read(quizRepositoryProvider);
   final logSvc = ref.read(quizLogServiceProvider);
   final cacheSvc = ref.read(quizCacheServiceProvider);
