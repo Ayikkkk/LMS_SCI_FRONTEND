@@ -17,6 +17,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   bool loading = false;
   bool _obscurePassword = true; // 👁️ state password
+  // Guard sinkron — mencegah dua tap cepat mengirim dua request
+  // sebelum setState() sempat rebuild tombol
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -26,7 +29,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    // Guard sinkron: set SEBELUM setState agar tap kedua langsung terblokir
+    // bahkan sebelum frame rebuild terjadi
+    if (_isSubmitting) return;
+    _isSubmitting = true;
+
+    if (!_formKey.currentState!.validate()) {
+      _isSubmitting = false;
+      return;
+    }
 
     setState(() => loading = true);
 
@@ -36,9 +47,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             _password.text.trim(),
           );
 
+      if (!mounted) return;
       setState(() => loading = false);
 
-      if (!ok && mounted) {
+      if (!ok) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: Colors.red,
@@ -48,12 +60,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         return;
       }
 
+      // Cegah double navigation jika dua request kebetulan sukses
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
-      setState(() => loading = false);
-
       if (!mounted) return;
+      setState(() => loading = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -61,6 +73,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           content: Text(ErrorMessages.fromException(e)),
         ),
       );
+    } finally {
+      // Selalu reset guard — aman untuk semua path (sukses, gagal, timeout, exception)
+      _isSubmitting = false;
     }
   }
 
