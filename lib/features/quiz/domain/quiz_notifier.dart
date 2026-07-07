@@ -73,6 +73,10 @@ class QuizNotifier extends ChangeNotifier {
   // Flag untuk mencegah notifyListeners() setelah dispose()
   bool _disposed = false;
 
+  // Timer debounce untuk _persistAnswers() — hanya dipakai oleh setTextAnswer()
+  // Pilihan ganda, true/false, dll tidak butuh debounce karena jarang dipanggil
+  Timer? _persistDebounce;
+
   // ============ QUIZ LOCK HANDLER ============
   void startQuizLock(String exerciseId) {
     NavigationService.instance.currentExerciseId = exerciseId;
@@ -257,13 +261,28 @@ class QuizNotifier extends ChangeNotifier {
   void setTextAnswer(String questionId, String text) {
     if (_submitted || alreadyDone) return;
     _selectedAnswers[questionId] = text;
-    _persistAnswers();
+    // Debounce 400ms — cegah write SharedPreferences setiap keystroke
+    // Pilihan ganda tidak lewat sini sehingga tidak kena debounce
+    _persistDebounce?.cancel();
+    _persistDebounce = Timer(const Duration(milliseconds: 400), () {
+      if (!_disposed) _persistAnswers();
+    });
     notifyListeners();
   }
 
   /// Simpan jawaban ke SharedPreferences (fire-and-forget, tidak block UI)
   void _persistAnswers() {
     cacheService?.saveAnswers(_exerciseId, Map.from(_selectedAnswers));
+  }
+
+  /// Flush debounce segera — pastikan jawaban terakhir tersimpan sebelum
+  /// submit atau dispose. Dipanggil manual dari submit() dan dispose().
+  void _flushPersist() {
+    if (_persistDebounce?.isActive == true) {
+      _persistDebounce!.cancel();
+      _persistDebounce = null;
+      _persistAnswers(); // simpan sekarang, jangan tunggu debounce
+    }
   }
 
   /// Check if multiple option is selected
@@ -333,6 +352,9 @@ class QuizNotifier extends ChangeNotifier {
     }
 
     _quizTimer?.cancel();
+
+    // Flush debounce — pastikan karakter terakhir essay tersimpan sebelum submit
+    _flushPersist();
 
     // Snapshot jawaban sebelum submit — aman dari perubahan concurrent
     final answersSnapshot = Map<String, dynamic>.from(_selectedAnswers);
@@ -506,6 +528,10 @@ class QuizNotifier extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _quizTimer?.cancel();
+    // Flush debounce saat halaman ditutup — jawaban terakhir tidak hilang
+    // meski timer belum selesai (misal user langsung close saat mengetik)
+    _flushPersist();
+    _persistDebounce?.cancel();
     super.dispose();
   }
 }
