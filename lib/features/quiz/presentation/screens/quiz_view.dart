@@ -254,6 +254,40 @@ class QuizView extends ConsumerWidget {
       );
     }
 
+    // Jika pending submit (network gagal, jawaban tersimpan lokal)
+    if (notifier.hasPendingSubmit &&
+        notifier.finalScore == null &&
+        !notifier.isPendingReview) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.cloud_upload_outlined,
+                size: 90, color: Colors.orange),
+            const SizedBox(height: 16),
+            const Text(
+              "Jawaban Tersimpan",
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              "Koneksi terputus saat mengirim.",
+              style: TextStyle(fontSize: 16, color: Colors.orange),
+            ),
+            const SizedBox(height: 8),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 40),
+              child: Text(
+                "Jawaban sudah disimpan. Akan dikirim otomatis saat koneksi kembali.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey, fontSize: 14),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     // Jika sudah ada nilai
     return Center(
       child: Column(

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../../../navigation_service.dart';
 import '../../../core/constants/error_messages.dart';
@@ -311,27 +312,21 @@ class QuizNotifier extends ChangeNotifier {
   Future<void> submit({bool auto = false, BuildContext? context}) async {
     // ============================================================
     // GUARD ATOMIK — set _submitted = true SEBELUM await pertama
-    // Ini mencegah race condition saat dua panggilan submit() masuk
-    // bersamaan (misal: user tap + timer auto-submit dalam 1 frame)
+    // Mencegah race condition: double tap, manual+auto bersamaan
     // ============================================================
     if (_submitted || alreadyDone) return;
-    _submitted = true; // ← set di sini, bukan di akhir fungsi
-    notifyListeners(); // rebuild UI segera, tombol submit langsung disable
+    _submitted = true;
+    notifyListeners(); // tombol submit langsung disable
 
-    // ⚠️ Validasi hanya berlaku untuk submit manual
+    // Validasi hanya untuk submit manual
     if (!auto && !allAnswered) {
-      // Rollback jika validasi gagal
-      _submitted = false;
+      _submitted = false; // rollback
       notifyListeners();
       AppLogger.warning(
-        'Submit blocked: Not all questions answered',
-        'QuizNotifier',
-      );
+          'Submit blocked: Not all questions answered', 'QuizNotifier');
       if (context != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Harap jawab semua pertanyaan dulu!"),
-          ),
+          const SnackBar(content: Text("Harap jawab semua pertanyaan dulu!")),
         );
       }
       return;
@@ -339,11 +334,11 @@ class QuizNotifier extends ChangeNotifier {
 
     _quizTimer?.cancel();
 
-    // Snapshot jawaban sebelum submit (aman dari perubahan concurrent)
+    // Snapshot jawaban sebelum submit — aman dari perubahan concurrent
     final answersSnapshot = Map<String, dynamic>.from(_selectedAnswers);
 
     try {
-      // 🔄 Retry submit hingga 3x dengan backoff
+      // Retry untuk network/5xx error, TIDAK untuk 4xx (termasuk 403 sudah dikerjakan)
       final submitResult = await _submitWithRetry(
         exerciseId: _exerciseId,
         answers: answersSnapshot,
@@ -358,29 +353,52 @@ class QuizNotifier extends ChangeNotifier {
         if (submitResult['is_pending_review'] == true) {
           _isPendingReview = true;
           _finalScore = null;
-          AppLogger.info('Pending review mode activated', 'QuizNotifier');
         } else {
-          final result = await repository.getResult(exerciseId: _exerciseId);
-          AppLogger.debug('Get Result: $result', 'QuizNotifier');
-          _finalScore = result?['score'] ?? 0;
-          _isPendingReview = false;
-          AppLogger.success('Final score: $_finalScore', 'QuizNotifier');
+          // Wrap getResult() dalam try-catch: jika network blip setelah submit sukses,
+          // jangan anggap seluruh submit gagal — fallback ke score dari response submit
+          try {
+            final result = await repository.getResult(exerciseId: _exerciseId);
+            _finalScore = result?['score'] ?? submitResult['score'] ?? 0;
+            _isPendingReview = result?['is_pending_review'] == true;
+          } catch (e) {
+            // getResult gagal tapi submit sudah sukses — pakai score dari submit response
+            AppLogger.warning(
+                'getResult failed after successful submit, using submit response score',
+                'QuizNotifier');
+            _finalScore = submitResult['score'] ?? 0;
+            _isPendingReview = false;
+          }
         }
       }
 
-      // ✅ Submit berhasil — hapus cache jawaban
+      // Submit berhasil — bersihkan cache
       await cacheService?.clearAnswers(_exerciseId);
       cacheService?.clearQuestionCache(_exerciseId);
+      _hasPendingSubmit = false;
+    } on _AlreadySubmittedException {
+      // Backend return 403 "Quiz sudah pernah dikerjakan" — bukan error, load result
+      AppLogger.info('Backend reports quiz already submitted — loading result',
+          'QuizNotifier');
+      try {
+        final result = await repository.getResult(exerciseId: _exerciseId);
+        if (!_disposed && result != null) {
+          _finalScore = result['score'];
+          _isPendingReview = result['is_pending_review'] == true;
+          _exerciseTypeName = result['exercise_type_name'] ?? _exerciseTypeName;
+        }
+      } catch (_) {
+        _finalScore = 0;
+      }
       _hasPendingSubmit = false;
     } catch (e) {
       AppLogger.error('Submit failed after retries', e, null, 'QuizNotifier');
 
-      // 💾 Simpan sebagai pending submit — akan bisa dicoba ulang
+      // Simpan sebagai pending submit untuk retry saat network kembali
       await cacheService?.markPendingSubmit(_exerciseId, answersSnapshot, auto);
       _hasPendingSubmit = true;
 
-      // _submitted sudah true, _finalScore = 0 sebagai fallback sementara
-      _finalScore = 0;
+      // Jangan tampilkan nilai 0 — biarkan score null agar UI tahu ini pending
+      _finalScore = null;
       _isPendingReview = false;
     }
 
@@ -398,9 +416,7 @@ class QuizNotifier extends ChangeNotifier {
       logService?.logSubmit(_exerciseId, duration);
     }
 
-    if (auto) {
-      NavigationService.instance.navigateToHomeWhenReady();
-    }
+    if (auto) NavigationService.instance.navigateToHomeWhenReady();
 
     await AnalyticsService.logQuizComplete(
       quizId: _exerciseId,
@@ -414,7 +430,8 @@ class QuizNotifier extends ChangeNotifier {
   }
 
   /// Submit dengan retry otomatis (max 3x, backoff 2s → 4s → 8s).
-  /// Hanya retry untuk network/timeout error, tidak untuk 4xx.
+  /// Retry HANYA untuk network/5xx error.
+  /// 4xx langsung rethrow — khususnya 403 dilempar sebagai _AlreadySubmittedException.
   Future<Map<String, dynamic>> _submitWithRetry({
     required String exerciseId,
     required Map<String, dynamic> answers,
@@ -431,25 +448,39 @@ class QuizNotifier extends ChangeNotifier {
           answers: answers,
           auto: auto,
         );
-      } catch (e) {
+      } on DioException catch (e) {
+        final statusCode = e.response?.statusCode ?? 0;
+
+        // 403 khusus: backend menyatakan sudah pernah submit
+        if (statusCode == 403) {
+          throw _AlreadySubmittedException();
+        }
+
+        // Semua 4xx lain: client error, jangan retry
+        if (statusCode >= 400 && statusCode < 500) {
+          AppLogger.error('Submit rejected [$statusCode]: ${e.response?.data}',
+              'QuizNotifier');
+          rethrow;
+        }
+
+        // 5xx / network error: coba retry
         attempt++;
-
-        // Cek apakah ini error 4xx (client error) — jangan retry
-        final is4xx = e.toString().contains('40') ||
-            e.toString().contains('DioException') && e.toString().contains('4');
-
-        if (is4xx || attempt >= maxRetries) {
+        if (attempt >= maxRetries) {
           AppLogger.error(
-              'Submit attempt $attempt failed (no more retries): $e',
+              'Submit attempt $attempt failed (max retries): ${e.message}',
               'QuizNotifier');
           rethrow;
         }
 
         AppLogger.warning(
-            'Submit attempt $attempt failed, retrying in ${delay.inSeconds}s...',
+            'Submit attempt $attempt failed [${statusCode > 0 ? statusCode : "network"}], '
+                'retrying in ${delay.inSeconds}s...',
             'QuizNotifier');
         await Future.delayed(delay);
         delay *= 2; // exponential backoff: 2s → 4s → 8s
+      } catch (e) {
+        // Non-Dio exception: langsung rethrow, jangan retry
+        rethrow;
       }
     }
   }
@@ -477,4 +508,10 @@ class QuizNotifier extends ChangeNotifier {
     _quizTimer?.cancel();
     super.dispose();
   }
+}
+
+/// Internal exception untuk membedakan 403 "sudah pernah submit"
+/// dari 4xx error lainnya tanpa mengandalkan string matching.
+class _AlreadySubmittedException implements Exception {
+  const _AlreadySubmittedException();
 }
