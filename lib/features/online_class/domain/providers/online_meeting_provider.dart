@@ -55,12 +55,16 @@ class OnlineMeetingState {
 /// =======================
 class OnlineMeetingNotifier extends StateNotifier<OnlineMeetingState> {
   final OnlineMeetingRepository repository;
+  // Guard: cegah loadMeetings berjalan paralel dari timer + manual refresh
+  bool _isFetching = false;
 
   OnlineMeetingNotifier(this.repository) : super(OnlineMeetingState.initial());
 
   /// 🔹 Load meetings siswa
-  /// Filter: hanya tampilkan meeting hari ini dan mendatang
   Future<void> loadMeetings() async {
+    if (_isFetching) return; // skip jika sedang in-flight
+    _isFetching = true;
+
     state = state.copyWith(isLoading: true, error: null);
 
     try {
@@ -81,30 +85,27 @@ class OnlineMeetingNotifier extends StateNotifier<OnlineMeetingState> {
           meeting.startTime!.day,
         );
 
-        // Debug: print untuk melihat perbandingan tanggal
         final isValid =
             meetingDate.isAtSameMomentAs(today) || meetingDate.isAfter(today);
 
-        // Uncomment untuk debugging:
-        // print('Meeting: ${meeting.title}');
-        // print('Meeting Date: $meetingDate');
-        // print('Today: $today');
-        // print('Is Valid: $isValid');
-        // print('---');
-
-        // Tampilkan jika meeting >= hari ini
         return isValid;
       }).toList();
 
-      state = state.copyWith(
-        isLoading: false,
-        meetings: filteredMeetings,
-      );
+      if (mounted) {
+        state = state.copyWith(
+          isLoading: false,
+          meetings: filteredMeetings,
+        );
+      }
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: ErrorMessages.fromException(e),
-      );
+      if (mounted) {
+        state = state.copyWith(
+          isLoading: false,
+          error: ErrorMessages.fromException(e),
+        );
+      }
+    } finally {
+      _isFetching = false;
     }
   }
 

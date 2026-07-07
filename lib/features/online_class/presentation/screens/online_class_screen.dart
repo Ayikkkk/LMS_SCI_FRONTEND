@@ -15,26 +15,65 @@ class OnlineClassScreen extends ConsumerStatefulWidget {
   ConsumerState<OnlineClassScreen> createState() => _OnlineClassScreenState();
 }
 
-class _OnlineClassScreenState extends ConsumerState<OnlineClassScreen> {
+class _OnlineClassScreenState extends ConsumerState<OnlineClassScreen>
+    with WidgetsBindingObserver {
   Timer? _timer;
+  // Guard mencegah request overlap jika loadMeetings belum selesai saat timer tick
+  bool _isPolling = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     Future.microtask(() {
-      ref.read(onlineMeetingProvider.notifier).loadMeetings();
+      if (mounted) ref.read(onlineMeetingProvider.notifier).loadMeetings();
     });
 
-    _timer = Timer.periodic(const Duration(seconds: 10), (_) {
-      ref.read(onlineMeetingProvider.notifier).loadMeetings();
-    });
+    _startPolling();
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _stopPolling();
     super.dispose();
+  }
+
+  // ── Lifecycle ────────────────────────────────────────
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // App kembali ke foreground — refresh segera lalu mulai polling
+      if (mounted) {
+        ref.read(onlineMeetingProvider.notifier).loadMeetings();
+      }
+      _startPolling();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      // App masuk background/inactive — hentikan polling
+      _stopPolling();
+    }
+  }
+
+  void _startPolling() {
+    // Cancel timer lama sebelum buat baru — cegah timer ganda setelah resume berkali-kali
+    _stopPolling();
+    _timer = Timer.periodic(const Duration(seconds: 10), (_) async {
+      // Skip jika request sebelumnya belum selesai (cegah overlap)
+      if (_isPolling || !mounted) return;
+      _isPolling = true;
+      try {
+        await ref.read(onlineMeetingProvider.notifier).loadMeetings();
+      } finally {
+        _isPolling = false;
+      }
+    });
+  }
+
+  void _stopPolling() {
+    _timer?.cancel();
+    _timer = null;
   }
 
   Future<void> _refreshMeetings() async {
