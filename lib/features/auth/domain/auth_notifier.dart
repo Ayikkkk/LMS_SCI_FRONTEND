@@ -5,6 +5,7 @@ import '../../laporan_harian/presentation/providers/laporan_provider.dart';
 import '../../home/presentation/providers/home_provider.dart';
 import '../../course/domain/providers/course_providers.dart';
 import '../../grades/domain/providers/grade_provider.dart';
+import '../../quiz/data/quiz_cache_service.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/services/crashlytics_service.dart';
 import '../../../../core/services/analytics_service.dart';
@@ -124,6 +125,9 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
 
     // Invalidate semua data user
     _invalidateAllUserProviders();
+
+    // Bersihkan semua cache kuis — cegah data siswa lama terbawa ke siswa baru
+    await ref.read(quizCacheServiceProvider).clearAllUserData();
 
     // Baru lakukan cleanup async
     await _repo.logout();
