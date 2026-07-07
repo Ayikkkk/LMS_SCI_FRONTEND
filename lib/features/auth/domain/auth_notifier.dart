@@ -41,6 +41,9 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
     if (token != null && token.isNotEmpty) {
       dio.options.headers['Authorization'] = "Bearer $token";
       state = AuthStatus.authenticated;
+
+      // Set Crashlytics identity saat restore session (app restart dengan login aktif)
+      await _setCrashlyticsIdentityFromStorage();
     } else {
       state = AuthStatus.unauthenticated;
     }
@@ -64,34 +67,60 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
 
         state = AuthStatus.authenticated;
 
-        // Set user identifier for Crashlytics
-        final student = ref.read(studentProvider);
-        if (student != null) {
-          await CrashlyticsService.setUserIdentifier(student.id.toString());
-          await CrashlyticsService.setCustomKey('student_name', student.name);
-          await CrashlyticsService.setCustomKey(
-              'student_nis', student.nis ?? '');
+        // Set Crashlytics identity menggunakan data student dari response login
+        // (bukan dari studentProvider yang masih loading setelah invalidate)
+        await _setCrashlyticsIdentityFromStorage();
 
-          // Track login event in Analytics
-          await AnalyticsService.logLogin(
-            method: 'username_password',
-            userId: student.id.toString(),
-          );
-          await AnalyticsService.setUserId(student.id.toString());
-          await AnalyticsService.setUserProperty(
-            name: 'student_name',
-            value: student.name,
-          );
-          await AnalyticsService.setUserProperty(
-            name: 'class_name',
-            value: student.className ?? 'Unknown',
-          );
-        }
+        // Log event login ke Analytics (hanya saat login baru, bukan restore)
+        try {
+          final studentData = await _repo.getStudentData();
+          if (studentData != null) {
+            await AnalyticsService.logLogin(
+              method: 'username_password',
+              userId: studentData['id']?.toString() ?? '',
+            );
+          }
+        } catch (_) {}
       }
 
       return success;
     } catch (e) {
       rethrow; // ⬅️ biar UI bisa tampilkan pesan error
+    }
+  }
+
+  /// Set Crashlytics & Analytics identity dari data student yang tersimpan di secure storage.
+  /// Dipanggil setelah login dan saat restore session (checkAuthStatus).
+  /// Kegagalan tidak menggagalkan proses auth.
+  Future<void> _setCrashlyticsIdentityFromStorage() async {
+    try {
+      final studentData = await _repo.getStudentData();
+      if (studentData == null) return;
+
+      final id = studentData['id']?.toString();
+      final name = studentData['name']?.toString() ?? '';
+      final nis = studentData['nis']?.toString() ?? '';
+
+      if (id == null || id.isEmpty) return;
+
+      // Set Crashlytics — hanya identifier minimal, tidak ada data sensitif
+      await CrashlyticsService.setUserIdentifier(id);
+      await CrashlyticsService.setCustomKey('student_name', name);
+      await CrashlyticsService.setCustomKey('student_nis', nis);
+
+      // Set Analytics
+      await AnalyticsService.setUserId(id);
+      await AnalyticsService.setUserProperty(name: 'student_name', value: name);
+      await AnalyticsService.setUserProperty(
+          name: 'class_name',
+          value: studentData['className']?.toString() ?? 'Unknown');
+
+      AppLogger.debug(
+          'Crashlytics identity set for student $id', 'AuthNotifier');
+    } catch (e) {
+      // Jangan gagalkan login/restore session karena Crashlytics error
+      AppLogger.warning(
+          'Failed to set Crashlytics identity: $e', 'AuthNotifier');
     }
   }
 
