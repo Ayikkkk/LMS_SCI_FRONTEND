@@ -8,6 +8,7 @@ import '../providers/quiz_provider.dart';
 import '../../../../navigation_service.dart';
 import '../../../../core/widgets/error_widget.dart';
 import '../screens/quiz_screen.dart';
+import '../../../auth/domain/auth_notifier.dart';
 
 class QuizRemoteScreen extends ConsumerStatefulWidget {
   final String exerciseId;
@@ -26,10 +27,12 @@ class _QuizRemoteScreenState extends ConsumerState<QuizRemoteScreen> {
   void initState() {
     super.initState();
 
-    // Load quiz saat masuk screen
+    // Load quiz saat masuk screen — pass studentId untuk ownership pending submit
     Future.microtask(() {
+      final studentId = ref.read(studentProvider)?.id.toString();
       ref.read(quizNotifierProvider).loadQuiz(
             exerciseId: widget.exerciseId,
+            studentId: studentId,
           );
     });
   }
@@ -98,9 +101,13 @@ class _QuizRemoteScreenState extends ConsumerState<QuizRemoteScreen> {
     if (notifier.error != null && !notifier.loading) {
       return AppErrorWidget(
         message: notifier.error!,
-        onRetry: () => ref.read(quizNotifierProvider).loadQuiz(
-              exerciseId: widget.exerciseId,
-            ),
+        onRetry: () {
+          final studentId = ref.read(studentProvider)?.id.toString();
+          ref.read(quizNotifierProvider).loadQuiz(
+                exerciseId: widget.exerciseId,
+                studentId: studentId,
+              );
+        },
       );
     }
 

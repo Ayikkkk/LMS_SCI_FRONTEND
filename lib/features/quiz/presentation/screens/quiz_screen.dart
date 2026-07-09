@@ -72,7 +72,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen>
       } else {
         _logEvent(eventType: 'RECONNECTED');
 
-        // Koneksi kembali — sembunyikan banner
+        // Koneksi kembali — sembunyikan banner dan retry pending submit jika ada
         if (mounted) {
           setState(() => _isOffline = false);
           ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -83,6 +83,8 @@ class _QuizScreenState extends ConsumerState<QuizScreen>
               duration: Duration(seconds: 2),
             ),
           );
+          // Trigger retry pending submit jika ada
+          ref.read(quizNotifierProvider).retryPendingSubmit();
         }
       }
     });

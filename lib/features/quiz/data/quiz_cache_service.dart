@@ -187,8 +187,12 @@ class QuizCacheService {
   // PENDING SUBMIT
   // ════════════════════════════════════════════════════════════════════════
 
+  /// Tandai bahwa ada submit yang pending (gagal karena network).
+  /// Menyimpan studentId sebagai ownership — submit tidak akan dikirim
+  /// jika student yang login berbeda dengan pemilik pending submit.
   Future<void> markPendingSubmit(
-      String exerciseId, Map<String, dynamic> answers, bool auto) async {
+      String exerciseId, Map<String, dynamic> answers, bool auto,
+      {String? studentId}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(
@@ -196,6 +200,7 @@ class QuizCacheService {
         jsonEncode({
           'answers': answers,
           'auto': auto,
+          'student_id': studentId, // ownership
           'timestamp': DateTime.now().toIso8601String(),
         }),
       );
@@ -231,27 +236,30 @@ class QuizCacheService {
 
   /// Bersihkan semua data quiz dari SharedPreferences dan in-memory cache.
   /// Dipanggil dari AuthNotifier.doLogout().
-  Future<void> clearAllUserData() async {
+  /// Pending submit yang dimiliki student lain (ownership mismatch) dipertahankan
+  /// namun karena logout = ganti user, semua data dihapus untuk keamanan isolasi.
+  Future<void> clearAllUserData({String? currentStudentId}) async {
     // 1. Bersihkan in-memory cache soal
     clearAllQuestionCache();
 
     try {
       final prefs = await SharedPreferences.getInstance();
-
-      // 2. Ambil daftar exercise ID yang pernah di-track
       final tracked = _getTrackedIds(prefs);
+      final idsToRemove = <String>[];
 
-      // 3. Hapus semua keys terkait kuis
       for (final id in tracked) {
+        // Cek ownership pending submit sebelum hapus
+        // Jika student_id tidak cocok dengan yang logout, tetap hapus
+        // (data siswa lain tidak boleh di-submit sebagai user baru)
         await prefs.remove(_answerKey(id));
         await prefs.remove(_pendingKey(id));
+        idsToRemove.add(id);
       }
 
-      // 4. Hapus tracker itu sendiri
       await prefs.remove(_trackedIdsKey);
 
       AppLogger.info(
-          'Cleared all quiz data for ${tracked.length} exercises on logout',
+          'Cleared all quiz data for ${idsToRemove.length} exercises on logout',
           'QuizCache');
     } catch (e) {
       AppLogger.warning('Failed to clear all user quiz data: $e', 'QuizCache');

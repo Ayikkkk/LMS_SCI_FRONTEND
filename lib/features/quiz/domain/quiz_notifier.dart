@@ -70,6 +70,12 @@ class QuizNotifier extends ChangeNotifier {
   bool _hasPendingSubmit = false;
   bool get hasPendingSubmit => _hasPendingSubmit;
 
+  // Student ID pemilik sesi kuis ini — untuk ownership check pending submit
+  String? _studentId;
+
+  // Guard: cegah dua retry berjalan bersamaan
+  bool _isRetrying = false;
+
   // Flag untuk mencegah notifyListeners() setelah dispose()
   bool _disposed = false;
 
@@ -89,8 +95,9 @@ class QuizNotifier extends ChangeNotifier {
   }
 
   // ================= LOAD QUIZ =================
-  Future<void> loadQuiz({required String exerciseId}) async {
+  Future<void> loadQuiz({required String exerciseId, String? studentId}) async {
     _exerciseId = exerciseId;
+    if (studentId != null) _studentId = studentId;
 
     _loading = true;
     _error = null;
@@ -166,12 +173,29 @@ class QuizNotifier extends ChangeNotifier {
         }
 
         // 🔄 Cek apakah ada pending submit yang belum terkirim
-        _hasPendingSubmit =
-            await cacheService?.hasPendingSubmit(exerciseId) ?? false;
-        if (_hasPendingSubmit) {
-          AppLogger.warning(
-              'Quiz $exerciseId has pending submit — will retry on submit',
-              'QuizNotifier');
+        final pending = await cacheService?.getPendingSubmit(exerciseId);
+        if (pending != null) {
+          // Cek ownership — hanya retry jika milik student yang sama
+          final ownerId = pending['student_id']?.toString();
+          final isMine = ownerId == null || ownerId == _studentId;
+          if (isMine) {
+            _hasPendingSubmit = true;
+            AppLogger.warning(
+                'Quiz $exerciseId has pending submit — will retry on reconnect',
+                'QuizNotifier');
+            // Langsung coba retry jika sudah ada koneksi saat ini
+            // (tidak perlu tunggu event reconnect)
+            Future.microtask(() => retryPendingSubmit());
+          } else {
+            // Data bukan milik student ini — hapus untuk keamanan isolasi
+            await cacheService?.clearAnswers(exerciseId);
+            _hasPendingSubmit = false;
+            AppLogger.warning(
+                'Pending submit for quiz $exerciseId belongs to different student — discarded',
+                'QuizNotifier');
+          }
+        } else {
+          _hasPendingSubmit = false;
         }
 
         startQuizLock(exerciseId);
@@ -416,7 +440,8 @@ class QuizNotifier extends ChangeNotifier {
       AppLogger.error('Submit failed after retries', e, null, 'QuizNotifier');
 
       // Simpan sebagai pending submit untuk retry saat network kembali
-      await cacheService?.markPendingSubmit(_exerciseId, answersSnapshot, auto);
+      await cacheService?.markPendingSubmit(_exerciseId, answersSnapshot, auto,
+          studentId: _studentId);
       _hasPendingSubmit = true;
 
       // Jangan tampilkan nilai 0 — biarkan score null agar UI tahu ini pending
@@ -507,7 +532,138 @@ class QuizNotifier extends ChangeNotifier {
     }
   }
 
-  // ================= RESET =================
+  /// Coba kirim ulang pending submit jika ada.
+  /// Dipanggil saat koneksi kembali (dari quiz_screen reconnect event)
+  /// dan saat loadQuiz mendeteksi pending submit.
+  ///
+  /// Keamanan:
+  /// - Hanya satu retry berjalan pada satu waktu (_isRetrying guard)
+  /// - Tidak retry jika sudah submitted/alreadyDone
+  /// - 403 dari backend → anggap sudah submitted, hapus pending
+  /// - Network/5xx → pertahankan pending untuk percobaan berikutnya
+  /// - 4xx permanen (selain 403) → hapus pending (tidak akan berhasil)
+  Future<void> retryPendingSubmit() async {
+    if (_isRetrying || _disposed) return;
+    if (!_hasPendingSubmit) return;
+
+    final pending = await cacheService?.getPendingSubmit(_exerciseId);
+    if (pending == null) {
+      _hasPendingSubmit = false;
+      if (!_disposed) notifyListeners();
+      return;
+    }
+
+    // Ownership check
+    final ownerId = pending['student_id']?.toString();
+    if (ownerId != null && ownerId != _studentId) {
+      AppLogger.warning(
+          'Retry blocked: pending submit belongs to student $ownerId, current is $_studentId',
+          'QuizNotifier');
+      await cacheService?.clearAnswers(_exerciseId);
+      _hasPendingSubmit = false;
+      if (!_disposed) notifyListeners();
+      return;
+    }
+
+    _isRetrying = true;
+    AppLogger.info(
+        'Retrying pending submit for quiz $_exerciseId', 'QuizNotifier');
+
+    try {
+      final answers = Map<String, dynamic>.from(pending['answers'] as Map);
+      final auto = pending['auto'] as bool? ?? false;
+
+      final submitResult = await repository.submitQuiz(
+        exerciseId: _exerciseId,
+        answers: answers,
+        auto: auto,
+      );
+
+      // Retry berhasil
+      AppLogger.info('Pending submit retry succeeded for quiz $_exerciseId',
+          'QuizNotifier');
+
+      if (!_disposed) {
+        if (submitResult['is_pending_review'] == true) {
+          _isPendingReview = true;
+          _finalScore = null;
+          _submitted = true;
+        } else {
+          try {
+            final result = await repository.getResult(exerciseId: _exerciseId);
+            _finalScore = result?['score'] ?? submitResult['score'] ?? 0;
+            _isPendingReview = result?['is_pending_review'] == true;
+            _submitted = true;
+          } catch (_) {
+            _finalScore = submitResult['score'] ?? 0;
+            _submitted = true;
+          }
+        }
+      }
+
+      await cacheService?.clearAnswers(_exerciseId);
+      cacheService?.clearQuestionCache(_exerciseId);
+      _hasPendingSubmit = false;
+      endQuizLock();
+    } on _AlreadySubmittedException {
+      // Backend menyatakan sudah submit — anggap selesai, hapus pending
+      AppLogger.info(
+          'Retry: backend confirms already submitted, loading result',
+          'QuizNotifier');
+      try {
+        final result = await repository.getResult(exerciseId: _exerciseId);
+        if (!_disposed && result != null) {
+          _finalScore = result['score'];
+          _isPendingReview = result['is_pending_review'] == true;
+          _submitted = true;
+        }
+      } catch (_) {}
+      await cacheService?.clearAnswers(_exerciseId);
+      _hasPendingSubmit = false;
+      endQuizLock();
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode ?? 0;
+      if (statusCode == 403) {
+        // Backend menyatakan sudah submit — sama seperti _AlreadySubmittedException
+        AppLogger.info('Retry: 403 from backend — loading existing result',
+            'QuizNotifier');
+        try {
+          final result = await repository.getResult(exerciseId: _exerciseId);
+          if (!_disposed && result != null) {
+            _finalScore = result['score'];
+            _isPendingReview = result['is_pending_review'] == true;
+            _submitted = true;
+          }
+        } catch (_) {}
+        await cacheService?.clearAnswers(_exerciseId);
+        _hasPendingSubmit = false;
+        endQuizLock();
+      } else if (statusCode >= 400 && statusCode < 500) {
+        // 4xx permanen — jangan retry lagi, hapus pending
+        AppLogger.warning(
+            'Retry failed with permanent 4xx [$statusCode] — discarding pending',
+            'QuizNotifier');
+        await cacheService?.clearAnswers(_exerciseId);
+        _hasPendingSubmit = false;
+      } else {
+        // Network/5xx — pertahankan pending untuk percobaan berikutnya
+        AppLogger.warning(
+            'Retry failed [${statusCode > 0 ? statusCode : "network"}] — keeping pending',
+            'QuizNotifier');
+      }
+    } catch (e) {
+      // Network error non-Dio — pertahankan pending
+      AppLogger.warning(
+          'Retry failed (non-Dio): $e — keeping pending', 'QuizNotifier');
+    } finally {
+      _isRetrying = false;
+      if (!_disposed) notifyListeners();
+    }
+  }
+
+  /// ============================
+  /// RESET
+  /// ============================
   void reset() {
     _quizTimer?.cancel();
     _currentIndex = 0;
