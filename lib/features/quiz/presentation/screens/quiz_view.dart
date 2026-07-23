@@ -289,6 +289,27 @@ class QuizView extends ConsumerWidget {
     }
 
     // Jika sudah ada nilai
+    // Guard: jika finalScore masih null tapi bukan pending submit dan bukan pending review,
+    // berarti getResult() masih in-flight (window ~500ms setelah submit sukses)
+    // atau retryPendingSubmit() baru selesai submit tapi belum fetch result.
+    // Tampilkan loading daripada string "null".
+    if (notifier.finalScore == null) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text(
+              'Mengambil hasil...',
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // finalScore sudah tersedia
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
