@@ -36,45 +36,60 @@ class OnboardingScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            //
-            // Placeholder untuk tampilan Gambar 2 (orangnya)
-            // Di sini kamu bisa gunakan PageView.builder untuk membuat slider
-            Image.asset(
-              onboardingData[0]['image']!,
-              height: 300,
-            ),
-            const SizedBox(height: 30),
-            Text(
-              onboardingData[0]['title']!,
-              style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color.fromARGB(221, 189, 124, 245)),
-            ),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40.0),
-              child: Text(
-                onboardingData[0]['text']!,
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const SizedBox(height: 50),
-            ElevatedButton(
-              onPressed: finishOnboarding,
-              child: const Text("MULAI"),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(200, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // Batasi tinggi gambar agar tidak overflow di HP pendek (< 600px)
+            final imageHeight =
+                (constraints.maxHeight * 0.35).clamp(150.0, 280.0);
+
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 24),
+                      Image.asset(
+                        onboardingData[0]['image']!,
+                        height: imageHeight,
+                        fit: BoxFit.contain,
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        onboardingData[0]['title']!,
+                        style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Color.fromARGB(221, 189, 124, 245)),
+                      ),
+                      const SizedBox(height: 10),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 40.0),
+                        child: Text(
+                          onboardingData[0]['text']!,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                      ElevatedButton(
+                        onPressed: finishOnboarding,
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(200, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                        ),
+                        child: const Text("MULAI"),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );

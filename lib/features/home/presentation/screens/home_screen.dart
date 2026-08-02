@@ -327,23 +327,37 @@ class _StatsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 2.2,
-      children: [
-        _stat('Total Tugas', stats.totalTasks, Icons.assignment_rounded,
-            [Colors.blue.shade400, Colors.blue.shade600]),
-        _stat('Total Materi', stats.totalMaterials, Icons.menu_book_rounded,
-            [Colors.teal.shade400, Colors.teal.shade600]),
-        _stat('Total Quiz Selesai', stats.totalExercises, Icons.quiz_rounded,
-            [Colors.purple.shade400, Colors.purple.shade600]),
-        _stat('Laporan Harian', stats.reportCount, Icons.event_note_rounded,
-            [Colors.orange.shade400, Colors.orange.shade600]),
-      ],
+    // Aspect ratio responsif: HP kecil butuh lebih tinggi agar teks tidak terpotong
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Lebar setiap card ≈ (lebar - spacing) / 2
+        final cardWidth = (constraints.maxWidth - 12) / 2;
+        // Tinggi ideal: icon(24) + spacing(8) + text(10+18) = ~60px + padding(16)
+        // Rasio = lebar / tinggi_ideal
+        final ratio = (cardWidth / 76).clamp(1.6, 2.4);
+
+        return GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: ratio,
+          children: [
+            _stat('Total Tugas', stats.totalTasks, Icons.assignment_rounded,
+                [Colors.blue.shade400, Colors.blue.shade600]),
+            _stat('Total Materi', stats.totalMaterials, Icons.menu_book_rounded,
+                [Colors.teal.shade400, Colors.teal.shade600]),
+            _stat(
+                'Total Quiz Selesai',
+                stats.totalExercises,
+                Icons.quiz_rounded,
+                [Colors.purple.shade400, Colors.purple.shade600]),
+            _stat('Laporan Harian', stats.reportCount, Icons.event_note_rounded,
+                [Colors.orange.shade400, Colors.orange.shade600]),
+          ],
+        );
+      },
     );
   }
 
@@ -741,53 +755,62 @@ class _QuickMenu extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 3,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.0,
-      children: [
-        _item('Materi', Icons.menu_book_rounded,
-            [Colors.blue.shade400, Colors.blue.shade600], () {
-          ref.read(courseTabProvider.notifier).state = 0; // tab Materi
-          onNavigate(1);
-        }, isDark),
-        _item('Tugas', Icons.edit_note_rounded,
-            [Colors.orange.shade400, Colors.orange.shade600], () {
-          ref.read(courseTabProvider.notifier).state = 1; // tab Tugas
-          onNavigate(1);
-        }, isDark),
-        _item(
-            'Online',
-            Icons.video_camera_front_rounded,
-            [Colors.green.shade400, Colors.green.shade600],
-            () => onNavigate(2),
-            isDark),
-        _item(
-            'Quiz',
-            Icons.quiz_rounded,
-            [Colors.blue.shade400, Colors.blue.shade600],
-            () => onNavigate(3),
-            isDark),
-        _item('Nilai', Icons.assessment_rounded,
-            [Colors.orange.shade400, Colors.orange.shade600], () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const RecapGradeScreen(),
-            ),
-          );
-        }, isDark),
-        _item('Laporan', Icons.event_note_rounded,
-            [Colors.green.shade400, Colors.green.shade600], () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const LaporanHarianScreen()),
-          );
-        }, isDark),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Lebar card ≈ (lebar - 2*spacing) / 3
+        final cardWidth = (constraints.maxWidth - 24) / 3;
+        // Tinggi ideal: icon(32) + spacing(8) + text(14) + padding(24) = ~78px
+        final ratio = (cardWidth / 78).clamp(0.8, 1.3);
+
+        return GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 3,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: ratio,
+          children: [
+            _item('Materi', Icons.menu_book_rounded,
+                [Colors.blue.shade400, Colors.blue.shade600], () {
+              ref.read(courseTabProvider.notifier).state = 0;
+              onNavigate(1);
+            }, isDark),
+            _item('Tugas', Icons.edit_note_rounded,
+                [Colors.orange.shade400, Colors.orange.shade600], () {
+              ref.read(courseTabProvider.notifier).state = 1;
+              onNavigate(1);
+            }, isDark),
+            _item(
+                'Online',
+                Icons.video_camera_front_rounded,
+                [Colors.green.shade400, Colors.green.shade600],
+                () => onNavigate(2),
+                isDark),
+            _item(
+                'Quiz',
+                Icons.quiz_rounded,
+                [Colors.blue.shade400, Colors.blue.shade600],
+                () => onNavigate(3),
+                isDark),
+            _item('Nilai', Icons.assessment_rounded,
+                [Colors.orange.shade400, Colors.orange.shade600], () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const RecapGradeScreen(),
+                ),
+              );
+            }, isDark),
+            _item('Laporan', Icons.event_note_rounded,
+                [Colors.green.shade400, Colors.green.shade600], () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const LaporanHarianScreen()),
+              );
+            }, isDark),
+          ],
+        );
+      },
     );
   }
 

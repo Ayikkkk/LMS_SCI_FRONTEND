@@ -284,17 +284,20 @@ class TrueFalseWidget extends StatelessWidget {
   ) {
     final selected = notifier.selectedAnswers[question.id] == value;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final cardWidth =
+        (MediaQuery.of(context).size.width * 0.4).clamp(160.0, 240.0);
 
     return SizedBox(
-      width: 200,
+      width: cardWidth,
       child: Card(
         elevation: selected ? 8 : 2,
         color: selected ? color.withOpacity(0.1) : null,
         child: InkWell(
           onTap: () => notifier.selectOption(question.id, value),
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(icon, size: 48, color: selected ? color : Colors.grey),
                 const SizedBox(height: 8),
@@ -363,17 +366,20 @@ class YesNoWidget extends StatelessWidget {
   ) {
     final selected = notifier.selectedAnswers[question.id] == value;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final cardWidth =
+        (MediaQuery.of(context).size.width * 0.4).clamp(160.0, 240.0);
 
     return SizedBox(
-      width: 200,
+      width: cardWidth,
       child: Card(
         elevation: selected ? 8 : 2,
         color: selected ? color.withOpacity(0.1) : null,
         child: InkWell(
           onTap: () => notifier.selectOption(question.id, value),
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(icon, size: 48, color: selected ? color : Colors.grey),
                 const SizedBox(height: 8),
