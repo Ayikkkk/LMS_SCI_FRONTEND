@@ -7,6 +7,7 @@ import '../../../../scaffold_messenger_key.dart';
 import '../../../../navigation_service.dart';
 import '../../../../core/constants/error_messages.dart';
 import '../../../../core/widgets/error_widget.dart';
+import '../../../../core/widgets/empty_state_widget.dart';
 
 class OnlineClassScreen extends ConsumerStatefulWidget {
   const OnlineClassScreen({super.key});
@@ -102,13 +103,20 @@ class _OnlineClassScreenState extends ConsumerState<OnlineClassScreen>
     }
 
     if (state.meetings.isEmpty) {
-      return const Center(child: Text("Tidak ada online meeting"));
+      return EmptyStateWidget(
+        title: 'Tidak ada kelas online',
+        subtitle: 'Kelas online akan muncul di sini saat guru menjadwalkannya',
+        icon: Icons.video_camera_front_outlined,
+        actionLabel: 'Refresh',
+        onAction: _refreshMeetings,
+      );
     }
 
     return RefreshIndicator(
       onRefresh: _refreshMeetings,
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(
+            16, 16, 16, 16 + MediaQuery.paddingOf(context).bottom),
         itemCount: state.meetings.length,
         itemBuilder: (_, index) {
           final meeting = state.meetings[index];
@@ -119,11 +127,15 @@ class _OnlineClassScreenState extends ConsumerState<OnlineClassScreen>
             child: ListTile(
               title: Text(
                 meeting.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               subtitle: Text(
                 "Mulai: ${meeting.startTime != null ? _formatDateTime(meeting.startTime!) : '-'}"
                 "\nStatus: ${meeting.status.toUpperCase()}",
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
               trailing: isLive
                   ? ElevatedButton(

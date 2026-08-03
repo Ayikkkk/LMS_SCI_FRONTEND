@@ -126,8 +126,9 @@ class _AddCommentFieldState extends ConsumerState<AddCommentField> {
                 ),
                 InkWell(
                   onTap: widget.onCancelAction,
+                  borderRadius: BorderRadius.circular(20),
                   child: const Padding(
-                    padding: EdgeInsets.all(4),
+                    padding: EdgeInsets.all(10),
                     child: Icon(Icons.close, size: 18, color: Colors.red),
                   ),
                 )
@@ -166,6 +167,9 @@ class _AddCommentFieldState extends ConsumerState<AddCommentField> {
                   : IconButton(
                       icon: Icon(widget.isEditing ? Icons.check : Icons.send),
                       color: widget.isEditing ? Colors.orange : Colors.blue,
+                      tooltip: widget.isEditing
+                          ? 'Simpan perubahan'
+                          : 'Kirim komentar',
                       onPressed: _sendComment,
                     ),
             ],

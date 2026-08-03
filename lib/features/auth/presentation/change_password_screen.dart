@@ -101,6 +101,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                     label: 'Kata sandi lama',
                     hide: _hideOld,
                     toggle: () => setState(() => _hideOld = !_hideOld),
+                    textInputAction: TextInputAction.next,
                   ),
                   const SizedBox(height: 16),
                   _passwordField(
@@ -109,6 +110,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                     hide: _hideNew,
                     toggle: () => setState(() => _hideNew = !_hideNew),
                     helper: 'Minimal 8 karakter ya ✨',
+                    textInputAction: TextInputAction.next,
                   ),
                   const SizedBox(height: 16),
                   _passwordField(
@@ -116,6 +118,8 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                     label: 'Ulangi kata sandi baru',
                     hide: _hideConfirm,
                     toggle: () => setState(() => _hideConfirm = !_hideConfirm),
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: _submit,
                     validator: (v) =>
                         v != _newCtrl.text ? 'Kata sandi belum sama' : null,
                   ),
@@ -157,12 +161,16 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
     required String label,
     required bool hide,
     required VoidCallback toggle,
+    TextInputAction textInputAction = TextInputAction.done,
+    VoidCallback? onSubmitted,
     String? helper,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: hide,
+      textInputAction: textInputAction,
+      onFieldSubmitted: onSubmitted != null ? (_) => onSubmitted() : null,
       decoration: InputDecoration(
         labelText: label,
         helperText: helper,

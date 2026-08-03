@@ -126,6 +126,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           // Username
                           TextFormField(
                             controller: _username,
+                            textInputAction: TextInputAction.next,
                             validator: (v) =>
                                 v!.isEmpty ? "Tidak boleh kosong" : null,
                             decoration: InputDecoration(
@@ -144,6 +145,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           TextFormField(
                             controller: _password,
                             obscureText: _obscurePassword,
+                            textInputAction: TextInputAction.done,
+                            onFieldSubmitted: (_) => submit(),
                             validator: (v) =>
                                 v!.isEmpty ? "Tidak boleh kosong" : null,
                             decoration: InputDecoration(

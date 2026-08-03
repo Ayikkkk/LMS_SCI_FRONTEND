@@ -33,12 +33,17 @@ class _LaporanHarianScreenState extends ConsumerState<LaporanHarianScreen> {
   final kegiatanController = TextEditingController();
   File? foto;
 
+  // Guard double submit
+  bool _isSubmitting = false;
+
   Future<void> pickFoto() async {
     final res = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (res != null) setState(() => foto = File(res.path));
   }
 
   Future<void> submit() async {
+    if (_isSubmitting) return;
+
     final repo = ref.read(laporanRepositoryProvider);
 
     /// VALIDASI
@@ -55,6 +60,8 @@ class _LaporanHarianScreenState extends ConsumerState<LaporanHarianScreen> {
       );
       return;
     }
+
+    setState(() => _isSubmitting = true);
 
     final listReport = [
       q1!,
@@ -90,6 +97,8 @@ class _LaporanHarianScreenState extends ConsumerState<LaporanHarianScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(ErrorMessages.fromException(e))),
       );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -115,8 +124,13 @@ class _LaporanHarianScreenState extends ConsumerState<LaporanHarianScreen> {
             );
           }
 
+          // Padding bawah = 20 + keyboard height + safe area bottom
+          final bottomPadding = 20.0 +
+              MediaQuery.viewInsetsOf(context).bottom +
+              MediaQuery.paddingOf(context).bottom;
+
           return ListView(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.fromLTRB(20, 20, 20, bottomPadding),
             children: [
               _radio(
                   "Tetap Belajar Mandiri?", (v) => setState(() => q1 = v), q1),
@@ -144,6 +158,7 @@ class _LaporanHarianScreenState extends ConsumerState<LaporanHarianScreen> {
               const SizedBox(height: 15),
               TextField(
                 controller: kegiatanController,
+                textInputAction: TextInputAction.done,
                 decoration: const InputDecoration(
                   labelText: "Kegiatan lain-lain",
                   border: OutlineInputBorder(),
@@ -163,8 +178,15 @@ class _LaporanHarianScreenState extends ConsumerState<LaporanHarianScreen> {
                 ),
               const SizedBox(height: 30),
               ElevatedButton(
-                onPressed: submit,
-                child: const Text("Kirim Laporan"),
+                onPressed: _isSubmitting ? null : submit,
+                child: _isSubmitting
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text("Kirim Laporan"),
               )
             ],
           );
@@ -173,7 +195,7 @@ class _LaporanHarianScreenState extends ConsumerState<LaporanHarianScreen> {
     );
   }
 
-  /// RADIO BUILDER
+  /// RADIO BUILDER — label juga tappable untuk UX yang lebih baik
   Widget _radio(String title, Function(String?) onChanged, String? group) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,18 +203,24 @@ class _LaporanHarianScreenState extends ConsumerState<LaporanHarianScreen> {
         Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         Row(
           children: [
-            Radio(
+            Radio<String>(
               value: "Ya",
               groupValue: group,
               onChanged: onChanged,
             ),
-            const Text("Ya"),
-            Radio(
+            GestureDetector(
+              onTap: () => onChanged("Ya"),
+              child: const Text("Ya"),
+            ),
+            Radio<String>(
               value: "Tidak",
               groupValue: group,
               onChanged: onChanged,
             ),
-            const Text("Tidak"),
+            GestureDetector(
+              onTap: () => onChanged("Tidak"),
+              child: const Text("Tidak"),
+            ),
           ],
         ),
       ],

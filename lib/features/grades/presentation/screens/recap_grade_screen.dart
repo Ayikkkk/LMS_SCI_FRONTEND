@@ -28,8 +28,7 @@ class _RecapGradeScreenState extends ConsumerState<RecapGradeScreen> {
     final messenger = ScaffoldMessenger.of(context);
 
     messenger.showSnackBar(
-      const SnackBar(
-          content: Text('Mengunduh rekap nilai ke folder Download/LMS Student...')),
+      const SnackBar(content: Text('Mengunduh rekap nilai...')),
     );
 
     final success = await notifier.downloadPdf();
@@ -37,14 +36,19 @@ class _RecapGradeScreenState extends ConsumerState<RecapGradeScreen> {
     if (!mounted) return;
 
     messenger.hideCurrentSnackBar();
+
+    // Tampilkan error dari state jika ada
+    final currentError = ref.read(gradeProvider).error;
+
     messenger.showSnackBar(
       SnackBar(
         content: Text(
           success
               ? 'PDF berhasil diunduh ke folder Download/LMS Student'
-              : 'Gagal mengunduh PDF',
+              : (currentError ?? 'Gagal mengunduh PDF'),
         ),
         backgroundColor: success ? Colors.green : Colors.red,
+        duration: const Duration(seconds: 4),
       ),
     );
   }
@@ -107,7 +111,8 @@ class _RecapGradeScreenState extends ConsumerState<RecapGradeScreen> {
               await ref.read(gradeProvider.notifier).loadRecap();
             },
             child: ListView(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.fromLTRB(
+                  16, 16, 16, 16 + MediaQuery.paddingOf(context).bottom),
               children: [
                 // =====================
                 // INFO SISWA
@@ -121,6 +126,8 @@ class _RecapGradeScreenState extends ConsumerState<RecapGradeScreen> {
                       children: [
                         Text(
                           recap.student.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: Theme.of(context)
                               .textTheme
                               .titleMedium
@@ -151,7 +158,7 @@ class _RecapGradeScreenState extends ConsumerState<RecapGradeScreen> {
                                   color: Colors.green, size: 18),
                               SizedBox(width: 6),
                               Text(
-                                'PDF tersimpan di folder Download',
+                                'PDF tersimpan di folder Download/LMS Student',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.green,
