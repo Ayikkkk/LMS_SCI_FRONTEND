@@ -450,113 +450,123 @@ class _QuizQuestionContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // QUESTION TEXT — render HTML jika ada gambar, fallback ke teks biasa
-        if (question.questionHtml != null &&
-            question.questionHtml!.contains('<'))
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Text(
-              "Soal ${currentIndex + 1} / $totalQuestions",
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey,
+    // Tablet: tambah padding horizontal agar teks soal tidak melebar penuh
+    // HP: padding tetap 0 karena layar sudah sempit
+    final hPad = MediaQuery.of(context).size.width > 700
+        ? (MediaQuery.of(context).size.width - 700) / 2
+        : 0.0;
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: hPad),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // QUESTION TEXT — render HTML jika ada gambar, fallback ke teks biasa
+          if (question.questionHtml != null &&
+              question.questionHtml!.contains('<'))
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Text(
+                "Soal ${currentIndex + 1} / $totalQuestions",
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey,
+                ),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Text(
+                "Soal ${currentIndex + 1} / $totalQuestions",
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey,
+                ),
               ),
             ),
-          )
-        else
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: Text(
-              "Soal ${currentIndex + 1} / $totalQuestions",
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey,
+
+          // Konten soal — dibatasi tinggi agar tidak overflow
+          if (question.questionHtml != null &&
+              question.questionHtml!.contains('<'))
+            RepaintBoundary(
+              key: ValueKey('html_${question.id}'),
+              child: _QuestionHtmlContent(html: question.questionHtml!),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: Text(
+                _cleanQuestionText(question.question),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  height: 1.5,
+                ),
               ),
             ),
+
+          // ANSWER OPTIONS
+          Expanded(
+            child: _buildQuestionWidget(question, notifier),
           ),
 
-        // Konten soal — dibatasi tinggi agar tidak overflow
-        if (question.questionHtml != null &&
-            question.questionHtml!.contains('<'))
-          RepaintBoundary(
-            key: ValueKey('html_${question.id}'),
-            child: _QuestionHtmlContent(html: question.questionHtml!),
-          )
-        else
+          // NAVIGATION BUTTONS
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Text(
-              _cleanQuestionText(question.question),
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                height: 1.5,
-              ),
-            ),
-          ),
-
-        // ANSWER OPTIONS
-        Expanded(
-          child: _buildQuestionWidget(question, notifier),
-        ),
-
-        // NAVIGATION BUTTONS
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-          child: Column(
-            children: [
-              // ── Indikator soal ─────────────────────────────────
-              _QuestionIndicator(notifier: notifier),
-              const SizedBox(height: 10),
-              // ── Tombol navigasi ────────────────────────────────
-              Row(
-                children: [
-                  if (currentIndex > 0)
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            child: Column(
+              children: [
+                // ── Indikator soal ─────────────────────────────────
+                _QuestionIndicator(notifier: notifier),
+                const SizedBox(height: 10),
+                // ── Tombol navigasi ────────────────────────────────
+                Row(
+                  children: [
+                    if (currentIndex > 0)
+                      ElevatedButton(
+                        onPressed: onPrevious,
+                        child: const Text("Sebelumnya"),
+                      ),
+                    const Spacer(),
                     ElevatedButton(
-                      onPressed: onPrevious,
-                      child: const Text("Sebelumnya"),
-                    ),
-                  const Spacer(),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (currentIndex == totalQuestions - 1) {
-                        // Soal terakhir → cek semua sudah dijawab
-                        if (allAnswered) {
-                          onSubmit();
+                      onPressed: () {
+                        if (currentIndex == totalQuestions - 1) {
+                          // Soal terakhir → cek semua sudah dijawab
+                          if (allAnswered) {
+                            onSubmit();
+                          } else {
+                            // Hitung berapa yang belum dijawab
+                            final unanswered = notifier.questions
+                                .where(
+                                    (q) => !selectedAnswers.containsKey(q.id))
+                                .length;
+                            final firstUnansweredIndex = notifier.questions
+                                .indexWhere(
+                                    (q) => !selectedAnswers.containsKey(q.id));
+                            onShowUnansweredSnackbar(
+                                unanswered, firstUnansweredIndex);
+                          }
                         } else {
-                          // Hitung berapa yang belum dijawab
-                          final unanswered = notifier.questions
-                              .where((q) => !selectedAnswers.containsKey(q.id))
-                              .length;
-                          final firstUnansweredIndex = notifier.questions
-                              .indexWhere(
-                                  (q) => !selectedAnswers.containsKey(q.id));
-                          onShowUnansweredSnackbar(
-                              unanswered, firstUnansweredIndex);
+                          // Bisa lanjut ke soal berikutnya meski belum dijawab
+                          onNext();
                         }
-                      } else {
-                        // Bisa lanjut ke soal berikutnya meski belum dijawab
-                        onNext();
-                      }
-                    },
-                    child: Text(
-                      currentIndex == totalQuestions - 1
-                          ? "Selesai"
-                          : "Selanjutnya",
+                      },
+                      child: Text(
+                        currentIndex == totalQuestions - 1
+                            ? "Selesai"
+                            : "Selanjutnya",
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
+                  ],
+                ),
+              ],
+            ), // closes Column (navigation)
+          ), // closes Padding (navigation)
+        ], // closes outer Column children
+      ), // closes outer Column
+    ); // closes outer Padding (tablet)
   }
 
   // ================= QUESTION WIDGET BUILDER =================

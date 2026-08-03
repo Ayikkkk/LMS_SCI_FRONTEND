@@ -42,109 +42,116 @@ class ProfileScreen extends ConsumerWidget {
             onRefresh: () async {
               ref.invalidate(profileDataProvider);
             },
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: [
-                const SizedBox(height: 10),
+            child: Center(
+              child: ConstrainedBox(
+                // Tablet: batasi lebar agar konten tidak terlalu melebar
+                // HP: tidak berpengaruh karena lebar layar < 600dp
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: [
+                    const SizedBox(height: 10),
 
-                // ============================
-                // AKUN SISWA
-                // ============================
-                _sectionTitle("AKUN", context),
-                _profileCard(context, ref, student),
+                    // ============================
+                    // AKUN SISWA
+                    // ============================
+                    _sectionTitle("AKUN", context),
+                    _profileCard(context, ref, student),
 
-                const SizedBox(height: 20),
+                    const SizedBox(height: 20),
 
-                // ============================
-                // GURU PEMBIMBING
-                // ============================
-                _sectionTitle("GURU AKADEMIK", context),
-                guru == null
-                    ? _emptyTeacherCard()
-                    : _teacherCard(
-                        guru.name,
-                        guru.email ?? "-",
-                        guru.phone ?? "-",
-                      ),
+                    // ============================
+                    // GURU PEMBIMBING
+                    // ============================
+                    _sectionTitle("GURU AKADEMIK", context),
+                    guru == null
+                        ? _emptyTeacherCard()
+                        : _teacherCard(
+                            guru.name,
+                            guru.email ?? "-",
+                            guru.phone ?? "-",
+                          ),
 
-                const SizedBox(height: 20),
+                    const SizedBox(height: 20),
 
-                // ============================
-                // PERSONALISASI
-                // ============================
-                _sectionTitle("PERSONALISASI & KEAMANAN", context),
+                    // ============================
+                    // PERSONALISASI
+                    // ============================
+                    _sectionTitle("PERSONALISASI & KEAMANAN", context),
 
-                //  MODE GELAP AKTIF
-                _switchItem(
-                  title: "Mode Gelap",
-                  icon: Icons.dark_mode_outlined,
-                  value: isDark,
-                  onChanged: (val) {
-                    ref.read(themeNotifierProvider.notifier).toggle(val);
-                  },
-                ),
+                    //  MODE GELAP AKTIF
+                    _switchItem(
+                      title: "Mode Gelap",
+                      icon: Icons.dark_mode_outlined,
+                      value: isDark,
+                      onChanged: (val) {
+                        ref.read(themeNotifierProvider.notifier).toggle(val);
+                      },
+                    ),
 
-                _menuItem(
-                  "Ganti Kata Sandi",
-                  Icons.password_outlined,
-                  onTap: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const ChangePasswordScreen()),
-                    );
+                    _menuItem(
+                      "Ganti Kata Sandi",
+                      Icons.password_outlined,
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const ChangePasswordScreen()),
+                        );
 
-                    try {
-                      ref.invalidate(profileDataProvider);
-                    } catch (_) {}
-                  },
-                ),
+                        try {
+                          ref.invalidate(profileDataProvider);
+                        } catch (_) {}
+                      },
+                    ),
 
-                const SizedBox(height: 30),
+                    const SizedBox(height: 30),
 
-                // ============================
-                // TENTANG APLIKASI
-                // ============================
-                _sectionTitle("TENTANG APLIKASI", context),
+                    // ============================
+                    // TENTANG APLIKASI
+                    // ============================
+                    _sectionTitle("TENTANG APLIKASI", context),
 
-                _menuItem(
-                  "Laporan Harian",
-                  Icons.book_outlined,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const LaporanHarianScreen()),
-                    );
-                  },
-                ),
+                    _menuItem(
+                      "Laporan Harian",
+                      Icons.book_outlined,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const LaporanHarianScreen()),
+                        );
+                      },
+                    ),
 
-                _menuItem(
-                  "Pengaduan",
-                  Icons.support_agent_outlined,
-                  onTap: () async {
-                    final uri = Uri.parse(
-                      'https://tak-scimediaonline.my.id/layanan-pelanggan-pelapor',
-                    );
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri,
-                          mode: LaunchMode.externalApplication);
-                    }
-                  },
-                ),
+                    _menuItem(
+                      "Pengaduan",
+                      Icons.support_agent_outlined,
+                      onTap: () async {
+                        final uri = Uri.parse(
+                          'https://tak-scimediaonline.my.id/layanan-pelanggan-pelapor',
+                        );
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri,
+                              mode: LaunchMode.externalApplication);
+                        }
+                      },
+                    ),
 
-                _versionItem(ref),
+                    _versionItem(ref),
 
-                const SizedBox(height: 30),
+                    const SizedBox(height: 30),
 
-                // ============================
-                // LOGOUT
-                // ============================
-                _logoutButton(context, ref),
-                const SizedBox(height: 50),
-              ],
-            ),
+                    // ============================
+                    // LOGOUT
+                    // ============================
+                    _logoutButton(context, ref),
+                    const SizedBox(height: 50),
+                  ],
+                ), // closes ListView
+              ), // closes ConstrainedBox
+            ), // closes Center
           );
         },
       ),

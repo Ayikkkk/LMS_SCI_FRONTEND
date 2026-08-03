@@ -114,83 +114,95 @@ class _RecapGradeScreenState extends ConsumerState<RecapGradeScreen> {
               padding: EdgeInsets.fromLTRB(
                   16, 16, 16, 16 + MediaQuery.paddingOf(context).bottom),
               children: [
-                // =====================
-                // INFO SISWA
-                // =====================
-                Card(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
+                // Batasi lebar konten agar tidak terlalu lebar di tablet
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 750),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          recap.student.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        Text('NIS : ${recap.student.nis}'),
-                        Text('Kelas : ${recap.student.kelas}'),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // =====================
-                // ACTIONS PDF
-                // =====================
-                if (state.downloadedPdfPath != null) ...[
-                  Card(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.check_circle,
-                                  color: Colors.green, size: 18),
-                              SizedBox(width: 6),
-                              Text(
-                                'PDF tersimpan di folder Download/LMS Student',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green,
+                        // =====================
+                        // INFO SISWA
+                        // =====================
+                        Card(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  recap.student.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.bold),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 4),
+                                Text('NIS : ${recap.student.nis}'),
+                                Text('Kelas : ${recap.student.kelas}'),
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 10),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              icon: const Icon(Icons.picture_as_pdf),
-                              label: const Text('Buka PDF'),
-                              onPressed: () {
-                                OpenFilex.open(state.downloadedPdfPath!);
-                              },
+                        ),
+
+                        // =====================
+                        // ACTIONS PDF
+                        // =====================
+                        if (state.downloadedPdfPath != null) ...[
+                          Card(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Row(
+                                    children: [
+                                      Icon(Icons.check_circle,
+                                          color: Colors.green, size: 18),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        'PDF tersimpan di folder Download/LMS Student',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.green,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton.icon(
+                                      icon: const Icon(Icons.picture_as_pdf),
+                                      label: const Text('Buka PDF'),
+                                      onPressed: () {
+                                        OpenFilex.open(
+                                            state.downloadedPdfPath!);
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
-                      ),
-                    ),
-                  ),
-                ],
 
-                // =====================
-                // LIST MAPEL
-                // =====================
-                ...recap.subjects.map(
-                  (subject) => SubjectSection(subject: subject),
-                ),
-              ],
-            ),
+                        // =====================
+                        // LIST MAPEL
+                        // =====================
+                        ...recap.subjects.map(
+                          (subject) => SubjectSection(subject: subject),
+                        ),
+                      ],
+                    ), // closes Column
+                  ), // closes ConstrainedBox
+                ), // closes Center (ListView item)
+              ], // closes ListView children
+            ), // closes ListView
           );
         },
       ),

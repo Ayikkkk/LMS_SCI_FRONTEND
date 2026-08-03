@@ -94,128 +94,133 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.school,
-                  color: Colors.white,
-                  size: 90,
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  "Login Siswa",
-                  style: TextStyle(
+            child: ConstrainedBox(
+              // Tablet: batasi lebar konten agar form tidak terlalu lebar
+              // HP: tidak berpengaruh karena lebar layar < 460dp
+              constraints: const BoxConstraints(maxWidth: 460),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.school,
                     color: Colors.white,
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
+                    size: 90,
                   ),
-                ),
-                const SizedBox(height: 30),
-                Card(
-                  elevation: 10,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                  const SizedBox(height: 20),
+                  const Text(
+                    "Login Siswa",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          // Username
-                          TextFormField(
-                            controller: _username,
-                            textInputAction: TextInputAction.next,
-                            validator: (v) =>
-                                v!.isEmpty ? "Tidak boleh kosong" : null,
-                            decoration: InputDecoration(
-                              prefixIcon: const Icon(Icons.person),
-                              labelText: "Username",
-                              filled: true,
-                              fillColor: Colors.grey.shade100,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Password + 👁️ Toggle
-                          TextFormField(
-                            controller: _password,
-                            obscureText: _obscurePassword,
-                            textInputAction: TextInputAction.done,
-                            onFieldSubmitted: (_) => submit(),
-                            validator: (v) =>
-                                v!.isEmpty ? "Tidak boleh kosong" : null,
-                            decoration: InputDecoration(
-                              prefixIcon: const Icon(Icons.lock),
-                              labelText: "Password",
-                              filled: true,
-                              fillColor: Colors.grey.shade100,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_off
-                                      : Icons.visibility,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _obscurePassword = !_obscurePassword;
-                                  });
-                                },
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 28),
-
-                          // Tombol Login
-                          SizedBox(
-                            width: double.infinity,
-                            height: 50,
-                            child: ElevatedButton(
-                              onPressed: loading ? null : submit,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF2575FC),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
+                  const SizedBox(height: 30),
+                  Card(
+                    elevation: 10,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          children: [
+                            // Username
+                            TextFormField(
+                              controller: _username,
+                              textInputAction: TextInputAction.next,
+                              validator: (v) =>
+                                  v!.isEmpty ? "Tidak boleh kosong" : null,
+                              decoration: InputDecoration(
+                                prefixIcon: const Icon(Icons.person),
+                                labelText: "Username",
+                                filled: true,
+                                fillColor: Colors.grey.shade100,
+                                border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              child: loading
-                                  ? const SizedBox(
-                                      height: 22,
-                                      width: 22,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 3,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : const Text(
-                                      "LOGIN",
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 16),
+
+                            // Password + 👁️ Toggle
+                            TextFormField(
+                              controller: _password,
+                              obscureText: _obscurePassword,
+                              textInputAction: TextInputAction.done,
+                              onFieldSubmitted: (_) => submit(),
+                              validator: (v) =>
+                                  v!.isEmpty ? "Tidak boleh kosong" : null,
+                              decoration: InputDecoration(
+                                prefixIcon: const Icon(Icons.lock),
+                                labelText: "Password",
+                                filled: true,
+                                fillColor: Colors.grey.shade100,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscurePassword
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _obscurePassword = !_obscurePassword;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 28),
+
+                            // Tombol Login
+                            SizedBox(
+                              width: double.infinity,
+                              height: 50,
+                              child: ElevatedButton(
+                                onPressed: loading ? null : submit,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF2575FC),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: loading
+                                    ? const SizedBox(
+                                        height: 22,
+                                        width: 22,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 3,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Text(
+                                        "LOGIN",
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 30),
-              ],
-            ),
-          ),
-        ),
-      ),
+                  const SizedBox(height: 30),
+                ],
+              ), // closes Column
+            ), // closes ConstrainedBox
+          ), // closes SingleChildScrollView
+        ), // closes Center
+      ), // closes Container.child
     );
   }
 }
