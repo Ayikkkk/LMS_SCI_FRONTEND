@@ -37,34 +37,30 @@ void main() async {
     EnvironmentConfig.printConfig();
   }
 
-  // Initialize Firebase
-  if (kDebugMode) {
-    debugPrint('🔥 Initializing Firebase...');
+  // Initialize Firebase (mobile only — Web tidak pakai Firebase native config)
+  if (!kIsWeb) {
+    if (kDebugMode) debugPrint('🔥 Initializing Firebase...');
+    await Firebase.initializeApp();
+    if (kDebugMode) debugPrint('✅ Firebase initialized successfully');
+
+    // Initialize Crashlytics & Analytics (mobile only)
+    await CrashlyticsService.initialize();
+    await AnalyticsService.initialize();
+
+    // Pass uncaught errors to Crashlytics
+    FlutterError.onError = (errorDetails) {
+      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+    };
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+  } else {
+    if (kDebugMode) debugPrint('ℹ️ Firebase skipped on Web platform');
   }
-  await Firebase.initializeApp();
-  if (kDebugMode) {
-    debugPrint('✅ Firebase initialized successfully');
-  }
 
-  // Initialize Crashlytics
-  await CrashlyticsService.initialize();
-
-  // Initialize Analytics
-  await AnalyticsService.initialize();
-
-  // Initialize Version Service
+  // Initialize Version Service (all platforms)
   await VersionService.initialize();
-
-  // Pass all uncaught errors from the framework to Crashlytics
-  FlutterError.onError = (errorDetails) {
-    FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
-  };
-
-  // Pass all uncaught asynchronous errors to Crashlytics
-  PlatformDispatcher.instance.onError = (error, stack) {
-    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-    return true;
-  };
 
   await MediaStore.ensureInitialized();
 
