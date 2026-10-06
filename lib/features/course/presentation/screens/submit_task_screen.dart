@@ -93,7 +93,7 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
     final sizeMB = file.size / 1024 / 1024;
     if (sizeMB > _maxFileSizeMB) {
       _showSnackbar(
-        'File terlalu besar (${sizeMB.toStringAsFixed(1)} MB). Maksimal ${_maxFileSizeMB} MB.',
+        'File terlalu besar (${sizeMB.toStringAsFixed(1)} MB). Maksimal $_maxFileSizeMB MB.',
         Colors.red,
       );
       return;
@@ -424,7 +424,7 @@ class _SubmitTaskScreenState extends ConsumerState<SubmitTaskScreen> {
                   const SizedBox(width: 4),
                   Flexible(
                     child: Text(
-                      'Maksimal ${_maxFileSizeMB} MB'
+                      'Maksimal $_maxFileSizeMB MB'
                       ' (PDF, DOC, JPG, PNG, MP4, MOV, dll.)',
                       style: TextStyle(
                         fontSize: 11,

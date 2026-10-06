@@ -38,6 +38,7 @@ class ReplyListWidget extends ConsumerWidget {
         /// 🔥 LIST BALASAN
         ...replies.map((reply) {
           final isOwner = reply.studentId == currentUser.id;
+          // createdAt is nullable — guard before format
           final replyTime = reply.createdAt != null
               ? timeago.format(reply.createdAt!, locale: "id")
               : "";
@@ -47,14 +48,14 @@ class ReplyListWidget extends ConsumerWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                /// Avatar
+                /// Avatar — authorPhoto is non-nullable String (defaults to '')
                 CircleAvatar(
                   radius: 14,
                   backgroundColor: Colors.grey[300],
-                  child: reply.authorPhoto != null
+                  child: reply.authorPhoto.isNotEmpty
                       ? ClipOval(
                           child: Image.network(
-                            reply.authorPhoto!,
+                            reply.authorPhoto,
                             width: 28,
                             height: 28,
                             fit: BoxFit.cover,
@@ -164,7 +165,7 @@ class ReplyListWidget extends ConsumerWidget {
               ],
             ),
           );
-        }).toList(),
+        }), // spread works directly without toList
 
         const SizedBox(height: 6),
 

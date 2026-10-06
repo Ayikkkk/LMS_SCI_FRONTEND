@@ -36,6 +36,7 @@ dependencies:
   youtube_player_iframe: ^5.2.2
   file_picker: ^8.0.6
   http: ^1.6.0
+  http_parser: ^4.0.2  # MediaType for multipart uploads (direct dep, used in task/laporan repositories)
   path_provider: ^2.1.2
   permission_handler: ^11.3.0
   jitsi_meet_flutter_sdk: ^10.0.0

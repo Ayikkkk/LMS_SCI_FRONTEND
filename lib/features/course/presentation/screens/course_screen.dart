@@ -176,7 +176,7 @@ class _MateriListView extends ConsumerWidget {
                       ),
                       if (item.classroomId != null) ...[
                         const SizedBox(height: 3),
-                        _ClassBadge(),
+                        const _ClassBadge(),
                       ],
                     ],
                   ),

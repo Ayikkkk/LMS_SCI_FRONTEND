@@ -116,7 +116,7 @@ class _LaporanHarianScreenState extends ConsumerState<LaporanHarianScreen> {
         ),
         data: (sudahIsi) {
           if (sudahIsi) {
-            return EmptyStateWidget(
+            return const EmptyStateWidget(
               title: 'Laporan sudah terisi',
               subtitle:
                   'Kamu sudah mengisi laporan hari ini.\nSilakan isi lagi besok.',

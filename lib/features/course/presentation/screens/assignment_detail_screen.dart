@@ -173,7 +173,7 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
 
                         // ── Konten tugas ────────────────────────
                         if (assignment.description?.isNotEmpty == true) ...[
-                          _SectionLabel('Deskripsi'),
+                          const _SectionLabel('Deskripsi'),
                           const SizedBox(height: 6),
                           Html(
                             data: assignment.description!,
@@ -182,7 +182,7 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
                                 margin: Margins.zero,
                                 padding: HtmlPaddings.zero,
                                 fontSize: FontSize(15),
-                                lineHeight: LineHeight(1.6),
+                                lineHeight: const LineHeight(1.6),
                               ),
                               'h3': Style(
                                 fontSize: FontSize(16),
@@ -207,21 +207,21 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
                         ],
 
                         if (assignment.embed?.isNotEmpty == true) ...[
-                          _SectionLabel('Video'),
+                          const _SectionLabel('Video'),
                           const SizedBox(height: 8),
                           VideoEmbedWidget(embedCode: assignment.embed!),
                           const SizedBox(height: 16),
                         ],
 
                         if (assignment.link?.isNotEmpty == true) ...[
-                          _SectionLabel('Tautan'),
+                          const _SectionLabel('Tautan'),
                           const SizedBox(height: 8),
                           _LinkButton(url: assignment.link!),
                           const SizedBox(height: 16),
                         ],
 
                         if (assignment.attachment?.isNotEmpty == true) ...[
-                          _SectionLabel('Lampiran'),
+                          const _SectionLabel('Lampiran'),
                           const SizedBox(height: 8),
                           AttachmentFileWidget(
                             postId: assignment.id,
@@ -310,7 +310,7 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
                           const SizedBox(height: 24),
                         ],
 
-                        _SectionLabel('Komentar'),
+                        const _SectionLabel('Komentar'),
                         const SizedBox(height: 8),
                         student == null
                             ? const Center(child: CircularProgressIndicator())

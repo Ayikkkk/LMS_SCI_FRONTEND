@@ -104,21 +104,21 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen>
 
                     // ── Konten ──────────────────────────────
                     if (item.embed?.isNotEmpty == true) ...[
-                      _SectionLabel('Video'),
+                      const _SectionLabel('Video'),
                       const SizedBox(height: 8),
                       VideoEmbedWidget(embedCode: item.embed!),
                       const SizedBox(height: 16),
                     ],
 
                     if (item.link?.isNotEmpty == true) ...[
-                      _SectionLabel('Tautan'),
+                      const _SectionLabel('Tautan'),
                       const SizedBox(height: 8),
                       _LinkButton(url: item.link!),
                       const SizedBox(height: 16),
                     ],
 
                     if (item.attachment?.isNotEmpty == true) ...[
-                      _SectionLabel('Lampiran'),
+                      const _SectionLabel('Lampiran'),
                       const SizedBox(height: 8),
                       AttachmentFileWidget(
                         postId: item.id,
@@ -134,7 +134,7 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen>
                     ],
 
                     if (item.description?.isNotEmpty == true) ...[
-                      _SectionLabel('Deskripsi'),
+                      const _SectionLabel('Deskripsi'),
                       const SizedBox(height: 6),
                       Html(
                         data: item.description!,
@@ -143,7 +143,7 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen>
                             margin: Margins.zero,
                             padding: HtmlPaddings.zero,
                             fontSize: FontSize(15),
-                            lineHeight: LineHeight(1.6),
+                            lineHeight: const LineHeight(1.6),
                           ),
                           'h3': Style(
                             fontSize: FontSize(16),
@@ -168,7 +168,7 @@ class _MaterialDetailScreenState extends ConsumerState<MaterialDetailScreen>
                     ],
 
                     // ── Komentar ─────────────────────────────
-                    _SectionLabel('Komentar'),
+                    const _SectionLabel('Komentar'),
                     const SizedBox(height: 8),
                     student == null
                         ? const Center(child: CircularProgressIndicator())

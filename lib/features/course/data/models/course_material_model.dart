@@ -57,12 +57,13 @@ class CourseMaterialModel {
       mappedFileType = 'VIDEO';
     } else if (nonNullAttachment.isNotEmpty) {
       final att = nonNullAttachment.toLowerCase();
-      if (att.endsWith('.pdf'))
+      if (att.endsWith('.pdf')) {
         mappedFileType = 'PDF';
-      else if (att.endsWith('.doc') || att.endsWith('.docx'))
+      } else if (att.endsWith('.doc') || att.endsWith('.docx')) {
         mappedFileType = 'DOC';
-      else
+      } else {
         mappedFileType = 'FILE';
+      }
     } else if (nonNullLink.isNotEmpty) {
       mappedFileType = 'LINK';
     }

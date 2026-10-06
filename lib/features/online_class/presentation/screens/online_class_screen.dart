@@ -83,7 +83,7 @@ class _OnlineClassScreenState extends ConsumerState<OnlineClassScreen>
 
   String _formatDateTime(DateTime dt) {
     // dt sudah local dari model (toLocal() saat parsing)
-    final two = (int n) => n.toString().padLeft(2, '0');
+    String two(int n) => n.toString().padLeft(2, '0');
     return '${dt.day}/${two(dt.month)}/${dt.year} ${two(dt.hour)}:${two(dt.minute)}';
   }
 
