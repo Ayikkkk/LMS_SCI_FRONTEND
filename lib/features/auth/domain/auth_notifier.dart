@@ -33,6 +33,15 @@ class AuthNotifier extends StateNotifier<AuthStatus> {
   }
 
   /// ==========================
+  /// FORCE UNAUTHENTICATED
+  /// Called from AppInitializer when init fails — avoids direct .state access
+  /// from outside the class which triggers invalid_use_of_protected_member.
+  /// ==========================
+  void forceUnauthenticated() {
+    state = AuthStatus.unauthenticated;
+  }
+
+  /// ==========================
   /// CEK STATUS LOGIN
   /// ==========================
   Future<void> checkAuthStatus() async {

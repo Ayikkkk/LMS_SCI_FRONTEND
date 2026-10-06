@@ -18,8 +18,7 @@ final appInitializerProvider = FutureProvider<void>((ref) async {
         s, 'AppInitializer');
     // Pastikan auth state di-set ke unauthenticated
     try {
-      ref.read(authNotifierProvider.notifier).state =
-          AuthStatus.unauthenticated;
+      ref.read(authNotifierProvider.notifier).forceUnauthenticated();
     } catch (_) {}
   }
 });
