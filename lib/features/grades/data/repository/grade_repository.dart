@@ -41,7 +41,7 @@ class GradeRepository {
       final tempPath =
           '${tempDir.path}/rekap_nilai_${DateTime.now().millisecondsSinceEpoch}.pdf';
 
-      await _dio.download(
+      final response = await _dio.download(
         '/student/grades/rekap-mapel/pdf',
         tempPath,
         options: Options(
@@ -51,50 +51,39 @@ class GradeRepository {
         ),
       );
 
-      final tempFile = File(tempPath);
-      if (!tempFile.existsSync() || tempFile.lengthSync() == 0) {
-        return null;
+      if (response.statusCode != 200) {
+        throw Exception('Server error: ${response.statusCode}');
       }
 
-      // 2. Simpan ke folder Download via MediaStore
+      final tempFile = File(tempPath);
+      if (!tempFile.existsSync() || tempFile.lengthSync() == 0) {
+        throw Exception('File PDF kosong');
+      }
+
+      // 2. Simpan copy ke app documents untuk OpenFilex (sebelum MediaStore memindahkan)
+      final docsDir = await getApplicationDocumentsDirectory();
+      final docPath = '${docsDir.path}/rekap_nilai.pdf';
+      await tempFile.copy(docPath);
+
+      // 3. Simpan ke folder Download via MediaStore
       MediaStore.appFolder = AppConstants.mediaStoreFolder;
       await MediaStore.ensureInitialized();
 
       final store = MediaStore();
-      final savedUri = await store.saveFile(
+      await store.saveFile(
         tempFilePath: tempPath,
         dirType: DirType.download,
         dirName: DirName.download,
       );
 
-      // 3. Hapus temp file
+      // 4. Hapus temp file jika masih ada
       try {
-        tempFile.deleteSync();
+        if (tempFile.existsSync()) tempFile.deleteSync();
       } catch (_) {}
 
-      if (savedUri == null) return null;
-
-      // 4. Return path temp yang masih ada untuk dibuka,
-      //    atau cari file di Download
-      // MediaStore tidak return path langsung — gunakan path_provider fallback
-      // Simpan copy di app documents untuk OpenFilex
-      final docsDir = await getApplicationDocumentsDirectory();
-      final docPath = '${docsDir.path}/rekap_nilai.pdf';
-
-      // Re-download ke app docs untuk bisa dibuka OpenFilex
-      await _dio.download(
-        '/student/grades/rekap-mapel/pdf',
-        docPath,
-        options: Options(
-          responseType: ResponseType.bytes,
-          followRedirects: true,
-          validateStatus: (status) => status != null && status < 500,
-        ),
-      );
-
-      return docPath;
+      return docPath; // path untuk OpenFilex
     } catch (e) {
-      return null;
+      rethrow; // lempar error agar bisa ditampilkan ke user
     }
   }
 }
