@@ -291,7 +291,7 @@ class TrueFalseWidget extends StatelessWidget {
       width: cardWidth,
       child: Card(
         elevation: selected ? 8 : 2,
-        color: selected ? color.withOpacity(0.1) : null,
+        color: selected ? color.withValues(alpha: 0.1) : null,
         child: InkWell(
           onTap: () => notifier.selectOption(question.id, value),
           child: Padding(
@@ -373,7 +373,7 @@ class YesNoWidget extends StatelessWidget {
       width: cardWidth,
       child: Card(
         elevation: selected ? 8 : 2,
-        color: selected ? color.withOpacity(0.1) : null,
+        color: selected ? color.withValues(alpha: 0.1) : null,
         child: InkWell(
           onTap: () => notifier.selectOption(question.id, value),
           child: Padding(

@@ -500,7 +500,7 @@ class QuizNotifier extends ChangeNotifier {
 
         // 403 khusus: backend menyatakan sudah pernah submit
         if (statusCode == 403) {
-          throw _AlreadySubmittedException();
+          throw const _AlreadySubmittedException();
         }
 
         // Semua 4xx lain: client error, jangan retry

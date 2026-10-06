@@ -258,24 +258,23 @@ class QuizView extends ConsumerWidget {
     if (notifier.hasPendingSubmit &&
         notifier.finalScore == null &&
         !notifier.isPendingReview) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.cloud_upload_outlined,
-                size: 90, color: Colors.orange),
-            const SizedBox(height: 16),
-            const Text(
+            Icon(Icons.cloud_upload_outlined, size: 90, color: Colors.orange),
+            SizedBox(height: 16),
+            Text(
               "Jawaban Tersimpan",
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 12),
-            const Text(
+            SizedBox(height: 12),
+            Text(
               "Koneksi terputus saat mengirim.",
               style: TextStyle(fontSize: 16, color: Colors.orange),
             ),
-            const SizedBox(height: 8),
-            const Padding(
+            SizedBox(height: 8),
+            Padding(
               padding: EdgeInsets.symmetric(horizontal: 40),
               child: Text(
                 "Jawaban sudah disimpan. Akan dikirim otomatis saat koneksi kembali.",
@@ -845,12 +844,12 @@ class _SslBypassImageState extends State<_SslBypassImage> {
       future: _imageFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return SizedBox(
+          return const SizedBox(
             height: 80,
             child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
+                children: [
                   CircularProgressIndicator(),
                   SizedBox(height: 6),
                   Text('Memuat gambar...', style: TextStyle(fontSize: 11)),

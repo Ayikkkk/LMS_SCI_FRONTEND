@@ -45,9 +45,11 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
         Navigator.pop(context);
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ErrorMessages.fromException(e))),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ErrorMessages.fromException(e))),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
