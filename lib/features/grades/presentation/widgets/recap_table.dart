@@ -29,7 +29,7 @@ class RecapTable extends StatelessWidget {
           // =====================
           TableRow(
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withOpacity(0.08),
+              color: theme.colorScheme.primary.withValues(alpha: 0.08),
             ),
             children: subject.headers.map((header) {
               return Padding(
